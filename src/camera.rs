@@ -11,8 +11,8 @@ pub struct Camera {
 impl Camera {
     pub fn new(width: usize, height: usize) -> Camera {
         Camera {
-            position: vector![-60.0, 60.0, -60.0],
-            target: vector![0.5, 0.5, 0.5],
+            position: vector![234.0, 128.0, 128.0],
+            target: vector![34.0, 128.0, 128.0],
             resolution: (width, height),
         }
     }
@@ -70,19 +70,9 @@ impl Camera {
 
                 let ray_world = Ray::from_3(origin, dir_world_3);
 
-                let int_res = bbox.intersect(&ray_world);
+                let ray_color = bbox.collect_light(&ray_world);
 
-                match int_res {
-                    Some((t1, t2)) => {
-                        counter.0 += 1;
-                        let color_v = (t2 - t1) * white_vec;
-                        let cl_sl = color_v.as_slice();
-                        let color = RGBColor::from_slice(cl_sl);
-                        buffer[y * self.resolution.0 + x] = color.to_int();
-                        //println!("i.s. ({} {})", ray.point_from_t(t1), ray.point_from_t(t2))
-                    }
-                    None => counter.1 += 1,
-                }
+                buffer[y * self.resolution.0 + x] = ray_color.to_int();
             }
         }
 
@@ -118,6 +108,10 @@ impl Ray {
     pub fn point_from_t(&self, t: f32) -> Vector3<f32> {
         self.origin + t * self.direction
     }
+
+    pub fn get_direction(&self) -> Vector3<f32> {
+        self.direction
+    }
 }
 
 pub struct BoundBox {
@@ -142,6 +136,48 @@ impl BoundBox {
             min: vector![0.0, 0.0, 0.0],
             max: volume.get_dims(),
             volume,
+        }
+    }
+
+    pub fn collect_light(&self, ray: &Ray) -> RGBColor {
+        //let mut color = vector![0.0, 0.0, 0.0];
+        let mut accum = 0.0;
+
+        let alpha = 0.2;
+
+        match self.intersect(ray) {
+            Some((t1, t2)) => {
+                let begin = ray.point_from_t(t1);
+                let direction = ray.get_direction();
+
+                let step_size = 1.0;
+                let steps = 64;
+                let step = direction * step_size; // normalized
+
+                let mut pos = begin;
+
+                let mut steps_count = 0;
+
+                for _ in 0..steps {
+                    let color_added = self.volume.sample_at(pos);
+                    accum += (1.0 - alpha) * color_added;
+
+                    pos += step;
+
+                    steps_count += 1;
+
+                    if !self.volume.is_in(pos) {
+                        // println!(
+                        //     "{} outside {} {} {} after {} steps",
+                        //     pos, self.volume.x, self.volume.y, self.volume.z, steps_count
+                        // );
+                        break;
+                    }
+                }
+
+                RGBColor::from_char(accum as u8)
+            }
+            None => RGBColor::from_vals(0, 0, 0),
         }
     }
 

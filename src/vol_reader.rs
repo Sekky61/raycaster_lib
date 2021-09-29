@@ -102,6 +102,38 @@ impl Volume {
         ]
     }
 
+    pub fn sample_at(&self, pos: Vector3<f32>) -> f32 {
+        let lows: Vec<f32> = pos.as_slice().iter().map(|&f| f.floor()).collect();
+        let x_low = lows[0] as usize;
+        let y_low = lows[1] as usize;
+        let z_low = lows[2] as usize;
+
+        let x_t = pos.x - lows[0];
+        let y_t = pos.y - lows[1];
+        let z_t = pos.z - lows[2];
+
+        let c000 = self.get_3d(x_low, y_low, z_low) as f32;
+        let c001 = self.get_3d(x_low, y_low, z_low + 1) as f32;
+        let c010 = self.get_3d(x_low, y_low + 1, z_low) as f32;
+        let c011 = self.get_3d(x_low, y_low + 1, z_low + 1) as f32;
+        let c100 = self.get_3d(x_low + 1, y_low, z_low) as f32;
+        let c101 = self.get_3d(x_low + 1, y_low, z_low + 1) as f32;
+        let c110 = self.get_3d(x_low + 1, y_low + 1, z_low) as f32;
+        let c111 = self.get_3d(x_low + 1, y_low + 1, z_low + 1) as f32;
+
+        let c00 = c000 * (1.0 - x_t) + c100 * x_t;
+        let c01 = c001 * (1.0 - x_t) + c101 * x_t;
+        let c10 = c010 * (1.0 - x_t) + c110 * x_t;
+        let c11 = c011 * (1.0 - x_t) + c111 * x_t;
+
+        let c0 = c00 * (1.0 - y_t) + c10 * y_t;
+        let c1 = c01 * (1.0 - y_t) + c11 * y_t;
+
+        let c = c0 * (1.0 - z_t) + c1 * z_t;
+
+        c
+    }
+
     pub fn from_file<P>(path: P) -> Volume
     where
         P: AsRef<Path>,
@@ -190,13 +222,26 @@ impl Volume {
         }
     }
 
-    pub fn get_3d(&self, x: usize, y: usize, z: usize) -> RGBColor {
-        let plane = self.frames.get(x).expect("out of range frame");
+    pub fn get_3d(&self, x: usize, y: usize, z: usize) -> u8 {
+        //println!("Getting {} {} {}", x, y, z);
+        let plane = self.frames.get(x);
+        let plane = match plane {
+            Some(p) => p,
+            None => return 0,
+        }; //.expect("out of range frame");
         let val = plane.get_data(y, z);
         match val {
-            Some(v) => RGBColor::from_char(v),
-            None => panic!("bad read"),
+            Some(v) => v,
+            None => 0,
         }
+    }
+
+    pub fn is_in(&self, pos: Vector3<f32>) -> bool {
+        let x_f = self.x as f32;
+        let y_f = self.y as f32;
+        let z_f = self.z as f32;
+
+        x_f > pos.x && y_f > pos.y && z_f > pos.z && pos.x > 0.0 && pos.y > 0.0 && pos.z > 0.0
     }
 }
 

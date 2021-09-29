@@ -47,7 +47,7 @@ fn main() {
         let plus = window.is_key_down(Key::NumPadPlus);
         let minus = window.is_key_down(Key::NumPadMinus);
 
-        let step = 1.0;
+        let step = 2.0;
 
         let x_p = if plus { step } else { 0.0 };
         let x_m = if minus { -step } else { 0.0 };
