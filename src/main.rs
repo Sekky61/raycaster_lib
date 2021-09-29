@@ -50,13 +50,18 @@ fn main() {
         let a = window.is_key_down(Key::A);
         let s = window.is_key_down(Key::S);
         let d = window.is_key_down(Key::D);
+        let plus = window.is_key_down(Key::NumPadPlus);
+        let minus = window.is_key_down(Key::NumPadMinus);
 
-        let x_p = if a { 0.5 } else { 0.0 };
-        let x_m = if d { -0.5 } else { 0.0 };
+        let x_p = if plus { 0.5 } else { 0.0 };
+        let x_m = if minus { -0.5 } else { 0.0 };
         let y_p = if w { 0.5 } else { 0.0 };
         let y_m = if s { -0.5 } else { 0.0 };
 
-        let change = vector![0.0, x_p + x_m, y_p + y_m];
+        let z_p = if a { 0.5 } else { 0.0 };
+        let z_m = if d { -0.5 } else { 0.0 };
+
+        let change = vector![z_p + z_m, x_p + x_m, y_p + y_m];
 
         camera.change_pos(change);
 

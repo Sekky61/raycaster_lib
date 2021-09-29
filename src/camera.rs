@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3};
+use nalgebra::{matrix, vector, Vector3, Vector4};
 
 use crate::vol_reader::RGBColor;
 
@@ -12,7 +12,7 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Camera {
         Camera {
-            position: vector![-1.5, 0.5, 0.5],
+            position: vector![-6.0, 6.0, -6.0],
             target: vector![0.5, 0.5, 0.5],
             f: 1.0,
             resolution: (512, 512),
@@ -30,10 +30,27 @@ impl Camera {
     pub fn cast_rays(&self) -> Vec<u32> {
         let mut buffer: Vec<u32> = vec![0; self.resolution.0 * self.resolution.1];
 
+        let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
+
         let origin = self.position;
+        let origin_4 = Vector4::new(origin.x, origin.y, origin.z, 1.0);
         let plane_x_offset = self.f;
 
-        let width = 3.0;
+        let aspect_ratio = image_width / image_height;
+
+        let camera_forward = (self.position - self.target).normalize();
+        let up_vec = vector![0.0, 1.0, 0.0];
+        let right = Vector3::cross(&up_vec, &camera_forward);
+        let up = Vector3::cross(&camera_forward, &right);
+
+        // cam to world
+        let lookat_matrix = matrix![right.x, right.y, right.z, 0.0;
+                                    up.x, up.y, up.z, 0.0;
+                                    camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
+                                    self.position.x,self.position.y,self.position.z, 1.0]
+        .transpose();
+
+        let origin_world = lookat_matrix * vector![0.0, 0.0, 0.0, 1.0];
 
         let bbox = BoundBox::new();
 
@@ -43,27 +60,24 @@ impl Camera {
 
         for y in 0..self.resolution.1 {
             for x in 0..self.resolution.0 {
-                let offset_x_rel = x as f32 / self.resolution.0 as f32 - 0.5;
-                let offset_y_rel = y as f32 / self.resolution.1 as f32 - 0.5;
+                let pixel_ndc_x = (x as f32 + 0.5) / image_width;
+                let pixel_ndc_y = (y as f32 + 0.5) / image_height;
 
-                let view_point = vector![
-                    origin.x + plane_x_offset,
-                    origin.y + offset_x_rel * width,
-                    origin.z + offset_y_rel * width
-                ];
+                let pixel_screen_x = (pixel_ndc_x * 2.0 - 1.0) * aspect_ratio;
+                let pixel_screen_y = 1.0 - pixel_ndc_y * 2.0; // v NDC Y roste dolu, obratime
 
-                let direction = view_point - origin;
+                //todo FOV
 
-                let ray = Ray::new(origin, direction);
+                let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
 
-                let int_res = bbox.intersect(&ray);
+                let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
+                let dir_world_3 = vector![dir_world.x, dir_world.y, dir_world.z].normalize();
 
-                // println!(
-                //     "R {} | {} int: {}",
-                //     ray.origin,
-                //     ray.direction,
-                //     int_res.is_some()
-                // );
+                //println!("{}", dir_world_3);
+
+                let ray_world = Ray::from_3(origin, dir_world_3);
+
+                let int_res = bbox.intersect(&ray_world);
 
                 match int_res {
                     Some((t1, t2)) => {
@@ -100,8 +114,15 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(origin: Vector3<f32>, direction: Vector3<f32>) -> Ray {
+    pub fn from_3(origin: Vector3<f32>, direction: Vector3<f32>) -> Ray {
         Ray { origin, direction }
+    }
+
+    pub fn from_4(origin: Vector4<f32>, direction: Vector4<f32>) -> Ray {
+        Ray {
+            origin: vector![origin.x, origin.y, origin.z],
+            direction: vector![direction.x, direction.y, direction.z],
+        }
     }
 
     pub fn point_from_t(&self, t: f32) -> Vector3<f32> {
@@ -118,7 +139,7 @@ impl BoundBox {
     pub fn new() -> BoundBox {
         BoundBox {
             min: vector![0.0, 0.0, 0.0],
-            max: vector![1.0, 1.0, 1.0],
+            max: vector![1.0, 2.0, 3.0],
         }
     }
 
