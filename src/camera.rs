@@ -1,21 +1,19 @@
 use nalgebra::{matrix, vector, Vector3, Vector4};
 
-use crate::vol_reader::RGBColor;
+use crate::vol_reader::{RGBColor, Volume};
 
 pub struct Camera {
     position: Vector3<f32>,
     target: Vector3<f32>,
-    f: f32,
     resolution: (usize, usize),
 }
 
 impl Camera {
-    pub fn new() -> Camera {
+    pub fn new(width: usize, height: usize) -> Camera {
         Camera {
-            position: vector![-6.0, 6.0, -6.0],
+            position: vector![-60.0, 60.0, -60.0],
             target: vector![0.5, 0.5, 0.5],
-            f: 1.0,
-            resolution: (512, 512),
+            resolution: (width, height),
         }
     }
 
@@ -27,14 +25,13 @@ impl Camera {
         self.resolution
     }
 
-    pub fn cast_rays(&self) -> Vec<u32> {
+    pub fn cast_rays(&self, bbox: &BoundBox) -> Vec<u32> {
         let mut buffer: Vec<u32> = vec![0; self.resolution.0 * self.resolution.1];
 
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
         let origin = self.position;
         let origin_4 = Vector4::new(origin.x, origin.y, origin.z, 1.0);
-        let plane_x_offset = self.f;
 
         let aspect_ratio = image_width / image_height;
 
@@ -49,10 +46,6 @@ impl Camera {
                                     camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
                                     self.position.x,self.position.y,self.position.z, 1.0]
         .transpose();
-
-        let origin_world = lookat_matrix * vector![0.0, 0.0, 0.0, 1.0];
-
-        let bbox = BoundBox::new();
 
         let mut counter = (0, 0);
 
@@ -83,11 +76,8 @@ impl Camera {
                     Some((t1, t2)) => {
                         counter.0 += 1;
                         let color_v = (t2 - t1) * white_vec;
-                        let color = RGBColor::from_vals(
-                            color_v[0] as u8,
-                            color_v[1] as u8,
-                            color_v[2] as u8,
-                        );
+                        let cl_sl = color_v.as_slice();
+                        let color = RGBColor::from_slice(cl_sl);
                         buffer[y * self.resolution.0 + x] = color.to_int();
                         //println!("i.s. ({} {})", ray.point_from_t(t1), ray.point_from_t(t2))
                     }
@@ -133,13 +123,25 @@ impl Ray {
 pub struct BoundBox {
     min: Vector3<f32>,
     max: Vector3<f32>,
+    volume: Volume,
+}
+
+impl std::fmt::Debug for BoundBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BoundBox")
+            .field("min", &self.min)
+            .field("max", &self.max)
+            .field("volume", &self.volume)
+            .finish()
+    }
 }
 
 impl BoundBox {
-    pub fn new() -> BoundBox {
+    pub fn from_volume(volume: Volume) -> BoundBox {
         BoundBox {
             min: vector![0.0, 0.0, 0.0],
-            max: vector![1.0, 2.0, 3.0],
+            max: volume.get_dims(),
+            volume,
         }
     }
 
@@ -179,9 +181,17 @@ impl BoundBox {
 mod test {
     use super::*;
 
+    fn cube_bound_box() -> BoundBox {
+        BoundBox {
+            min: vector![0.0, 0.0, 0.0],
+            max: vector![1.0, 1.0, 1.0],
+            volume: Volume::white_vol(),
+        }
+    }
+
     #[test]
     fn intersect_works() {
-        let bbox = BoundBox::new();
+        let bbox = cube_bound_box();
         let ray = Ray {
             origin: vector![-1.0, -1.0, 0.0],
             direction: vector![1.0, 1.0, 1.0],
@@ -193,7 +203,7 @@ mod test {
 
     #[test]
     fn intersect_works2() {
-        let bbox = BoundBox::new();
+        let bbox = cube_bound_box();
         let ray = Ray {
             origin: vector![-0.4, 0.73, 0.0],
             direction: vector![1.0, 0.0, 1.0],
@@ -205,7 +215,7 @@ mod test {
 
     #[test]
     fn not_intersecting() {
-        let bbox = BoundBox::new();
+        let bbox = cube_bound_box();
         let ray = Ray {
             origin: vector![2.0, 2.0, 2.0],
             direction: vector![1.0, 1.0, 8.0],

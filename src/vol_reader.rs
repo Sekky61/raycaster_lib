@@ -3,6 +3,7 @@ use std::fmt::Display;
 use std::path::Path;
 use std::{fs::File, io::Read};
 
+use nalgebra::{vector, Vector3};
 use nom::bytes::complete::take;
 use nom::IResult;
 
@@ -18,6 +19,10 @@ impl RGBColor {
         RGBColor(r, g, b)
     }
 
+    pub fn from_slice(slice: &[f32]) -> RGBColor {
+        RGBColor(slice[0] as u8, slice[1] as u8, slice[2] as u8)
+    }
+
     pub fn to_int(&self) -> u32 {
         let r = self.0 as u32;
         let g = self.1 as u32;
@@ -27,6 +32,7 @@ impl RGBColor {
     }
 }
 
+#[derive(Debug)]
 pub struct Frame {
     width: usize,
     height: usize,
@@ -60,7 +66,42 @@ pub struct Volume {
     frames: Vec<Frame>,
 }
 
+impl std::fmt::Debug for Volume {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Volume")
+            .field("x", &self.x)
+            .field("y", &self.y)
+            .field("z", &self.z)
+            .field("border", &self.border)
+            .field("scale_x", &self.scale_x)
+            .field("scale_y", &self.scale_y)
+            .field("scale_z", &self.scale_z)
+            .finish()
+    }
+}
+
 impl Volume {
+    pub fn white_vol() -> Volume {
+        Volume {
+            x: 2,
+            y: 2,
+            z: 2,
+            border: 0,
+            scale_x: 1.0,
+            scale_y: 1.0,
+            scale_z: 1.0,
+            frames: vec![],
+        }
+    }
+
+    pub fn get_dims(&self) -> Vector3<f32> {
+        vector![
+            self.x as f32 * self.scale_x,
+            self.y as f32 * self.scale_y,
+            self.z as f32 * self.scale_z
+        ]
+    }
+
     pub fn from_file<P>(path: P) -> Volume
     where
         P: AsRef<Path>,
