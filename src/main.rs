@@ -35,6 +35,8 @@ fn main() {
 
     println!("Box {:?}", boxx);
 
+    let mut frame_buffer = vec![0; WIDTH * HEIGHT];
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // for i in buffer.iter_mut() {
         //     *i = 0; // write something more funny here!
@@ -61,9 +63,11 @@ fn main() {
 
         camera.change_pos(change);
 
-        let cast_buf = camera.cast_rays(&boxx);
+        camera.cast_rays(&boxx, frame_buffer.as_mut_slice());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        window.update_with_buffer(&cast_buf, WIDTH, HEIGHT).unwrap();
+        window
+            .update_with_buffer(&frame_buffer[..], WIDTH, HEIGHT)
+            .unwrap();
     }
 }

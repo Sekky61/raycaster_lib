@@ -25,9 +25,7 @@ impl Camera {
         self.resolution
     }
 
-    pub fn cast_rays(&self, bbox: &BoundBox) -> Vec<u32> {
-        let mut buffer: Vec<u32> = vec![0; self.resolution.0 * self.resolution.1];
-
+    pub fn cast_rays(&self, bbox: &BoundBox, buffer: &mut [u32]) {
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
         let origin = self.position;
@@ -46,10 +44,6 @@ impl Camera {
                                     camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
                                     self.position.x,self.position.y,self.position.z, 1.0]
         .transpose();
-
-        let mut counter = (0, 0);
-
-        let white_vec = vector![255.0, 255.0, 255.0];
 
         for y in 0..self.resolution.1 {
             for x in 0..self.resolution.0 {
@@ -77,14 +71,9 @@ impl Camera {
         }
 
         println!(
-            "Ray hit rate: {} at cam ({} | {} | {}) window ({})",
-            counter.0 as f32 / (counter.0 as f32 + counter.1 as f32),
-            origin.x,
-            origin.y,
-            origin.z,
-            0
+            "Ray at cam ({} | {} | {}) window ({})",
+            origin.x, origin.y, origin.z, 0
         );
-        buffer
     }
 }
 
