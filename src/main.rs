@@ -4,6 +4,7 @@ mod camera;
 
 mod vol_reader;
 use nalgebra::vector;
+use sixtyfps::{Image, Rgb8Pixel, SharedPixelBuffer};
 use vol_reader::Volume;
 
 use minifb::{Key, Window, WindowOptions};
@@ -13,6 +14,82 @@ use crate::camera::{BoundBox, Camera};
 const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
 
+sixtyfps::sixtyfps! {
+    import { Slider, HorizontalBox, VerticalBox, GroupBox, ComboBox } from "sixtyfps_widgets.60";
+
+    export MainWindow := Window {
+        title: "SixtyFPS Image Filter Integration Example";
+        preferred-width: 800px;
+        preferred-height: 600px;
+
+        property original-image <=> original.source;
+
+        callback x_changed;
+        callback y_changed;
+
+        HorizontalBox {
+            VerticalBox {
+                Text {
+                    font-size: 20px;
+                    text: "Original Image";
+                    horizontal-alignment: center;
+                }
+                original := Image { }
+
+            }
+        }
+        x_slider := Slider {
+            width: 100px;
+            height: 20px;
+            value: 42;
+            changed => {
+                // emit the callback
+                root.x_changed()
+            }
+        }
+        y_slider := Slider {
+            y: 30px;
+            width: 100px;
+            height: 20px;
+            value: 70;
+            changed => {
+                // emit the callback
+                root.y_changed()
+            }
+        }
+    }
+}
+
+fn on_x_changed(x: f32) {
+    println!("x_changed {}", x);
+}
+
+fn render_to_pixel_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
+    camera.cast_rays(bbox, buffer);
+}
+
+fn main() {
+    let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(WIDTH, HEIGHT);
+
+    let camera = Camera::new(WIDTH, HEIGHT);
+    let volume = Volume::from_file("Skull.vol");
+    let bbox = BoundBox::from_volume(volume);
+    render_to_pixel_buffer(&camera, &bbox, pixel_buffer.make_mut_slice());
+
+    let image = Image::from_rgb8(pixel_buffer);
+
+    let main_window = MainWindow::new();
+
+    main_window.on_x_changed(|| {
+        println!("x_changed ");
+    });
+
+    main_window.set_original_image(image);
+
+    main_window.run();
+}
+
+/*
 fn main() {
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -70,4 +147,4 @@ fn main() {
             .update_with_buffer(&frame_buffer[..], WIDTH, HEIGHT)
             .unwrap();
     }
-}
+}*/

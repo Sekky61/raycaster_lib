@@ -8,7 +8,7 @@ use nom::bytes::complete::take;
 use nom::IResult;
 
 #[derive(Debug)]
-pub struct RGBColor(u8, u8, u8);
+pub struct RGBColor(pub u8, pub u8, pub u8);
 
 impl RGBColor {
     pub fn from_char(val: u8) -> RGBColor {

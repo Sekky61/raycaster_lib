@@ -1,4 +1,5 @@
 use nalgebra::{matrix, vector, Vector3, Vector4};
+use sixtyfps::Rgb8Pixel;
 
 use crate::vol_reader::{RGBColor, Volume};
 
@@ -25,7 +26,7 @@ impl Camera {
         self.resolution
     }
 
-    pub fn cast_rays(&self, bbox: &BoundBox, buffer: &mut [u32]) {
+    pub fn cast_rays(&self, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
         let origin = self.position;
@@ -66,7 +67,13 @@ impl Camera {
 
                 let ray_color = bbox.collect_light(&ray_world);
 
-                buffer[y * self.resolution.0 + x] = ray_color.to_int();
+                let val = Rgb8Pixel::new(ray_color.0, ray_color.1, ray_color.2);
+
+                let index = y * self.resolution.0 + x;
+
+                buffer[index] = val;
+                // buffer[index + 1] = ray_color.1;
+                // buffer[index + 2] = ray_color.2;
             }
         }
 
