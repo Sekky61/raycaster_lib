@@ -1,31 +1,37 @@
 //extern crate minifb;
 
+use std::sync::{mpsc, Arc, Mutex};
+
 mod camera;
 
 mod vol_reader;
+
 use nalgebra::vector;
 use sixtyfps::{Image, Rgb8Pixel, SharedPixelBuffer};
 use vol_reader::Volume;
 
-use minifb::{Key, Window, WindowOptions};
-
 use crate::camera::{BoundBox, Camera};
 
-const WIDTH: usize = 512;
-const HEIGHT: usize = 512;
+const WIDTH: usize = 128;
+const HEIGHT: usize = 128;
 
 sixtyfps::sixtyfps! {
     import { Slider, HorizontalBox, VerticalBox, GroupBox, ComboBox } from "sixtyfps_widgets.60";
 
     export MainWindow := Window {
-        title: "SixtyFPS Image Filter Integration Example";
+        title: "Raycast demo app";
         preferred-width: 800px;
         preferred-height: 600px;
 
         property original-image <=> original.source;
 
+        property x_coord <=> x_slider.value;
+        property y_coord <=> y_slider.value;
+        property z_coord <=> z_slider.value;
+
         callback x_changed;
         callback y_changed;
+        callback z_changed;
 
         HorizontalBox {
             VerticalBox {
@@ -39,9 +45,11 @@ sixtyfps::sixtyfps! {
             }
         }
         x_slider := Slider {
-            width: 100px;
+            width: 200px;
             height: 20px;
-            value: 42;
+            value: 200;
+            minimum: -300;
+            maximum: 500;
             changed => {
                 // emit the callback
                 root.x_changed()
@@ -49,47 +57,141 @@ sixtyfps::sixtyfps! {
         }
         y_slider := Slider {
             y: 30px;
-            width: 100px;
+            width: 200px;
             height: 20px;
-            value: 70;
+            value: 250;
+            minimum: -300;
+            maximum: 500;
             changed => {
                 // emit the callback
                 root.y_changed()
             }
         }
+        z_slider := Slider {
+            y: 60px;
+            width: 200px;
+            height: 20px;
+            value: 270;
+            minimum: -300;
+            maximum: 500;
+            changed => {
+                // emit the callback
+                root.z_changed()
+            }
+        }
     }
-}
-
-fn on_x_changed(x: f32) {
-    println!("x_changed {}", x);
 }
 
 fn render_to_pixel_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
     camera.cast_rays(bbox, buffer);
 }
 
-fn main() {
-    let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(WIDTH, HEIGHT);
-
-    let camera = Camera::new(WIDTH, HEIGHT);
-    let volume = Volume::from_file("Skull.vol");
-    let bbox = BoundBox::from_volume(volume);
-    render_to_pixel_buffer(&camera, &bbox, pixel_buffer.make_mut_slice());
-
-    let image = Image::from_rgb8(pixel_buffer);
-
-    let main_window = MainWindow::new();
-
-    main_window.on_x_changed(|| {
-        println!("x_changed ");
-    });
-
-    main_window.set_original_image(image);
-
-    main_window.run();
+fn render_to_byte_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [u8]) {
+    camera.cast_rays_bytes(bbox, buffer);
 }
 
+fn main() {
+    // window instance
+    let main_window = MainWindow::new();
+
+    let mut camera = Camera::new(WIDTH, HEIGHT);
+    let volume = Volume::from_file("Skull.vol");
+    let bbox = BoundBox::from_volume(volume);
+
+    // threading communication
+    let (tx, rx) = mpsc::channel();
+
+    // shared state (camera coordinates)
+    let global_coords = Arc::new(Mutex::new(vector![234.0, 128.0, 128.0]));
+
+    // setting x coordinate
+    let main_window_weak = main_window.as_weak();
+    let gl_coords_x = global_coords.clone();
+    let tx_x = tx.clone();
+
+    main_window.on_x_changed(move || {
+        let win = main_window_weak.unwrap();
+        let x: f32 = win.get_x_coord();
+
+        println!("x_changed {}", x);
+
+        let old_coords = gl_coords_x.lock().unwrap();
+
+        let mut coords = *old_coords;
+        coords.x = x;
+
+        tx_x.send(coords).unwrap();
+    });
+
+    // setting y coordinate
+    let main_window_weak = main_window.as_weak();
+    let gl_coords_y = global_coords.clone();
+    let tx_y = tx.clone();
+
+    main_window.on_y_changed(move || {
+        let win = main_window_weak.unwrap();
+        let y: f32 = win.get_y_coord();
+
+        println!("y_changed {}", y);
+
+        let old_coords = gl_coords_y.lock().unwrap();
+
+        let mut coords = *old_coords;
+        coords.y = y;
+
+        tx_y.send(coords).unwrap();
+    });
+
+    // setting z coordinate
+    let main_window_weak = main_window.as_weak();
+    let gl_coords_z = global_coords;
+    let tx_z = tx;
+
+    main_window.on_z_changed(move || {
+        let win = main_window_weak.unwrap();
+        let z: f32 = win.get_z_coord();
+
+        println!("z_changed {}", z);
+
+        let old_coords = gl_coords_z.lock().unwrap();
+
+        let mut coords = *old_coords;
+        coords.z = z;
+
+        tx_z.send(coords).unwrap();
+    });
+
+    let main_window_weak = main_window.as_weak();
+
+    // rendering thread
+    std::thread::spawn(move || loop {
+        let new_pos = rx.try_recv();
+
+        if let Ok(pos) = new_pos {
+            camera.set_pos(pos);
+        }
+
+        let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
+        let window_handle_copy = main_window_weak.clone();
+
+        render_to_byte_buffer(&camera, &bbox, buf.as_mut_slice());
+
+        sixtyfps::invoke_from_event_loop(move || {
+            let pixel_buffer =
+                SharedPixelBuffer::<Rgb8Pixel>::clone_from_slice(&buf[..], WIDTH, HEIGHT);
+            let image = Image::from_rgb8(pixel_buffer);
+            window_handle_copy.unwrap().set_original_image(image)
+        });
+    });
+
+    main_window.run(); // blocking
+}
+
+// minifb backend
+
 /*
+use minifb::{Key, Window, WindowOptions};
+
 fn main() {
     let mut window = Window::new(
         "Test - ESC to exit",

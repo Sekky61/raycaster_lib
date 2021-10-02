@@ -22,8 +22,67 @@ impl Camera {
         self.position += change;
     }
 
+    pub fn set_pos(&mut self, pos: Vector3<f32>) {
+        self.position = pos;
+    }
+
     pub fn get_resolution(&self) -> (usize, usize) {
         self.resolution
+    }
+
+    pub fn cast_rays_bytes(&self, bbox: &BoundBox, buffer: &mut [u8]) {
+        let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
+
+        let origin = self.position;
+        let origin_4 = Vector4::new(origin.x, origin.y, origin.z, 1.0);
+
+        let aspect_ratio = image_width / image_height;
+
+        let camera_forward = (self.position - self.target).normalize();
+        let up_vec = vector![0.0, 1.0, 0.0];
+        let right = Vector3::cross(&up_vec, &camera_forward);
+        let up = Vector3::cross(&camera_forward, &right);
+
+        // cam to world
+        let lookat_matrix = matrix![right.x, right.y, right.z, 0.0;
+                                    up.x, up.y, up.z, 0.0;
+                                    camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
+                                    self.position.x,self.position.y,self.position.z, 1.0]
+        .transpose();
+
+        for y in 0..self.resolution.1 {
+            for x in 0..self.resolution.0 {
+                let pixel_ndc_x = (x as f32 + 0.5) / image_width;
+                let pixel_ndc_y = (y as f32 + 0.5) / image_height;
+
+                let pixel_screen_x = (pixel_ndc_x * 2.0 - 1.0) * aspect_ratio;
+                let pixel_screen_y = 1.0 - pixel_ndc_y * 2.0; // v NDC Y roste dolu, obratime
+
+                //todo FOV
+
+                let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
+
+                let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
+                let dir_world_3 = vector![dir_world.x, dir_world.y, dir_world.z].normalize();
+
+                //println!("{}", dir_world_3);
+
+                let ray_world = Ray::from_3(origin, dir_world_3);
+
+                let ray_color = bbox.collect_light(&ray_world);
+
+                let index = (y * self.resolution.0 + x) * 3; // packed structs -/-
+
+                buffer[index] = ray_color.0;
+                buffer[index + 1] = ray_color.1;
+                buffer[index + 2] = ray_color.2;
+            }
+        }
+
+        println!(
+            "Ray at cam ({} | {} | {}) window ({})",
+            origin.x, origin.y, origin.z, 0
+        );
     }
 
     pub fn cast_rays(&self, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
@@ -139,7 +198,7 @@ impl BoundBox {
         //let mut color = vector![0.0, 0.0, 0.0];
         let mut accum = 0.0;
 
-        let alpha = 0.2;
+        let alpha = 0.1;
 
         match self.intersect(ray) {
             Some((t1, t2)) => {
