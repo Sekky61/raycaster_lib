@@ -4,8 +4,6 @@ use std::path::Path;
 use std::{fs::File, io::Read};
 
 use nalgebra::{vector, Vector3};
-use nom::bytes::complete::take;
-use nom::IResult;
 
 #[derive(Debug)]
 pub struct RGBColor(pub u8, pub u8, pub u8);
@@ -48,9 +46,9 @@ impl Frame {
         }
     }
 
-    pub fn get_data(&self, x: usize, y: usize) -> Option<u8> {
+    pub fn get_data(&self, x: usize, y: usize) -> u8 {
         let start = y * self.height + x;
-        self.data.get(start).copied()
+        *self.data.get(start).unwrap_or(&0)
     }
 }
 
@@ -102,24 +100,28 @@ impl Volume {
         ]
     }
 
+    // trilinear interpolation sample
     pub fn sample_at(&self, pos: Vector3<f32>) -> f32 {
-        let lows: Vec<f32> = pos.as_slice().iter().map(|&f| f.floor()).collect();
-        let x_low = lows[0] as usize;
-        let y_low = lows[1] as usize;
-        let z_low = lows[2] as usize;
+        let x_low = pos[0].floor() as usize;
+        let y_low = pos[1].floor() as usize;
+        let z_low = pos[2].floor() as usize;
 
-        let x_t = pos.x - lows[0];
-        let y_t = pos.y - lows[1];
-        let z_t = pos.z - lows[2];
+        let x_high = x_low + 1;
+        let y_high = y_low + 1;
+        let z_high = z_low + 1;
+
+        let x_t = pos.x.fract();
+        let y_t = pos.y.fract();
+        let z_t = pos.z.fract();
 
         let c000 = self.get_3d(x_low, y_low, z_low) as f32;
-        let c001 = self.get_3d(x_low, y_low, z_low + 1) as f32;
-        let c010 = self.get_3d(x_low, y_low + 1, z_low) as f32;
-        let c011 = self.get_3d(x_low, y_low + 1, z_low + 1) as f32;
-        let c100 = self.get_3d(x_low + 1, y_low, z_low) as f32;
-        let c101 = self.get_3d(x_low + 1, y_low, z_low + 1) as f32;
-        let c110 = self.get_3d(x_low + 1, y_low + 1, z_low) as f32;
-        let c111 = self.get_3d(x_low + 1, y_low + 1, z_low + 1) as f32;
+        let c001 = self.get_3d(x_low, y_low, z_high) as f32;
+        let c010 = self.get_3d(x_low, y_high, z_low) as f32;
+        let c011 = self.get_3d(x_low, y_high, z_high) as f32;
+        let c100 = self.get_3d(x_high, y_low, z_low) as f32;
+        let c101 = self.get_3d(x_high, y_low, z_high) as f32;
+        let c110 = self.get_3d(x_high, y_high, z_low) as f32;
+        let c111 = self.get_3d(x_high, y_high, z_high) as f32;
 
         let c00 = c000 * (1.0 - x_t) + c100 * x_t;
         let c01 = c001 * (1.0 - x_t) + c101 * x_t;
@@ -129,9 +131,7 @@ impl Volume {
         let c0 = c00 * (1.0 - y_t) + c10 * y_t;
         let c1 = c01 * (1.0 - y_t) + c11 * y_t;
 
-        let c = c0 * (1.0 - z_t) + c1 * z_t;
-
-        c
+        c0 * (1.0 - z_t) + c1 * z_t
     }
 
     pub fn from_file<P>(path: P) -> Volume
@@ -229,11 +229,7 @@ impl Volume {
             Some(p) => p,
             None => return 0,
         }; //.expect("out of range frame");
-        let val = plane.get_data(y, z);
-        match val {
-            Some(v) => v,
-            None => 0,
-        }
+        plane.get_data(y, z)
     }
 
     pub fn is_in(&self, pos: Vector3<f32>) -> bool {

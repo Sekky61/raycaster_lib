@@ -12,7 +12,7 @@ pub struct Camera {
 impl Camera {
     pub fn new(width: usize, height: usize) -> Camera {
         Camera {
-            position: vector![234.0, 128.0, 128.0],
+            position: vector![-4.0, 108.0, -85.0],
             target: vector![34.0, 128.0, 128.0],
             resolution: (width, height),
         }
@@ -84,63 +84,6 @@ impl Camera {
             origin.x, origin.y, origin.z, 0
         );
     }
-
-    pub fn cast_rays(&self, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
-        let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
-
-        let origin = self.position;
-        let origin_4 = Vector4::new(origin.x, origin.y, origin.z, 1.0);
-
-        let aspect_ratio = image_width / image_height;
-
-        let camera_forward = (self.position - self.target).normalize();
-        let up_vec = vector![0.0, 1.0, 0.0];
-        let right = Vector3::cross(&up_vec, &camera_forward);
-        let up = Vector3::cross(&camera_forward, &right);
-
-        // cam to world
-        let lookat_matrix = matrix![right.x, right.y, right.z, 0.0;
-                                    up.x, up.y, up.z, 0.0;
-                                    camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
-                                    self.position.x,self.position.y,self.position.z, 1.0]
-        .transpose();
-
-        for y in 0..self.resolution.1 {
-            for x in 0..self.resolution.0 {
-                let pixel_ndc_x = (x as f32 + 0.5) / image_width;
-                let pixel_ndc_y = (y as f32 + 0.5) / image_height;
-
-                let pixel_screen_x = (pixel_ndc_x * 2.0 - 1.0) * aspect_ratio;
-                let pixel_screen_y = 1.0 - pixel_ndc_y * 2.0; // v NDC Y roste dolu, obratime
-
-                //todo FOV
-
-                let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
-
-                let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
-                let dir_world_3 = vector![dir_world.x, dir_world.y, dir_world.z].normalize();
-
-                //println!("{}", dir_world_3);
-
-                let ray_world = Ray::from_3(origin, dir_world_3);
-
-                let ray_color = bbox.collect_light(&ray_world);
-
-                let val = Rgb8Pixel::new(ray_color.0, ray_color.1, ray_color.2);
-
-                let index = y * self.resolution.0 + x;
-
-                buffer[index] = val;
-                // buffer[index + 1] = ray_color.1;
-                // buffer[index + 2] = ray_color.2;
-            }
-        }
-
-        println!(
-            "Ray at cam ({} | {} | {}) window ({})",
-            origin.x, origin.y, origin.z, 0
-        );
-    }
 }
 
 pub struct Ray {
@@ -166,6 +109,14 @@ impl Ray {
 
     pub fn get_direction(&self) -> Vector3<f32> {
         self.direction
+    }
+}
+
+pub fn transfer_function(sample: f32) -> (u8, u8, u8) {
+    if sample > 2.0 && sample < 3.0 {
+        (14, 14, 14)
+    } else {
+        (0, 0, 0)
     }
 }
 
@@ -196,7 +147,7 @@ impl BoundBox {
 
     pub fn collect_light(&self, ray: &Ray) -> RGBColor {
         //let mut color = vector![0.0, 0.0, 0.0];
-        let mut accum = 0.0;
+        let mut accum = (0, 0, 0);
 
         let alpha = 0.1;
 
@@ -206,20 +157,25 @@ impl BoundBox {
                 let direction = ray.get_direction();
 
                 let step_size = 1.0;
-                let steps = 64;
+                //let steps = 64;
                 let step = direction * step_size; // normalized
 
                 let mut pos = begin;
 
-                let mut steps_count = 0;
+                //let mut steps_count = 0;
 
-                for _ in 0..steps {
-                    let color_added = self.volume.sample_at(pos);
-                    accum += (1.0 - alpha) * color_added;
+                loop {
+                    let sample = self.volume.sample_at(pos);
+
+                    let color = transfer_function(sample);
+
+                    accum.0 += color.0;
+                    accum.1 += color.1;
+                    accum.2 += color.2;
 
                     pos += step;
 
-                    steps_count += 1;
+                    //steps_count += 1;
 
                     if !self.volume.is_in(pos) {
                         // println!(
@@ -230,7 +186,7 @@ impl BoundBox {
                     }
                 }
 
-                RGBColor::from_char(accum as u8)
+                RGBColor::from_vals(accum.0, accum.1, accum.2)
             }
             None => RGBColor::from_vals(0, 0, 0),
         }

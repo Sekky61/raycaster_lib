@@ -12,8 +12,8 @@ use vol_reader::Volume;
 
 use crate::camera::{BoundBox, Camera};
 
-const WIDTH: usize = 128;
-const HEIGHT: usize = 128;
+const WIDTH: usize = 256;
+const HEIGHT: usize = 256;
 
 sixtyfps::sixtyfps! {
     import { Slider, HorizontalBox, VerticalBox, GroupBox, ComboBox } from "sixtyfps_widgets.60";
@@ -82,10 +82,6 @@ sixtyfps::sixtyfps! {
     }
 }
 
-fn render_to_pixel_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [Rgb8Pixel]) {
-    camera.cast_rays(bbox, buffer);
-}
-
 fn render_to_byte_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [u8]) {
     camera.cast_rays_bytes(bbox, buffer);
 }
@@ -99,15 +95,19 @@ fn main() {
     let bbox = BoundBox::from_volume(volume);
 
     // threading communication
-    let (tx, rx) = mpsc::channel();
+    //let (tx, rx) = mpsc::channel();
 
     // shared state (camera coordinates)
-    let global_coords = Arc::new(Mutex::new(vector![234.0, 128.0, 128.0]));
+    let camera_init = vector![-4.0, 108.0, -85.0];
+    main_window.set_x_coord(camera_init.x);
+    main_window.set_y_coord(camera_init.y);
+    main_window.set_z_coord(camera_init.z);
+    let global_coords = Arc::new(Mutex::new(camera_init));
 
     // setting x coordinate
     let main_window_weak = main_window.as_weak();
     let gl_coords_x = global_coords.clone();
-    let tx_x = tx.clone();
+    //let tx_x = tx.clone();
 
     main_window.on_x_changed(move || {
         let win = main_window_weak.unwrap();
@@ -115,18 +115,22 @@ fn main() {
 
         println!("x_changed {}", x);
 
-        let old_coords = gl_coords_x.lock().unwrap();
+        let mut old_coords = gl_coords_x.lock().unwrap();
 
-        let mut coords = *old_coords;
-        coords.x = x;
+        println!("x read  {}", old_coords);
 
-        tx_x.send(coords).unwrap();
+        //let mut coords = *old_coords;
+        (*old_coords).x = x;
+
+        println!("x set  {}", old_coords);
+
+        //tx_x.send(coords).unwrap();
     });
 
     // setting y coordinate
     let main_window_weak = main_window.as_weak();
     let gl_coords_y = global_coords.clone();
-    let tx_y = tx.clone();
+    //let tx_y = tx.clone();
 
     main_window.on_y_changed(move || {
         let win = main_window_weak.unwrap();
@@ -134,18 +138,18 @@ fn main() {
 
         println!("y_changed {}", y);
 
-        let old_coords = gl_coords_y.lock().unwrap();
+        let mut old_coords = gl_coords_y.lock().unwrap();
 
-        let mut coords = *old_coords;
-        coords.y = y;
+        //let mut coords = *old_coords;
+        (*old_coords).y = y;
 
-        tx_y.send(coords).unwrap();
+        //tx_y.send(coords).unwrap();
     });
 
     // setting z coordinate
     let main_window_weak = main_window.as_weak();
-    let gl_coords_z = global_coords;
-    let tx_z = tx;
+    let gl_coords_z = global_coords.clone();
+    //let tx_z = tx;
 
     main_window.on_z_changed(move || {
         let win = main_window_weak.unwrap();
@@ -153,22 +157,22 @@ fn main() {
 
         println!("z_changed {}", z);
 
-        let old_coords = gl_coords_z.lock().unwrap();
+        let mut old_coords = gl_coords_z.lock().unwrap();
 
-        let mut coords = *old_coords;
-        coords.z = z;
+        //let mut coords = *old_coords;
+        (*old_coords).z = z;
 
-        tx_z.send(coords).unwrap();
+        //tx_z.send(coords).unwrap();
     });
 
     let main_window_weak = main_window.as_weak();
 
     // rendering thread
     std::thread::spawn(move || loop {
-        let new_pos = rx.try_recv();
+        let new_pos = global_coords.try_lock();
 
-        if let Ok(pos) = new_pos {
-            camera.set_pos(pos);
+        if let Ok(guard) = new_pos {
+            camera.set_pos(*guard);
         }
 
         let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
