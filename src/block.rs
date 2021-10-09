@@ -6,12 +6,14 @@ pub enum BlockType {
 }
 
 pub struct Block {
+    block_type: BlockType,
     pub data: Vec<u8>,
 }
 
 impl Block {
     pub fn new() -> Block {
         Block {
+            block_type: BlockType::NonEmpty,
             data: vec![0; BLOCK_SIZE * BLOCK_SIZE],
         }
     }

@@ -1,4 +1,4 @@
-use nalgebra::{matrix, vector, Vector3, Vector4};
+use nalgebra::{matrix, vector, Vector2, Vector3, Vector4};
 
 use crate::volume::Volume;
 
@@ -12,7 +12,7 @@ impl Camera {
     pub fn new(width: usize, height: usize) -> Camera {
         Camera {
             position: vector![-4.0, 108.0, -85.0],
-            target: vector![34.0, 128.0, 128.0],
+            target: vector![34.0, 128.0, 128.0], //target: vector![0.0, 0.0, 0.0],
             resolution: (width, height),
         }
     }
@@ -62,7 +62,7 @@ impl Camera {
                 let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
 
                 let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
-                let dir_world_3 = vector![dir_world.x, dir_world.y, dir_world.z].normalize();
+                let dir_world_3 = dir_world.xyz().normalize();
 
                 //println!("{}", dir_world_3);
 
@@ -95,13 +95,6 @@ impl Ray {
         Ray { origin, direction }
     }
 
-    pub fn from_4(origin: Vector4<f32>, direction: Vector4<f32>) -> Ray {
-        Ray {
-            origin: vector![origin.x, origin.y, origin.z],
-            direction: vector![direction.x, direction.y, direction.z],
-        }
-    }
-
     pub fn point_from_t(&self, t: f32) -> Vector3<f32> {
         self.origin + t * self.direction
     }
@@ -111,11 +104,18 @@ impl Ray {
     }
 }
 
-pub fn transfer_function(sample: f32) -> (u8, u8, u8, u8) {
-    if sample > 2.0 && sample < 3.0 {
-        (14, 14, 14, 14)
+// R G B A -- A <0;1>
+pub fn transfer_function(sample: f32) -> (f32, f32, f32, f32) {
+    if sample > 4.0 {
+        (20.0, 220.0, 20.0, 0.5)
+    } else if sample > 3.0 {
+        (220.0, 10.0, 10.0, 0.2)
+    } else if sample > 2.0 {
+        (50.0, 50.0, 10.0, 0.2)
+    } else if sample > 1.0 {
+        (10.0, 10.0, 40.0, 0.1)
     } else {
-        (0, 0, 0, 0)
+        (0.0, 0.0, 0.0, 0.0)
     }
 }
 
@@ -144,9 +144,9 @@ impl BoundBox {
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8, u8) {
+    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
         //let mut color = vector![0.0, 0.0, 0.0];
-        let mut accum = (0, 0, 0, 0);
+        let mut accum = (0.0, 0.0, 0.0, 0.0);
 
         match self.intersect(ray) {
             Some((t1, t2)) => {
@@ -166,21 +166,48 @@ impl BoundBox {
 
                     let color = transfer_function(sample);
 
-                    accum.0 = (accum.0 as u8).saturating_add(color.0);
-                    accum.1 = (accum.1 as u8).saturating_add(color.1);
-                    accum.2 = (accum.2 as u8).saturating_add(color.2);
-                    accum.3 = (accum.3 as u8).saturating_add(color.3);
-
                     pos += step;
+
+                    if color.3 == 0.0 {
+                        if !self.volume.is_in(pos) {
+                            break;
+                        }
+                        continue;
+                    }
+
+                    // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+                    //sum = (1 - sum.alpha) * volume.density * color + sum;
+
+                    accum.0 += (1.0 - accum.3) * color.0;
+                    accum.1 += (1.0 - accum.3) * color.1;
+                    accum.2 += (1.0 - accum.3) * color.2;
+                    accum.3 += (1.0 - accum.3) * color.3;
+
+                    // accum.0 += color.0 * color.3;
+                    // accum.1 += color.1 * color.3;
+                    // accum.2 += color.2 * color.3;
+
+                    // early ray termination
+                    if (color.3 - 1.0).abs() < f32::EPSILON {
+                        break;
+                    }
+
+                    //accum.1 = (accum.1 as u8).saturating_add(color.1 / color.3);
+                    //accum.2 = (accum.2 as u8).saturating_add(color.2 / color.3);
+                    //accum.3 = (accum.3 as u8).saturating_add(color.3);
 
                     if !self.volume.is_in(pos) {
                         break;
                     }
                 }
 
-                accum
+                let accum_i_x = accum.0.min(255.0) as u8;
+                let accum_i_y = accum.1.min(255.0) as u8;
+                let accum_i_z = accum.2.min(255.0) as u8;
+
+                (accum_i_x, accum_i_y, accum_i_z)
             }
-            None => (0, 0, 0, 0),
+            None => (0, 0, 0),
         }
     }
 

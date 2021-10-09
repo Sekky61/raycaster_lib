@@ -14,8 +14,8 @@ use volume::Volume;
 
 use crate::camera::{BoundBox, Camera};
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
 
 sixtyfps::sixtyfps! {
     import { Slider, HorizontalBox, VerticalBox, GroupBox, ComboBox } from "sixtyfps_widgets.60";
@@ -114,6 +114,7 @@ fn main() {
     main_window.set_x_coord(camera_init.x);
     main_window.set_y_coord(camera_init.y);
     main_window.set_z_coord(camera_init.z);
+
     let global_coords = Arc::new(Mutex::new(camera_init));
 
     // setting x coordinate
