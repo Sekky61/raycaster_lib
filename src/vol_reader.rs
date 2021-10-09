@@ -5,50 +5,19 @@ use std::{fs::File, io::Read};
 
 use nalgebra::{vector, Vector3};
 
-#[derive(Debug)]
-pub struct RGBColor(pub u8, pub u8, pub u8);
+const BLOCK_SIZE: usize = 16;
 
-impl RGBColor {
-    pub fn from_char(val: u8) -> RGBColor {
-        RGBColor(val, val, val)
-    }
-
-    pub fn from_vals(r: u8, g: u8, b: u8) -> RGBColor {
-        RGBColor(r, g, b)
-    }
-
-    pub fn from_slice(slice: &[f32]) -> RGBColor {
-        RGBColor(slice[0] as u8, slice[1] as u8, slice[2] as u8)
-    }
-
-    pub fn to_int(&self) -> u32 {
-        let r = self.0 as u32;
-        let g = self.1 as u32;
-        let b = self.2 as u32;
-
-        (r << 16) + (g << 8) + b
-    }
+struct Block {
+    pub data: Vec<u8>,
 }
 
-#[derive(Debug)]
-pub struct Frame {
-    width: usize,
-    height: usize,
-    data: Vec<u8>,
-}
-
-impl Frame {
-    pub fn from_data(width: usize, height: usize, data: &[u8]) -> Frame {
-        Frame {
-            width,
-            height,
-            data: data.to_owned(),
-        }
+impl Block {
+    pub fn new() -> Block {
+        Block { data: vec![] }
     }
 
-    pub fn get_data(&self, x: usize, y: usize) -> u8 {
-        let start = y * self.height + x;
-        *self.data.get(start).unwrap_or(&0)
+    pub fn get_data(&self, x: usize, y: usize, z: usize) -> u8 {
+        self.data[x + y * BLOCK_SIZE + z * BLOCK_SIZE * BLOCK_SIZE]
     }
 }
 
@@ -61,7 +30,10 @@ pub struct Volume {
     scale_x: f32,
     scale_y: f32,
     scale_z: f32,
-    frames: Vec<Frame>,
+    vol_dims: (f32, f32, f32),
+    data: Vec<u8>,
+    block_dim: (usize, usize, usize),
+    blocks: Vec<Block>,
 }
 
 impl std::fmt::Debug for Volume {
@@ -88,7 +60,10 @@ impl Volume {
             scale_x: 1.0,
             scale_y: 1.0,
             scale_z: 1.0,
-            frames: vec![],
+            vol_dims: (1.0, 1.0, 1.0),
+            data: vec![],
+            block_dim: (0, 0, 0),
+            blocks: vec![],
         }
     }
 
@@ -114,14 +89,14 @@ impl Volume {
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let c000 = self.get_3d(x_low, y_low, z_low) as f32;
-        let c001 = self.get_3d(x_low, y_low, z_high) as f32;
-        let c010 = self.get_3d(x_low, y_high, z_low) as f32;
-        let c011 = self.get_3d(x_low, y_high, z_high) as f32;
-        let c100 = self.get_3d(x_high, y_low, z_low) as f32;
-        let c101 = self.get_3d(x_high, y_low, z_high) as f32;
-        let c110 = self.get_3d(x_high, y_high, z_low) as f32;
-        let c111 = self.get_3d(x_high, y_high, z_high) as f32;
+        let c000 = self.get_3d_data(x_low, y_low, z_low) as f32;
+        let c001 = self.get_3d_data(x_low, y_low, z_high) as f32;
+        let c010 = self.get_3d_data(x_low, y_high, z_low) as f32;
+        let c011 = self.get_3d_data(x_low, y_high, z_high) as f32;
+        let c100 = self.get_3d_data(x_high, y_low, z_low) as f32;
+        let c101 = self.get_3d_data(x_high, y_low, z_high) as f32;
+        let c110 = self.get_3d_data(x_high, y_high, z_low) as f32;
+        let c111 = self.get_3d_data(x_high, y_high, z_high) as f32;
 
         let c00 = c000 * (1.0 - x_t) + c100 * x_t;
         let c01 = c001 * (1.0 - x_t) + c101 * x_t;
@@ -189,26 +164,13 @@ impl Volume {
             rest.len() / (256 * 256)
         );
 
-        let mut frames_iter = rest.chunks((y * z) as usize);
-
-        println!(
-            "Chunks: {} | Chunk size = {}",
-            frames_iter.len(),
-            frames_iter.next().expect("ddd").len(),
-        );
-
-        let mut frames = Vec::new();
-
-        println!("{}", frames_iter.len());
-
-        for frame_data in frames_iter {
-            let frame = Frame::from_data(y as usize, z as usize, frame_data);
-            frames.push(frame);
-        }
+        let data = rest.to_owned();
 
         let x = x as usize;
         let y = y as usize;
         let z = z as usize;
+
+        let vol_dims = (x as f32 * scale_x, y as f32 * scale_y, z as f32 * scale_z);
 
         Volume {
             x,
@@ -218,26 +180,94 @@ impl Volume {
             scale_x,
             scale_y,
             scale_z,
-            frames,
+            vol_dims,
+            data,
+            block_dim: (0, 0, 0),
+            blocks: vec![],
+        }
+    }
+    /*
+        pub fn blocks_from_frames(&mut self) {
+            let num_blocks_x = (self.x as f32 / BLOCK_SIZE as f32).ceil() as usize;
+            let num_blocks_y = (self.y as f32 / BLOCK_SIZE as f32).ceil() as usize;
+            let num_blocks_z = (self.z as f32 / BLOCK_SIZE as f32).ceil() as usize;
+
+            let num_of_blocks = num_blocks_x + num_blocks_y + num_blocks_z;
+
+            let mut blocks: Vec<Block> = vec![];
+
+            for b_z in 0..num_blocks_z {
+                for b_y in 0..num_blocks_y {
+                    for b_x in 0..num_blocks_x {
+                        let mut block = Block::new();
+
+                        let x_coord = b_x * BLOCK_SIZE;
+                        let y_coord = b_y * BLOCK_SIZE;
+
+                        for z in 0..BLOCK_SIZE {
+                            let ind = b_z * BLOCK_SIZE + z;
+                            let plane = self.data.get(ind);
+                            match plane {
+                                Some(fr) => {
+                                    let mut slic = fr.get_square_cutout(x_coord, y_coord, BLOCK_SIZE);
+                                    block.data.append(&mut slic);
+                                }
+                                None => {
+                                    let mut slic = vec![0; BLOCK_SIZE * BLOCK_SIZE];
+                                    block.data.append(&mut slic);
+                                }
+                            }
+                        }
+
+                        blocks.push(block);
+                    }
+                }
+            }
+
+            self.block_dim = (num_blocks_x, num_blocks_y, num_blocks_z);
+            self.blocks = blocks;
+        }
+    */
+    pub fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
+        z + y * self.z + x * self.y * self.z
+    }
+
+    pub fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
+        //println!("Getting {} {} {}", x, y, z);
+        let val = self.data.get(self.get_3d_index(x, y, z));
+        match val {
+            Some(&v) => v,
+            None => 0,
         }
     }
 
-    pub fn get_3d(&self, x: usize, y: usize, z: usize) -> u8 {
+    fn get_block(&self, x: usize, y: usize, z: usize) -> Option<&Block> {
+        let block_x = (x as f32 / BLOCK_SIZE as f32).ceil() as usize;
+        let block_y = (y as f32 / BLOCK_SIZE as f32).ceil() as usize;
+        let block_z = (z as f32 / BLOCK_SIZE as f32).ceil() as usize;
+
+        self.blocks.get(
+            block_x + block_y * self.block_dim.0 + block_z * self.block_dim.0 * self.block_dim.1,
+        )
+    }
+
+    pub fn get_3d_blocks(&self, x: usize, y: usize, z: usize) -> u8 {
         //println!("Getting {} {} {}", x, y, z);
-        let plane = self.frames.get(x);
-        let plane = match plane {
-            Some(p) => p,
+        let block = self.get_block(x, y, z);
+        let block = match block {
+            Some(b) => b,
             None => return 0,
-        }; //.expect("out of range frame");
-        plane.get_data(y, z)
+        };
+        block.get_data(x % BLOCK_SIZE, y % BLOCK_SIZE, z % BLOCK_SIZE)
     }
 
     pub fn is_in(&self, pos: Vector3<f32>) -> bool {
-        let x_f = self.x as f32;
-        let y_f = self.y as f32;
-        let z_f = self.z as f32;
-
-        x_f > pos.x && y_f > pos.y && z_f > pos.z && pos.x > 0.0 && pos.y > 0.0 && pos.z > 0.0
+        self.vol_dims.0 > pos.x
+            && self.vol_dims.1 > pos.y
+            && self.vol_dims.2 > pos.z
+            && pos.x > 0.0
+            && pos.y > 0.0
+            && pos.z > 0.0
     }
 }
 
@@ -245,14 +275,14 @@ impl Display for Volume {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         write!(
             fmt,
-            "coords {} {} {} | scale {} {} {} | data count {}",
+            "coords {} {} {} | scale {} {} {} | data length {} B",
             self.x,
             self.y,
             self.z,
             self.scale_x,
             self.scale_y,
             self.scale_z,
-            self.frames.len()
+            self.data.len()
         )
     }
 }

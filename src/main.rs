@@ -107,7 +107,6 @@ fn main() {
     // setting x coordinate
     let main_window_weak = main_window.as_weak();
     let gl_coords_x = global_coords.clone();
-    //let tx_x = tx.clone();
 
     main_window.on_x_changed(move || {
         let win = main_window_weak.unwrap();
@@ -117,14 +116,7 @@ fn main() {
 
         let mut old_coords = gl_coords_x.lock().unwrap();
 
-        println!("x read  {}", old_coords);
-
-        //let mut coords = *old_coords;
         (*old_coords).x = x;
-
-        println!("x set  {}", old_coords);
-
-        //tx_x.send(coords).unwrap();
     });
 
     // setting y coordinate
@@ -140,10 +132,7 @@ fn main() {
 
         let mut old_coords = gl_coords_y.lock().unwrap();
 
-        //let mut coords = *old_coords;
         (*old_coords).y = y;
-
-        //tx_y.send(coords).unwrap();
     });
 
     // setting z coordinate
@@ -159,10 +148,7 @@ fn main() {
 
         let mut old_coords = gl_coords_z.lock().unwrap();
 
-        //let mut coords = *old_coords;
         (*old_coords).z = z;
-
-        //tx_z.send(coords).unwrap();
     });
 
     let main_window_weak = main_window.as_weak();

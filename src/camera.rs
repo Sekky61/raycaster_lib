@@ -1,7 +1,7 @@
 use nalgebra::{matrix, vector, Vector3, Vector4};
 use sixtyfps::Rgb8Pixel;
 
-use crate::vol_reader::{RGBColor, Volume};
+use crate::vol_reader::Volume;
 
 pub struct Camera {
     position: Vector3<f32>,
@@ -112,11 +112,11 @@ impl Ray {
     }
 }
 
-pub fn transfer_function(sample: f32) -> (u8, u8, u8) {
+pub fn transfer_function(sample: f32) -> (u8, u8, u8, u8) {
     if sample > 2.0 && sample < 3.0 {
-        (14, 14, 14)
+        (14, 14, 14, 14)
     } else {
-        (0, 0, 0)
+        (0, 0, 0, 0)
     }
 }
 
@@ -145,11 +145,9 @@ impl BoundBox {
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray) -> RGBColor {
+    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8, u8) {
         //let mut color = vector![0.0, 0.0, 0.0];
-        let mut accum = (0, 0, 0);
-
-        let alpha = 0.1;
+        let mut accum = (0, 0, 0, 0);
 
         match self.intersect(ray) {
             Some((t1, t2)) => {
@@ -169,26 +167,21 @@ impl BoundBox {
 
                     let color = transfer_function(sample);
 
-                    accum.0 += color.0;
-                    accum.1 += color.1;
-                    accum.2 += color.2;
+                    accum.0 = (accum.0 as u8).saturating_add(color.0);
+                    accum.1 = (accum.1 as u8).saturating_add(color.1);
+                    accum.2 = (accum.2 as u8).saturating_add(color.2);
+                    accum.3 = (accum.3 as u8).saturating_add(color.3);
 
                     pos += step;
 
-                    //steps_count += 1;
-
                     if !self.volume.is_in(pos) {
-                        // println!(
-                        //     "{} outside {} {} {} after {} steps",
-                        //     pos, self.volume.x, self.volume.y, self.volume.z, steps_count
-                        // );
                         break;
                     }
                 }
 
-                RGBColor::from_vals(accum.0, accum.1, accum.2)
+                accum
             }
-            None => RGBColor::from_vals(0, 0, 0),
+            None => (0, 0, 0, 0),
         }
     }
 
