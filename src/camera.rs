@@ -1,7 +1,6 @@
 use nalgebra::{matrix, vector, Vector3, Vector4};
-use sixtyfps::Rgb8Pixel;
 
-use crate::vol_reader::Volume;
+use crate::volume::Volume;
 
 pub struct Camera {
     position: Vector3<f32>,

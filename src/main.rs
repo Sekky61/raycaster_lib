@@ -1,14 +1,16 @@
 //extern crate minifb;
 
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 mod camera;
 
+mod block;
 mod vol_reader;
+mod volume;
 
 use nalgebra::vector;
 use sixtyfps::{Image, Rgb8Pixel, SharedPixelBuffer};
-use vol_reader::Volume;
+use volume::Volume;
 
 use crate::camera::{BoundBox, Camera};
 
@@ -91,7 +93,17 @@ fn main() {
     let main_window = MainWindow::new();
 
     let mut camera = Camera::new(WIDTH, HEIGHT);
-    let volume = Volume::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("Skull.vol");
+    //let volume = Volume::white_vol();
+
+    let volume = match read_result {
+        Ok(vol) => vol,
+        Err(message) => {
+            eprint!("{}", message);
+            std::process::exit(1);
+        }
+    };
+
     let bbox = BoundBox::from_volume(volume);
 
     // threading communication
