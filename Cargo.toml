@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
+[lib]
+name = "raycaster_lib"
+path = "src/lib.rs"
+
+# firegraph
 [profile.release]
 debug = true
 
@@ -20,3 +25,4 @@ harness = false
 #nom = "7.0.0"
 nalgebra = "0.29.0"
 sixtyfps = "0.1.2"
+minifb = "0.19.3"

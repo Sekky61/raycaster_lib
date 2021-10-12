@@ -53,6 +53,12 @@ impl VolumeBuilder {
     }
 }
 
+impl Default for VolumeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Volume {
     size: Vector3<usize>,
     border: u32,

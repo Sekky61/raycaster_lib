@@ -25,7 +25,7 @@ where
 
     match extension {
         "vol" => vol_parser(path),
-        _ => return Err("Unknown extension"),
+        _ => Err("Unknown extension"),
     }
 }
 
@@ -82,12 +82,12 @@ fn vol_parser(path: &Path) -> Result<Volume, &'static str> {
 
     let rest = &fb[28..];
 
-    println!(
-        "Rest: {} | Rest / 68 = {} | Rest / 256*256 = {}",
-        rest.len(),
-        rest.len() / 68,
-        rest.len() / (256 * 256)
-    );
+    // println!(
+    //     "Parsed file. Rest: {} | Rest / 68 = {} | Rest / 256*256 = {}",
+    //     rest.len(),
+    //     rest.len() / 68,
+    //     rest.len() / (256 * 256)
+    // );
 
     let data = rest.to_owned();
 

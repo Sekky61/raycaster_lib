@@ -1,4 +1,4 @@
-use nalgebra::{matrix, vector, Vector2, Vector3, Vector4};
+use nalgebra::{matrix, vector, Matrix4, Vector3, Vector4};
 
 use crate::volume::Volume;
 
@@ -17,8 +17,8 @@ impl Camera {
         }
     }
 
-    pub fn change_pos(&mut self, change: Vector3<f32>) {
-        self.position += change;
+    pub fn change_pos(&mut self, delta: Vector3<f32>) {
+        self.position += delta;
     }
 
     pub fn set_pos(&mut self, pos: Vector3<f32>) {
@@ -29,6 +29,19 @@ impl Camera {
         self.resolution
     }
 
+    pub fn get_look_at_matrix(&self) -> Matrix4<f32> {
+        let camera_forward = (self.position - self.target).normalize();
+        let up_vec = vector![0.0, 1.0, 0.0];
+        let right = Vector3::cross(&up_vec, &camera_forward);
+        let up = Vector3::cross(&camera_forward, &right);
+
+        // cam to world
+        matrix![right.x, up.x, camera_forward.x, self.position.x;
+                                                            right.y, up.y, camera_forward.y, self.position.y;
+                                                            right.z,up.z,camera_forward.z, self.position.z;
+                                                            0.0,0.0,0.0, 1.0]
+    }
+
     pub fn cast_rays_bytes(&self, bbox: &BoundBox, buffer: &mut [u8]) {
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
@@ -37,17 +50,8 @@ impl Camera {
 
         let aspect_ratio = image_width / image_height;
 
-        let camera_forward = (self.position - self.target).normalize();
-        let up_vec = vector![0.0, 1.0, 0.0];
-        let right = Vector3::cross(&up_vec, &camera_forward);
-        let up = Vector3::cross(&camera_forward, &right);
-
         // cam to world
-        let lookat_matrix = matrix![right.x, right.y, right.z, 0.0;
-                                    up.x, up.y, up.z, 0.0;
-                                    camera_forward.x,camera_forward.y,camera_forward.z, 0.0;
-                                    self.position.x,self.position.y,self.position.z, 1.0]
-        .transpose();
+        let lookat_matrix = self.get_look_at_matrix();
 
         for y in 0..self.resolution.1 {
             for x in 0..self.resolution.0 {
@@ -77,11 +81,6 @@ impl Camera {
                 buffer[index + 2] = ray_color.2;
             }
         }
-
-        println!(
-            "Ray at cam ({} | {} | {}) window ({})",
-            origin.x, origin.y, origin.z, 0
-        );
     }
 }
 
