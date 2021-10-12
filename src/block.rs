@@ -1,4 +1,19 @@
-pub const BLOCK_SIZE: usize = 16;
+pub const BLOCK_SIZE: usize = 8;
+
+use std::collections::HashMap;
+
+// data: map of slices of block
+pub struct BlockBuilder {
+    data: HashMap<u8, Vec<u8>>,
+}
+
+impl BlockBuilder {
+    pub fn new() -> BlockBuilder {
+        BlockBuilder {
+            data: HashMap::new(),
+        }
+    }
+}
 
 pub enum BlockType {
     Empty,
@@ -14,8 +29,22 @@ impl Block {
     pub fn new() -> Block {
         Block {
             block_type: BlockType::NonEmpty,
-            data: vec![0; BLOCK_SIZE * BLOCK_SIZE],
+            data: vec![0; BLOCK_SIZE * BLOCK_SIZE * BLOCK_SIZE],
         }
+    }
+
+    pub fn from_data(data: Vec<u8>) -> Block {
+        let non_zero_byte = data.iter().any(|&p| p != 0);
+        let block_type = match non_zero_byte {
+            true => BlockType::NonEmpty,
+            false => BlockType::Empty,
+        };
+
+        if data.len() != BLOCK_SIZE * BLOCK_SIZE * BLOCK_SIZE {
+            panic!("Data size not precisely matching block size");
+        }
+
+        Block { block_type, data }
     }
 
     pub fn get_data(&self, x: usize, y: usize, z: usize) -> u8 {
@@ -36,6 +65,7 @@ impl Blocks {
         }
     }
 
+    // get block coresponding to a voxel coordinates
     pub fn get_block(&self, x: usize, y: usize, z: usize) -> Option<&Block> {
         let block_x = (x as f32 / BLOCK_SIZE as f32).ceil() as usize;
         let block_y = (y as f32 / BLOCK_SIZE as f32).ceil() as usize;

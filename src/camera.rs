@@ -45,8 +45,7 @@ impl Camera {
     pub fn cast_rays_bytes(&self, bbox: &BoundBox, buffer: &mut [u8]) {
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
-        let origin = self.position;
-        let origin_4 = Vector4::new(origin.x, origin.y, origin.z, 1.0);
+        let origin_4 = Vector4::new(self.position.x, self.position.y, self.position.z, 1.0);
 
         let aspect_ratio = image_width / image_height;
 
@@ -66,11 +65,12 @@ impl Camera {
                 let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
 
                 let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
-                let dir_world_3 = dir_world.xyz().normalize();
+                let mut dir_world_3 = dir_world.xyz();
+                dir_world_3.normalize_mut();
 
                 //println!("{}", dir_world_3);
 
-                let ray_world = Ray::from_3(origin, dir_world_3);
+                let ray_world = Ray::from_3(self.position, dir_world_3);
 
                 let ray_color = bbox.collect_light(&ray_world);
 
@@ -182,18 +182,10 @@ impl BoundBox {
                     accum.2 += (1.0 - accum.3) * color.2;
                     accum.3 += (1.0 - accum.3) * color.3;
 
-                    // accum.0 += color.0 * color.3;
-                    // accum.1 += color.1 * color.3;
-                    // accum.2 += color.2 * color.3;
-
                     // early ray termination
                     if (color.3 - 1.0).abs() < f32::EPSILON {
                         break;
                     }
-
-                    //accum.1 = (accum.1 as u8).saturating_add(color.1 / color.3);
-                    //accum.2 = (accum.2 as u8).saturating_add(color.2 / color.3);
-                    //accum.3 = (accum.3 as u8).saturating_add(color.3);
 
                     if !self.volume.is_in(pos) {
                         break;

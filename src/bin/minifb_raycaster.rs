@@ -4,6 +4,7 @@ use minifb::{Key, Window, WindowOptions};
 
 use raycaster_lib::camera::{BoundBox, Camera};
 use raycaster_lib::vol_reader;
+use raycaster_lib::volume::Volume;
 
 use nalgebra::vector;
 
@@ -27,18 +28,20 @@ fn main() {
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
     window.limit_update_rate(Some(std::time::Duration::from_millis(100)));
 
-    let vol = Volume::from_file("Skull.vol");
-    let boxx = BoundBox::from_volume(vol);
+    let vol = vol_reader::from_file("Skull.vol");
+    let volume = match vol {
+        Ok(vol) => vol,
+        Err(e) => {
+            panic!("{}", e)
+        }
+    };
+    let boxx = BoundBox::from_volume(volume);
 
     println!("Box {:?}", boxx);
 
     let mut frame_buffer = vec![0; WIDTH * HEIGHT * 3];
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        // for i in buffer.iter_mut() {
-        //     *i = 0; // write something more funny here!
-        // }
-
         let w = window.is_key_down(Key::W);
         let a = window.is_key_down(Key::A);
         let s = window.is_key_down(Key::S);
@@ -63,8 +66,8 @@ fn main() {
         camera.cast_rays_bytes(&boxx, frame_buffer.as_mut_slice());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        window
-            .update_with_buffer(&frame_buffer[..], WIDTH, HEIGHT)
-            .unwrap();
+        // window
+        //     .update_with_buffer(&frame_buffer[..], WIDTH, HEIGHT)
+        //     .unwrap();
     }
 }
