@@ -4,9 +4,9 @@ use std::{fs::File, io::Read};
 
 use nalgebra::vector;
 
-use crate::volume::{Volume, VolumeBuilder};
+use super::VolumeBuilder;
 
-pub fn from_file<P>(path: P) -> Result<Volume, &'static str>
+pub fn from_file<P>(path: P) -> Result<VolumeBuilder, &'static str>
 where
     P: AsRef<Path>,
 {
@@ -29,7 +29,7 @@ where
     }
 }
 
-fn vol_parser(path: &Path) -> Result<Volume, &'static str> {
+fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
     let metadata = path.metadata();
     let metadata = match metadata {
         Ok(metadata) => metadata,
@@ -42,9 +42,7 @@ fn vol_parser(path: &Path) -> Result<Volume, &'static str> {
         .read_to_end(&mut fb)
         .expect("cannot read");
 
-    // assert_eq!(parser("(abc)"), Ok(("", "abc")));
-
-    // branch to different parsers
+    // nom assert_eq!(parser("(abc)"), Ok(("", "abc")));
 
     let x_bytes: [u8; 4] = fb.get(0..4).expect("no bytes x").try_into().expect("wrong");
     let x = u32::from_be_bytes(x_bytes);
@@ -95,12 +93,11 @@ fn vol_parser(path: &Path) -> Result<Volume, &'static str> {
     let y = y as usize;
     let z = z as usize;
 
-    let volume = VolumeBuilder::new()
+    let volume_builder = VolumeBuilder::new()
         .set_size(vector![x, y, z])
         .set_scale(vector![scale_x, scale_y, scale_z])
         .set_data(data)
-        .set_border(0)
-        .build();
+        .set_border(0);
 
-    Ok(volume)
+    Ok(volume_builder)
 }

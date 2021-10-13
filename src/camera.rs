@@ -42,7 +42,10 @@ impl Camera {
                                                             0.0,0.0,0.0, 1.0]
     }
 
-    pub fn cast_rays_bytes(&self, bbox: &BoundBox, buffer: &mut [u8]) {
+    pub fn cast_rays_bytes<V>(&self, bbox: &BoundBox<V>, buffer: &mut [u8])
+    where
+        V: Volume,
+    {
         let (image_width, image_height) = (self.resolution.0 as f32, self.resolution.1 as f32);
 
         let origin_4 = Vector4::new(self.position.x, self.position.y, self.position.z, 1.0);
@@ -118,24 +121,26 @@ pub fn transfer_function(sample: f32) -> (f32, f32, f32, f32) {
     }
 }
 
-pub struct BoundBox {
+pub struct BoundBox<V>
+where
+    V: Volume,
+{
     min: Vector3<f32>,
     max: Vector3<f32>,
-    volume: Volume,
+    volume: V,
 }
 
-impl std::fmt::Debug for BoundBox {
+impl<V: Volume> std::fmt::Debug for BoundBox<V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BoundBox")
             .field("min", &self.min)
             .field("max", &self.max)
-            .field("volume", &self.volume)
             .finish()
     }
 }
 
-impl BoundBox {
-    pub fn from_volume(volume: Volume) -> BoundBox {
+impl<V: Volume> BoundBox<V> {
+    pub fn from_volume(volume: V) -> BoundBox<V> {
         BoundBox {
             min: vector![0.0, 0.0, 0.0],
             max: volume.get_dims(),
@@ -236,13 +241,16 @@ impl BoundBox {
 
 #[cfg(test)]
 mod test {
+    use crate::volume::{LinearVolume, VolumeBuilder};
+
     use super::*;
 
-    fn cube_bound_box() -> BoundBox {
+    fn cube_bound_box() -> BoundBox<LinearVolume> {
+        let builder = VolumeBuilder::white_vol();
         BoundBox {
             min: vector![0.0, 0.0, 0.0],
             max: vector![1.0, 1.0, 1.0],
-            volume: Volume::white_vol(),
+            volume: LinearVolume::from(builder),
         }
     }
 

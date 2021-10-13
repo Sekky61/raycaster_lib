@@ -2,8 +2,10 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use raycaster_lib::{
     camera::{BoundBox, Camera},
-    render_frame, render_to_byte_buffer, vol_reader,
+    render_frame, render_to_byte_buffer,
 };
+
+use raycaster_lib::volume::vol_reader::from_file;
 
 fn full_render(c: &mut Criterion) {
     c.bench_function("file read, alloc, render 512x512", |b| {

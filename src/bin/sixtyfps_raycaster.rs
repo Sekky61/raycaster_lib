@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use raycaster_lib::camera::{BoundBox, Camera};
-use raycaster_lib::vol_reader;
+use raycaster_lib::volume::{vol_reader, LinearVolume, Volume};
 
 use nalgebra::vector;
 use sixtyfps::{sixtyfps, Image, Rgb8Pixel, SharedPixelBuffer};
@@ -82,7 +82,10 @@ sixtyfps! {
     }
 }
 
-fn render_to_byte_buffer(camera: &Camera, bbox: &BoundBox, buffer: &mut [u8]) {
+fn render_to_byte_buffer<V>(camera: &Camera, bbox: &BoundBox<V>, buffer: &mut [u8])
+where
+    V: Volume,
+{
     camera.cast_rays_bytes(bbox, buffer);
 }
 
@@ -94,13 +97,15 @@ fn main() {
     let read_result = vol_reader::from_file("Skull.vol");
     //let volume = Volume::white_vol();
 
-    let volume = match read_result {
+    let volume_b = match read_result {
         Ok(vol) => vol,
         Err(message) => {
             eprint!("{}", message);
             std::process::exit(1);
         }
     };
+
+    let volume = LinearVolume::from(volume_b);
 
     let bbox = BoundBox::from_volume(volume);
 
@@ -187,4 +192,3 @@ fn main() {
 
     main_window.run(); // blocking
 }
-

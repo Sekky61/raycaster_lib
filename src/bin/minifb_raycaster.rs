@@ -3,8 +3,7 @@
 use minifb::{Key, Window, WindowOptions};
 
 use raycaster_lib::camera::{BoundBox, Camera};
-use raycaster_lib::vol_reader;
-use raycaster_lib::volume::Volume;
+use raycaster_lib::volume::{vol_reader, LinearVolume};
 
 use nalgebra::vector;
 
@@ -29,12 +28,14 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_millis(100)));
 
     let vol = vol_reader::from_file("Skull.vol");
-    let volume = match vol {
+    let volume_b = match vol {
         Ok(vol) => vol,
         Err(e) => {
             panic!("{}", e)
         }
     };
+    let volume = LinearVolume::from(volume_b);
+
     let boxx = BoundBox::from_volume(volume);
 
     println!("Box {:?}", boxx);
