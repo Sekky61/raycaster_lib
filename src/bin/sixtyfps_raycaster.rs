@@ -2,8 +2,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use raycaster_lib::camera::{BoundBox, Camera};
-use raycaster_lib::volume::{vol_reader, LinearVolume, Volume};
+use raycaster_lib::renderer::Renderer;
+use raycaster_lib::volumetric::{vol_reader, LinearVolume};
+use raycaster_lib::Camera;
 
 use nalgebra::vector;
 use sixtyfps::{sixtyfps, Image, Rgb8Pixel, SharedPixelBuffer};
@@ -82,18 +83,11 @@ sixtyfps! {
     }
 }
 
-fn render_to_byte_buffer<V>(camera: &Camera, bbox: &BoundBox<V>, buffer: &mut [u8])
-where
-    V: Volume,
-{
-    camera.cast_rays_bytes(bbox, buffer);
-}
-
 fn main() {
     // window instance
     let main_window = MainWindow::new();
 
-    let mut camera = Camera::new(WIDTH, HEIGHT);
+    let camera = Camera::new(WIDTH, HEIGHT);
     let read_result = vol_reader::from_file("Skull.vol");
     //let volume = Volume::white_vol();
 
@@ -107,7 +101,7 @@ fn main() {
 
     let volume = LinearVolume::from(volume_b);
 
-    let bbox = BoundBox::from_volume(volume);
+    let mut renderer = Renderer::new(volume, camera);
 
     // threading communication
     //let (tx, rx) = mpsc::channel();
@@ -174,13 +168,13 @@ fn main() {
         let new_pos = global_coords.try_lock();
 
         if let Ok(guard) = new_pos {
-            camera.set_pos(*guard);
+            renderer.set_camera_pos(*guard);
         }
 
         let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
         let window_handle_copy = main_window_weak.clone();
 
-        render_to_byte_buffer(&camera, &bbox, buf.as_mut_slice());
+        renderer.cast_rays_bytes(buf.as_mut_slice());
 
         sixtyfps::invoke_from_event_loop(move || {
             let pixel_buffer =

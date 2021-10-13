@@ -2,8 +2,9 @@
 
 use minifb::{Key, Window, WindowOptions};
 
-use raycaster_lib::camera::{BoundBox, Camera};
-use raycaster_lib::volume::{vol_reader, LinearVolume};
+use raycaster_lib::renderer::Renderer;
+use raycaster_lib::volumetric::{vol_reader, LinearVolume};
+use raycaster_lib::Camera;
 
 use nalgebra::vector;
 
@@ -21,7 +22,7 @@ fn main() {
         panic!("{}", e);
     });
 
-    let mut camera = Camera::new(WIDTH, HEIGHT);
+    let camera = Camera::new(WIDTH, HEIGHT);
 
     // Limit to max ~60 fps update rate
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
@@ -36,9 +37,7 @@ fn main() {
     };
     let volume = LinearVolume::from(volume_b);
 
-    let boxx = BoundBox::from_volume(volume);
-
-    println!("Box {:?}", boxx);
+    let mut renderer = Renderer::new(volume, camera);
 
     let mut frame_buffer = vec![0; WIDTH * HEIGHT * 3];
 
@@ -62,9 +61,9 @@ fn main() {
 
         let change = vector![z_p + z_m, x_p + x_m, y_p + y_m];
 
-        camera.change_pos(change);
+        renderer.change_camera_pos(change);
 
-        camera.cast_rays_bytes(&boxx, frame_buffer.as_mut_slice());
+        renderer.cast_rays_bytes(frame_buffer.as_mut_slice());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         // window
