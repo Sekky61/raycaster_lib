@@ -2,9 +2,11 @@
 
 use minifb::{Key, Window, WindowOptions};
 
-use raycaster_lib::renderer::Renderer;
+use raycaster_lib::render::Renderer;
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
 use raycaster_lib::Camera;
+
+use raycaster_lib::SingleThread;
 
 use nalgebra::vector;
 
@@ -35,9 +37,10 @@ fn main() {
             panic!("{}", e)
         }
     };
-    let volume = LinearVolume::from(volume_b);
 
-    let mut renderer = Renderer::new(volume, camera);
+    let volume = volume_b.build::<LinearVolume>();
+
+    let mut renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
 
     let mut frame_buffer = vec![0; WIDTH * HEIGHT * 3];
 
@@ -63,7 +66,7 @@ fn main() {
 
         renderer.change_camera_pos(change);
 
-        renderer.cast_rays_bytes(frame_buffer.as_mut_slice());
+        renderer.render(frame_buffer.as_mut_slice());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         // window

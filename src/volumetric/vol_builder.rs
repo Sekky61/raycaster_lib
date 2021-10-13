@@ -50,8 +50,6 @@ impl VolumeBuilder {
     }
 
     pub fn build<V: Volume + From<VolumeBuilder>>(self) -> V {
-        let vol_dims = self.size.cast::<f32>().component_mul(&self.scale);
-
         V::from(self)
     }
 }

@@ -1,33 +1,8 @@
-use nalgebra::{vector, Vector3, Vector4};
+use super::*;
 
-use crate::camera::Camera;
-use crate::ray::Ray;
-use crate::volumetric::{LinearVolume, Volume};
-
-pub struct Renderer<V>
-where
-    V: Volume,
-{
-    volume: V,
-    camera: Camera,
-}
-
-impl<V: Volume> Renderer<V> {
-    pub fn new(volume: V, camera: Camera) -> Renderer<V> {
-        Renderer { volume, camera }
-    }
-
-    pub fn set_camera_pos(&mut self, pos: Vector3<f32>) {
-        self.camera.set_pos(pos);
-    }
-
-    pub fn change_camera_pos(&mut self, delta: Vector3<f32>) {
-        self.camera.change_pos(delta);
-    }
-}
-
-impl Renderer<LinearVolume> {
-    pub fn cast_rays_bytes(&self, buffer: &mut [u8]) {
+impl Renderer<LinearVolume, MultiThread> {
+    pub fn render(&self, buffer: &mut [u8]) {
+        println!("OMG THE 1 RENDERER");
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
             self.camera.resolution.1 as f32,

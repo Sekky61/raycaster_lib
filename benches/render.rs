@@ -1,9 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use raycaster_lib::renderer::Renderer;
-use raycaster_lib::{render_frame, render_to_byte_buffer, Camera};
-
+use raycaster_lib::render::{MultiThread, Renderer, SingleThread};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
+use raycaster_lib::{render_frame, render_to_byte_buffer, Camera};
 
 fn full_render(c: &mut Criterion) {
     c.bench_function("file read, alloc, render 512x512", |b| {
@@ -26,7 +25,7 @@ fn pure_render(c: &mut Criterion) {
 
         let volume = LinearVolume::from(volume_b);
 
-        let renderer = Renderer::new(volume, camera);
+        let renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
 
         let mut buffer: Vec<u8> = vec![0; 512 * 512 * 3];
 

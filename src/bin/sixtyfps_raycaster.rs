@@ -2,9 +2,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use raycaster_lib::renderer::Renderer;
+use raycaster_lib::render::Renderer;
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
-use raycaster_lib::Camera;
+use raycaster_lib::{Camera, MultiThread, SingleThread};
 
 use nalgebra::vector;
 use sixtyfps::{sixtyfps, Image, Rgb8Pixel, SharedPixelBuffer};
@@ -89,7 +89,6 @@ fn main() {
 
     let camera = Camera::new(WIDTH, HEIGHT);
     let read_result = vol_reader::from_file("Skull.vol");
-    //let volume = Volume::white_vol();
 
     let volume_b = match read_result {
         Ok(vol) => vol,
@@ -99,9 +98,9 @@ fn main() {
         }
     };
 
-    let volume = LinearVolume::from(volume_b);
+    //let volume = volume_b.build::<LinearVolume>();
 
-    let mut renderer = Renderer::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, SingleThread>::new(volume_b.into(), camera);
 
     // threading communication
     //let (tx, rx) = mpsc::channel();
@@ -174,7 +173,7 @@ fn main() {
         let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
         let window_handle_copy = main_window_weak.clone();
 
-        renderer.cast_rays_bytes(buf.as_mut_slice());
+        renderer.render(buf.as_mut_slice());
 
         sixtyfps::invoke_from_event_loop(move || {
             let pixel_buffer =

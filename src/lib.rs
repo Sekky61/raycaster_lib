@@ -1,12 +1,14 @@
 mod camera;
 mod ray;
-pub mod renderer;
+pub mod render;
 pub mod volumetric;
 
 pub use camera::Camera;
 pub use volumetric::vol_reader;
 
-use crate::{renderer::Renderer, volumetric::LinearVolume};
+use crate::{render::Renderer, volumetric::LinearVolume};
+
+pub use render::{MultiThread, SingleThread};
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = Camera::new(width, height);
@@ -22,15 +24,15 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
 
     let volume = LinearVolume::from(volume_b);
 
-    let renderer = Renderer::new(volume, camera);
+    let renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
 
     let mut buffer: Vec<u8> = vec![0; width * height * 3];
 
-    renderer.cast_rays_bytes(&mut buffer);
+    renderer.render(&mut buffer);
 
     buffer
 }
 
-pub fn render_to_byte_buffer(renderer: &Renderer<LinearVolume>, buffer: &mut [u8]) {
-    renderer.cast_rays_bytes(buffer);
+pub fn render_to_byte_buffer(renderer: &Renderer<LinearVolume, SingleThread>, buffer: &mut [u8]) {
+    renderer.render(buffer);
 }
