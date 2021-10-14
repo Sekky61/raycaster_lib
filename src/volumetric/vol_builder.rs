@@ -11,11 +11,7 @@ pub struct VolumeBuilder {
 }
 
 pub trait BuildVolume {
-    type VolumeItem;
-
     fn build(builder: VolumeBuilder) -> Self;
-
-    fn convertor(builder_data: &[u8]) -> Vec<Self::VolumeItem>;
 }
 
 impl VolumeBuilder {
@@ -62,6 +58,31 @@ impl VolumeBuilder {
         V: Volume + BuildVolume,
     {
         V::build(self)
+    }
+
+    fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
+        z + y * self.size.z + x * self.size.y * self.size.z
+    }
+
+    pub fn get_data(&self, x: usize, y: usize, z: usize) -> u8 {
+        let index = self.get_3d_index(x, y, z);
+        match self.data.get(index) {
+            Some(&v) => v,
+            None => 0,
+        }
+    }
+
+    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [u8; 8] {
+        [
+            self.get_data(x, y, z),
+            self.get_data(x, y, z + 1),
+            self.get_data(x, y + 1, z),
+            self.get_data(x, y + 1, z + 1),
+            self.get_data(x + 1, y, z),
+            self.get_data(x + 1, y, z + 1),
+            self.get_data(x + 1, y + 1, z),
+            self.get_data(x + 1, y + 1, z + 1),
+        ]
     }
 }
 
