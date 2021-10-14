@@ -2,6 +2,7 @@ use super::*;
 
 impl Renderer<LinearVolume, SINGLE_THREAD> {
     pub fn render(&self, buffer: &mut [u8]) {
+        println!("RENDER BUM");
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
             self.camera.resolution.1 as f32,
