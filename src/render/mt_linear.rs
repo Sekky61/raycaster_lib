@@ -1,6 +1,6 @@
 use super::*;
 
-impl Renderer<LinearVolume, MultiThread> {
+impl Renderer<LinearVolume, MULTI_THREAD> {
     pub fn render(&self, buffer: &mut [u8]) {
         println!("OMG THE 1 RENDERER");
         let (image_width, image_height) = (

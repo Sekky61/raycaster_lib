@@ -2,7 +2,7 @@ mod mt_linear;
 mod renderer;
 mod st_linear;
 
-pub use renderer::{MultiThread, Renderer, SingleThread};
+pub use renderer::{Renderer, MULTI_THREAD, SINGLE_THREAD};
 
 use crate::Camera;
 use crate::{

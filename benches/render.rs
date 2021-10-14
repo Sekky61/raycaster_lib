@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use raycaster_lib::render::{MultiThread, Renderer, SingleThread};
+use raycaster_lib::render::{Renderer, SINGLE_THREAD};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
 use raycaster_lib::{render_frame, render_to_byte_buffer, Camera};
 
@@ -23,9 +23,9 @@ fn pure_render(c: &mut Criterion) {
             }
         };
 
-        let volume = LinearVolume::from(volume_b);
+        let volume = volume_b.build();
 
-        let renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
+        let renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
 
         let mut buffer: Vec<u8> = vec![0; 512 * 512 * 3];
 

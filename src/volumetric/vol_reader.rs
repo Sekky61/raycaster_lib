@@ -25,8 +25,56 @@ where
 
     match extension {
         "vol" => vol_parser(path),
+        "dat" => dat_parser(path),
         _ => Err("Unknown extension"),
     }
+}
+
+fn dat_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
+    let metadata = path.metadata();
+    let metadata = match metadata {
+        Ok(metadata) => metadata,
+        Err(_) => return Err("No file metadata"),
+    };
+
+    let mut fb = Vec::with_capacity(metadata.len() as usize);
+    let mut file = File::open(path).expect("no file");
+    // .read_to_end(&mut fb)
+    // .expect("cannot read");
+
+    // nom assert_eq!(parser("(abc)"), Ok(("", "abc")));
+
+    let mut x_bytes: [u8; 2] = [0; 2];
+    file.read_exact(&mut x_bytes[..]).expect("no bytes x");
+    let x = u16::from_be_bytes(x_bytes);
+
+    let mut y_bytes: [u8; 2] = [0; 2];
+    file.read_exact(&mut y_bytes[..]).expect("no bytes y");
+    let y = u16::from_be_bytes(y_bytes);
+
+    let mut z_bytes: [u8; 2] = [0; 2];
+    file.read_exact(&mut z_bytes[..]).expect("no bytes z");
+    let z = u16::from_be_bytes(z_bytes);
+
+    file.read_to_end(&mut fb).expect("Read to end fail");
+
+    println!(
+        "Parsed file. Rest: {} | Rest / 68 = {} | Rest / 256*256 = {}",
+        fb.len(),
+        fb.len() / x as usize,
+        fb.len() / (y * z) as usize
+    );
+
+    let x = x as usize;
+    let y = y as usize;
+    let z = z as usize;
+
+    let volume_builder = VolumeBuilder::new()
+        .set_size(vector![x, y, z])
+        .set_data(fb)
+        .set_border(0);
+
+    Ok(volume_builder)
 }
 
 fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
@@ -38,7 +86,7 @@ fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
 
     let mut fb = Vec::with_capacity(metadata.len() as usize);
     File::open(path)
-        .expect("no file skull")
+        .expect("no file")
         .read_to_end(&mut fb)
         .expect("cannot read");
 

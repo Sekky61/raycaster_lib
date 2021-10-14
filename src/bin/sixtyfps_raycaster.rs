@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use raycaster_lib::render::Renderer;
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
-use raycaster_lib::{Camera, MultiThread, SingleThread};
+use raycaster_lib::{Camera, SINGLE_THREAD};
 
 use nalgebra::vector;
 use sixtyfps::{sixtyfps, Image, Rgb8Pixel, SharedPixelBuffer};
@@ -88,7 +88,7 @@ fn main() {
     let main_window = MainWindow::new();
 
     let camera = Camera::new(WIDTH, HEIGHT);
-    let read_result = vol_reader::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("C60Large.vol");
 
     let volume_b = match read_result {
         Ok(vol) => vol,
@@ -100,7 +100,7 @@ fn main() {
 
     //let volume = volume_b.build::<LinearVolume>();
 
-    let mut renderer = Renderer::<LinearVolume, SingleThread>::new(volume_b.into(), camera);
+    let mut renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume_b.build(), camera);
 
     // threading communication
     //let (tx, rx) = mpsc::channel();

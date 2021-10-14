@@ -1,3 +1,5 @@
 /target
 perf.data
 flamegraph.svg
+*.vol
+*.dat

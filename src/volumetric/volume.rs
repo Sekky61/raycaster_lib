@@ -1,6 +1,6 @@
 use crate::ray::Ray;
 
-use super::VolumeBuilder;
+use super::{vol_builder::BuildVolume, VolumeBuilder};
 use nalgebra::Vector3;
 
 pub trait Volume {
@@ -69,59 +69,59 @@ impl LinearVolume {
         //let mut color = vector![0.0, 0.0, 0.0];
         let mut accum = (0.0, 0.0, 0.0, 0.0);
 
-        match self.intersect(ray) {
-            Some((t1, t2)) => {
-                let begin = ray.point_from_t(t1);
-                let direction = ray.get_direction();
+        let (t1, t2) = match self.intersect(ray) {
+            Some(tup) => tup,
+            None => return (0, 0, 0),
+        };
 
-                let step_size = 1.0;
-                //let steps = 64;
-                let step = direction * step_size; // normalized
+        let begin = ray.point_from_t(t1);
+        let direction = ray.get_direction();
 
-                let mut pos = begin;
+        let step_size = 1.0;
 
-                //let mut steps_count = 0;
+        let step = direction * step_size; // normalized
 
-                loop {
-                    let sample = self.sample_at(pos);
+        let mut pos = begin;
 
-                    let color = transfer_function(sample);
+        //let mut steps_count = 0;
 
-                    pos += step;
+        loop {
+            let sample = self.sample_at(pos);
 
-                    if color.3 == 0.0 {
-                        if !self.is_in(pos) {
-                            break;
-                        }
-                        continue;
-                    }
+            let color = transfer_function(sample);
 
-                    // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-                    //sum = (1 - sum.alpha) * volume.density * color + sum;
+            pos += step;
 
-                    accum.0 += (1.0 - accum.3) * color.0;
-                    accum.1 += (1.0 - accum.3) * color.1;
-                    accum.2 += (1.0 - accum.3) * color.2;
-                    accum.3 += (1.0 - accum.3) * color.3;
-
-                    // early ray termination
-                    if (color.3 - 1.0).abs() < f32::EPSILON {
-                        break;
-                    }
-
-                    if !self.is_in(pos) {
-                        break;
-                    }
+            if color.3 == 0.0 {
+                if !self.is_in(pos) {
+                    break;
                 }
-
-                let accum_i_x = accum.0.min(255.0) as u8;
-                let accum_i_y = accum.1.min(255.0) as u8;
-                let accum_i_z = accum.2.min(255.0) as u8;
-
-                (accum_i_x, accum_i_y, accum_i_z)
+                continue;
             }
-            None => (0, 0, 0),
+
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
+
+            accum.0 += (1.0 - accum.3) * color.0;
+            accum.1 += (1.0 - accum.3) * color.1;
+            accum.2 += (1.0 - accum.3) * color.2;
+            accum.3 += (1.0 - accum.3) * color.3;
+
+            // early ray termination
+            if (color.3 - 0.99) > 0.0 {
+                break;
+            }
+
+            if !self.is_in(pos) {
+                break;
+            }
         }
+
+        let accum_i_x = accum.0.min(255.0) as u8;
+        let accum_i_y = accum.1.min(255.0) as u8;
+        let accum_i_z = accum.2.min(255.0) as u8;
+
+        (accum_i_x, accum_i_y, accum_i_z)
     }
 }
 
@@ -204,16 +204,23 @@ impl Volume for LinearVolume {
     }
 }
 
-impl From<VolumeBuilder> for LinearVolume {
-    fn from(builder: VolumeBuilder) -> LinearVolume {
+impl BuildVolume for LinearVolume {
+    type VolumeItem = u8;
+
+    fn build(builder: VolumeBuilder) -> Self {
         let vol_dims = builder.size.cast::<f32>().component_mul(&builder.scale);
+        let data = Self::convertor(builder.data.as_slice());
         LinearVolume {
             size: builder.size,
             border: builder.border,
             scale: builder.scale,
             vol_dims,
-            data: builder.data,
+            data,
         }
+    }
+
+    fn convertor(builder_data: &[u8]) -> Vec<Self::VolumeItem> {
+        builder_data.to_owned()
     }
 }
 
@@ -225,8 +232,7 @@ mod test {
     use super::*;
 
     fn cube_volume() -> LinearVolume {
-        let builder = VolumeBuilder::white_vol();
-        LinearVolume::from(builder)
+        VolumeBuilder::white_vol().build()
     }
 
     #[test]

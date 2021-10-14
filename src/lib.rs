@@ -8,7 +8,7 @@ pub use volumetric::vol_reader;
 
 use crate::{render::Renderer, volumetric::LinearVolume};
 
-pub use render::{MultiThread, SingleThread};
+pub use render::{MULTI_THREAD, SINGLE_THREAD};
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = Camera::new(width, height);
@@ -22,9 +22,9 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
         }
     };
 
-    let volume = LinearVolume::from(volume_b);
+    let volume = volume_b.build();
 
-    let renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
+    let renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
 
     let mut buffer: Vec<u8> = vec![0; width * height * 3];
 
@@ -33,6 +33,6 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     buffer
 }
 
-pub fn render_to_byte_buffer(renderer: &Renderer<LinearVolume, SingleThread>, buffer: &mut [u8]) {
+pub fn render_to_byte_buffer(renderer: &Renderer<LinearVolume, SINGLE_THREAD>, buffer: &mut [u8]) {
     renderer.render(buffer);
 }

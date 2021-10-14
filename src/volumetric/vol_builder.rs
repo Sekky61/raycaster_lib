@@ -10,6 +10,14 @@ pub struct VolumeBuilder {
     pub(super) data: Vec<u8>,
 }
 
+pub trait BuildVolume {
+    type VolumeItem;
+
+    fn build(builder: VolumeBuilder) -> Self;
+
+    fn convertor(builder_data: &[u8]) -> Vec<Self::VolumeItem>;
+}
+
 impl VolumeBuilder {
     pub fn new() -> VolumeBuilder {
         VolumeBuilder {
@@ -49,8 +57,11 @@ impl VolumeBuilder {
         self
     }
 
-    pub fn build<V: Volume + From<VolumeBuilder>>(self) -> V {
-        V::from(self)
+    pub fn build<V>(self) -> V
+    where
+        V: Volume + BuildVolume,
+    {
+        V::build(self)
     }
 }
 

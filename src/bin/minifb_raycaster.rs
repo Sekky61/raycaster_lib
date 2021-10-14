@@ -4,9 +4,7 @@ use minifb::{Key, Window, WindowOptions};
 
 use raycaster_lib::render::Renderer;
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
-use raycaster_lib::Camera;
-
-use raycaster_lib::SingleThread;
+use raycaster_lib::{Camera, SINGLE_THREAD};
 
 use nalgebra::vector;
 
@@ -40,7 +38,7 @@ fn main() {
 
     let volume = volume_b.build::<LinearVolume>();
 
-    let mut renderer = Renderer::<LinearVolume, SingleThread>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
 
     let mut frame_buffer = vec![0; WIDTH * HEIGHT * 3];
 

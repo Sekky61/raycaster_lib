@@ -1,6 +1,6 @@
 use super::*;
 
-impl Renderer<LinearVolume, SingleThread> {
+impl Renderer<LinearVolume, SINGLE_THREAD> {
     pub fn render(&self, buffer: &mut [u8]) {
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
