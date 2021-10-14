@@ -13,12 +13,22 @@ mod support;
 
 use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use glium::Surface;
+use nalgebra::vector;
+use raycaster_lib::{volumetric::LinearVolume, SINGLE_THREAD};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 700;
 
 widget_ids! {
     struct Ids { canvas, oval, range_slider, rendered_tex }
+}
+
+use conrod_core::image::Id;
+
+struct frame_buffers {
+    active_frame: bool,
+    frame1: Id, // false
+    frame2: Id, // true
 }
 
 fn main() {
@@ -49,15 +59,25 @@ fn main() {
     // for drawing to the glium `Surface`.
     let mut renderer = conrod_glium::Renderer::new(&display).unwrap();
 
-    let ray_renderer = raycaster_lib::render_frame(512, 512);
+    let volume = raycaster_lib::vol_reader::from_file("C60Large.vol")
+        .expect("bad read of file")
+        .build();
 
-    let raw_image = glium::texture::RawImage2d::from_raw_rgb(ray_renderer, (512, 512));
+    let camera = raycaster_lib::Camera::new(512, 512);
 
-    let rendered_texture = glium::texture::Texture2d::new(&display, raw_image).unwrap();
+    let mut raycast_renderer =
+        raycaster_lib::Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
+
+    let mut image_vec = vec![0; 512 * 512 * 3];
+    raycast_renderer.render(&mut image_vec[..]);
+
+    let raw_image = glium::texture::RawImage2d::from_raw_rgb(image_vec, (512, 512));
+    let texture_1 = glium::texture::Texture2d::new(&display, raw_image).unwrap();
 
     // The image map describing each of our widget->image mappings (in our case, none).
     let mut image_map = conrod_core::image::Map::new();
-    let image_id = image_map.insert(rendered_texture);
+
+    let frame = image_map.insert(texture_1);
 
     let mut oval_range = (0.25, 0.75);
 
@@ -93,14 +113,16 @@ fn main() {
                 }
             }
             support::Request::SetUi { needs_redraw } => {
-                let ray_renderer = raycaster_lib::render_frame(512, 512);
-                let raw_image = glium::texture::RawImage2d::from_raw_rgb(ray_renderer, (512, 512));
+                let mut im_vec = vec![0; 512 * 512 * 3];
+                raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
+                raycast_renderer.render(&mut im_vec[..]);
+                let raw_image = glium::texture::RawImage2d::from_raw_rgb(im_vec, (512, 512));
 
                 let rendered_texture = glium::texture::Texture2d::new(display, raw_image).unwrap();
 
-                image_map.replace(image_id, rendered_texture);
+                image_map.replace(frame, rendered_texture);
 
-                set_ui(ui.set_widgets(), &ids, &mut oval_range, image_id);
+                set_ui(ui.set_widgets(), &ids, &mut oval_range, frame);
 
                 *needs_redraw = ui.has_changed();
             }
@@ -110,7 +132,7 @@ fn main() {
 
                 renderer.fill(display, primitives, &image_map);
                 let mut target = display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
                 renderer.draw(display, &mut target, &image_map).unwrap();
                 target.finish().unwrap();
             }

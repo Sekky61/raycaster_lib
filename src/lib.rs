@@ -4,9 +4,10 @@ pub mod render;
 pub mod volumetric;
 
 pub use camera::Camera;
+pub use render::Renderer;
 pub use volumetric::vol_reader;
 
-use crate::{render::Renderer, volumetric::LinearVolume};
+use crate::volumetric::LinearVolume;
 
 pub use render::{MULTI_THREAD, SINGLE_THREAD};
 
