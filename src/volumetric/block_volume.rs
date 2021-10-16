@@ -4,11 +4,6 @@ use nalgebra::Vector3;
 
 use super::{vol_builder::BuildVolume, VolumeBuilder};
 
-pub enum BlockType {
-    Empty,
-    NonEmpty,
-}
-
 pub struct Block {
     pub data: [u8; 8],
 }
@@ -21,17 +16,6 @@ impl Block {
     pub fn index(x: usize, y: usize, z: usize) -> usize {
         z + y * 2 + x * 4
     }
-}
-
-pub struct BlockLevel {
-    size: Vector3<usize>,
-    blocks: Vec<BlockType>,
-}
-
-impl BlockLevel {
-    pub fn from_block_level(level: &BlockLevel) -> BlockLevel {}
-
-    pub fn from_data(data: &[Block]) -> BlockLevel {}
 }
 
 pub struct BlockVolume {

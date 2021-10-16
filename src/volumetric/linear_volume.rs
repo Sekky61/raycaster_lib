@@ -9,7 +9,7 @@ pub struct LinearVolume {
     border: u32,
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
-    data: Vec<u8>,
+    data: Vec<f32>,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -29,12 +29,12 @@ impl LinearVolume {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
         //println!("Getting {} {} {}", x, y, z);
         let val = self.data.get(self.get_3d_index(x, y, z));
         match val {
             Some(&v) => v,
-            None => 0,
+            None => 0.0,
         }
     }
 
@@ -175,6 +175,14 @@ impl Volume for LinearVolume {
 
         Some((tmin, tmax))
     }
+
+    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+        self.get_3d_data(x, y, z)
+    }
+
+    fn get_size(&self) -> Vector3<usize> {
+        self.size
+    }
 }
 
 impl BuildVolume for LinearVolume {
@@ -187,5 +195,52 @@ impl BuildVolume for LinearVolume {
             vol_dims,
             data: builder.data,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use nalgebra::vector;
+
+    use super::*;
+
+    fn cube_volume() -> LinearVolume {
+        VolumeBuilder::white_vol().build()
+    }
+
+    #[test]
+    fn intersect_works() {
+        let bbox = cube_volume();
+        let ray = Ray {
+            origin: vector![-1.0, -1.0, 0.0],
+            direction: vector![1.0, 1.0, 1.0],
+        };
+        let inter = bbox.intersect(&ray);
+        println!("intersection: {:?}", inter);
+        assert!(inter.is_some());
+    }
+
+    #[test]
+    fn intersect_works2() {
+        let vol = cube_volume();
+        let ray = Ray {
+            origin: vector![-0.4, 0.73, 0.0],
+            direction: vector![1.0, 0.0, 1.0],
+        };
+        let inter = vol.intersect(&ray);
+        println!("intersection: {:?}", inter);
+        assert!(inter.is_some());
+    }
+
+    #[test]
+    fn not_intersecting() {
+        let vol = cube_volume();
+        let ray = Ray {
+            origin: vector![200.0, 200.0, 200.0],
+            direction: vector![1.0, 0.0, 0.0],
+        };
+
+        assert!(vol.intersect(&ray).is_none());
     }
 }
