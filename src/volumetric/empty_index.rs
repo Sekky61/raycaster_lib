@@ -14,21 +14,28 @@ pub struct EmptyIndex {
 }
 
 impl EmptyIndex {
-    pub fn from_finer_empty_index(base: &EmptyIndex) -> EmptyIndex {
-        let dims = base.size;
-        let cell_count = dims.iter().fold(1, |acc, x| acc * (x - 1));
+    pub fn from_empty_index(base: &EmptyIndex) -> Option<EmptyIndex> {
+        let base_dims = base.size;
+        if base_dims.iter().any(|&x| x == 1) {
+            // Bigger index does not make sense (I hope)
+            return None;
+        }
+        let index_size = vector![base_dims.x - 1, base_dims.y - 1, base_dims.z - 1];
+        let cell_count = index_size.iter().fold(1, |acc, x| acc * (x - 1));
         let mut blocks = Vec::with_capacity(cell_count);
 
-        for x in 0..(dims.x - 1) {
-            for y in 0..(dims.y - 1) {
-                for z in 0..(dims.z - 1) {
+        for x in 0..index_size.x {
+            for y in 0..index_size.y {
+                for z in 0..index_size.z {
                     let block_type = EmptyIndex::join_blocks(base, x, y, z);
                     blocks.push(block_type);
                 }
             }
         }
-
-        EmptyIndex { size: dims, blocks }
+        Some(EmptyIndex {
+            size: index_size,
+            blocks,
+        })
     }
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndex {
@@ -112,17 +119,19 @@ mod test {
 
     use super::*;
 
-    fn volume_2x2_empty() -> LinearVolume {
+    fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         VolumeBuilder::new()
-            .set_size(vector![2, 2, 2])
-            .set_data(vec![0.0; 8])
+            .set_size(vector![x, y, z])
+            .set_data(vec![0.0; x * y * z])
             .build()
     }
 
-    fn volume_2x2_nonempty() -> LinearVolume {
+    fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
+        let mut data = vec![0.0; x * y * z];
+        data[0] = 17.0;
         VolumeBuilder::new()
-            .set_size(vector![2, 2, 2])
-            .set_data(vec![0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0])
+            .set_size(vector![x, y, z])
+            .set_data(data)
             .build()
     }
 
@@ -132,12 +141,72 @@ mod test {
 
         #[test]
         fn empty() {
-            let volume = volume_2x2_empty();
+            let volume = volume_dims_empty(2, 2, 2);
             let empty_index = EmptyIndex::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 1);
             assert_eq!(empty_index.blocks[0], BlockType::Empty);
             assert_eq!(empty_index.size, vector![1, 1, 1]);
+        }
+
+        #[test]
+        fn empty_uneven() {
+            let volume = volume_dims_empty(2, 3, 2);
+            let empty_index = EmptyIndex::from_volume(&volume);
+
+            assert_eq!(empty_index.blocks.len(), 2);
+            assert_eq!(empty_index.blocks[0], BlockType::Empty);
+            assert_eq!(empty_index.blocks[1], BlockType::Empty);
+            assert_eq!(empty_index.size, vector![1, 2, 1]);
+        }
+
+        #[test]
+        fn non_empty() {
+            let volume = volume_dims_nonempty(2, 2, 2);
+            let empty_index = EmptyIndex::from_volume(&volume);
+
+            assert_eq!(empty_index.blocks.len(), 1);
+            assert_eq!(empty_index.blocks[0], BlockType::NonEmpty);
+            assert_eq!(empty_index.size, vector![1, 1, 1]);
+        }
+    }
+
+    mod from_empty_index {
+
+        use super::*;
+
+        #[test]
+        fn cube() {
+            let volume = volume_dims_empty(3, 3, 3);
+            let empty_index = EmptyIndex::from_volume(&volume);
+            let level_1 = EmptyIndex::from_empty_index(&empty_index).unwrap();
+
+            assert_eq!(level_1.blocks.len(), 1);
+            assert_eq!(level_1.blocks[0], BlockType::Empty);
+            assert_eq!(level_1.size, vector![1, 1, 1]);
+        }
+
+        #[test]
+        fn cant_make_level_1() {
+            let volume = volume_dims_empty(2, 3, 2);
+            let empty_index = EmptyIndex::from_volume(&volume);
+            let level_1 = EmptyIndex::from_empty_index(&empty_index);
+
+            assert!(level_1.is_none());
+        }
+
+        #[test]
+        fn uneven_level_1() {
+            let volume = volume_dims_empty(4, 3, 3);
+            let empty_index = EmptyIndex::from_volume(&volume);
+            let level_1 = EmptyIndex::from_empty_index(&empty_index).unwrap();
+
+            assert_eq!(level_1.size, vector![2, 1, 1]);
+            assert_eq!(level_1.blocks.len(), 2);
+            level_1
+                .blocks
+                .iter()
+                .for_each(|&bl| assert_eq!(bl, BlockType::Empty));
         }
     }
 }
