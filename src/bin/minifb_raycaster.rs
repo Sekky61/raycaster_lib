@@ -2,7 +2,7 @@
 
 use minifb::{Key, Window, WindowOptions};
 
-use raycaster_lib::render::Renderer;
+use raycaster_lib::render::{Render, Renderer};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
 use raycaster_lib::{Camera, SINGLE_THREAD};
 
@@ -64,11 +64,22 @@ fn main() {
 
         renderer.change_camera_pos(change);
 
-        renderer.render(frame_buffer.as_mut_slice());
+        renderer.render();
 
-        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        // window
-        //     .update_with_buffer(&frame_buffer[..], WIDTH, HEIGHT)
-        //     .unwrap();
+        let converted: Vec<u32> = renderer
+            .get_data()
+            .chunks(3)
+            .map(|chunk| from_u8_rgb(chunk[0], chunk[1], chunk[2]))
+            .collect();
+
+        //We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+        window
+            .update_with_buffer(converted.as_slice(), WIDTH, HEIGHT)
+            .unwrap();
     }
+}
+
+fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
+    let (r, g, b) = (r as u32, g as u32, b as u32);
+    (r << 16) | (g << 8) | b
 }

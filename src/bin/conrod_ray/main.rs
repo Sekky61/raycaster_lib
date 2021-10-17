@@ -11,10 +11,12 @@ extern crate glium;
 
 mod support;
 
+use std::thread;
+
 use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use glium::Surface;
 use nalgebra::vector;
-use raycaster_lib::{volumetric::LinearVolume, SINGLE_THREAD};
+use raycaster_lib::{render::Render, volumetric::LinearVolume, SINGLE_THREAD};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 700;
@@ -68,16 +70,33 @@ fn main() {
     let mut raycast_renderer =
         raycaster_lib::Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
 
-    let mut image_vec = vec![0; 512 * 512 * 3];
-    raycast_renderer.render(&mut image_vec[..]);
-
-    let raw_image = glium::texture::RawImage2d::from_raw_rgb(image_vec, (512, 512));
-    let texture_1 = glium::texture::Texture2d::new(&display, raw_image).unwrap();
-
-    // The image map describing each of our widget->image mappings (in our case, none).
     let mut image_map = conrod_core::image::Map::new();
 
-    let frame = image_map.insert(texture_1);
+    let empty_tex =
+        glium::texture::Texture2d::empty(&display, 512, 512).expect("empty texture error");
+
+    let render_output_id = image_map.insert(empty_tex);
+
+    let (sender, reciever) = std::sync::mpsc::channel();
+
+    thread::spawn(move || loop {
+        raycast_renderer.render();
+
+        let x = raycast_renderer.get_data();
+
+        sender.send(x.to_owned());
+        raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
+    });
+
+    // let mut image_vec = vec![0; 512 * 512 * 3];
+    // raycast_renderer.render(&mut image_vec[..]);
+
+    let texture_1 = glium::texture::Texture2d::empty(&display, 512, 512).unwrap();
+
+    // The image map describing each of our widget->image mappings (in our case, none).
+    // let mut image_map = conrod_core::image::Map::new();
+
+    let render_target_id = image_map.insert(texture_1);
 
     let mut oval_range = (0.25, 0.75);
 
@@ -93,6 +112,17 @@ fn main() {
                     ui.handle_event(event);
                     *should_update_ui = true;
                 }
+
+                let img_data = reciever.try_recv();
+                if let Ok(data) = img_data {
+                    let raw_image = glium::texture::RawImage2d::from_raw_rgb(data, (512, 512));
+
+                    let rendered_texture =
+                        glium::texture::Texture2d::new(display, raw_image).unwrap();
+                    image_map.replace(render_target_id, rendered_texture);
+                    *should_update_ui = true;
+                    println!("Set true");
+                };
 
                 match event {
                     glium::glutin::event::Event::WindowEvent { event, .. } => match event {
@@ -113,18 +143,14 @@ fn main() {
                 }
             }
             support::Request::SetUi { needs_redraw } => {
-                let mut im_vec = vec![0; 512 * 512 * 3];
-                raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
-                raycast_renderer.render(&mut im_vec[..]);
-                let raw_image = glium::texture::RawImage2d::from_raw_rgb(im_vec, (512, 512));
+                // let mut im_vec = vec![0; 512 * 512 * 3];
+                // raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
+                // raycast_renderer.render(&mut im_vec[..]);
 
-                let rendered_texture = glium::texture::Texture2d::new(display, raw_image).unwrap();
+                set_ui(ui.set_widgets(), &ids, &mut oval_range, render_target_id);
 
-                image_map.replace(frame, rendered_texture);
-
-                set_ui(ui.set_widgets(), &ids, &mut oval_range, frame);
-
-                *needs_redraw = ui.has_changed();
+                //*needs_redraw |= ui.has_changed();
+                *needs_redraw |= true;
             }
             support::Request::Redraw => {
                 // Render the `Ui` and then display it on the screen.
@@ -133,6 +159,7 @@ fn main() {
                 renderer.fill(display, primitives, &image_map);
                 let mut target = display.draw();
                 target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
+
                 renderer.draw(display, &mut target, &image_map).unwrap();
                 target.finish().unwrap();
             }
@@ -147,7 +174,7 @@ fn set_ui(
     ref mut ui: conrod_core::UiCell,
     ids: &Ids,
     oval_range: &mut (conrod_core::Scalar, conrod_core::Scalar),
-    image_id: conrod_core::image::Id,
+    image_id: Id,
 ) {
     use conrod_core::{color, widget, Colorable, Positionable, Sizeable, Widget};
 

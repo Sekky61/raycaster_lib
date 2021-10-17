@@ -11,6 +11,8 @@ use crate::volumetric::LinearVolume;
 
 pub use render::{MULTI_THREAD, SINGLE_THREAD};
 
+use render::Render;
+
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = Camera::new(width, height);
     let read_result = vol_reader::from_file("Skull.vol");
@@ -25,15 +27,9 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
 
     let volume = volume_b.build();
 
-    let renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
 
-    let mut buffer: Vec<u8> = vec![0; width * height * 3];
+    renderer.render();
 
-    renderer.render(&mut buffer);
-
-    buffer
-}
-
-pub fn render_to_byte_buffer(renderer: &Renderer<LinearVolume, SINGLE_THREAD>, buffer: &mut [u8]) {
-    renderer.render(buffer);
+    renderer.get_buffer()
 }

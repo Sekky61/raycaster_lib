@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use raycaster_lib::render::Renderer;
+use raycaster_lib::render::{Render, Renderer};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
 use raycaster_lib::{Camera, SINGLE_THREAD};
 
@@ -170,10 +170,11 @@ fn main() {
             renderer.set_camera_pos(*guard);
         }
 
-        let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
+        //let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
         let window_handle_copy = main_window_weak.clone();
 
-        renderer.render(buf.as_mut_slice());
+        renderer.render();
+        let buf: Vec<u8> = renderer.get_data().to_owned();
 
         sixtyfps::invoke_from_event_loop(move || {
             let pixel_buffer =
