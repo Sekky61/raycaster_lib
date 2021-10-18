@@ -4,14 +4,10 @@ pub mod render;
 pub mod volumetric;
 
 pub use camera::Camera;
-pub use render::Renderer;
+pub use render::{Renderer, RendererOptions};
 pub use volumetric::vol_reader;
 
 use crate::volumetric::LinearVolume;
-
-pub use render::{MULTI_THREAD, SINGLE_THREAD};
-
-use render::Render;
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = Camera::new(width, height);
@@ -27,7 +23,12 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
 
     let volume = volume_b.build();
 
-    let mut renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume>::new(volume, camera);
+    renderer.render_settings(RendererOptions {
+        ray_termination: true,
+        empty_index: false,
+        multi_thread: false,
+    });
 
     renderer.render();
 

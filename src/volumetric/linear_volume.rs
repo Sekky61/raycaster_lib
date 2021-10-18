@@ -38,8 +38,7 @@ impl LinearVolume {
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
-        //let mut color = vector![0.0, 0.0, 0.0];
+    pub fn collect_light_term(&self, ray: &Ray) -> (u8, u8, u8) {
         let mut accum = (0.0, 0.0, 0.0, 0.0);
 
         let (t1, t2) = match self.intersect(ray) {
@@ -84,6 +83,59 @@ impl LinearVolume {
             if (color.3 - 0.99) > 0.0 {
                 break;
             }
+
+            if !self.is_in(pos) {
+                break;
+            }
+        }
+
+        let accum_i_x = accum.0.min(255.0) as u8;
+        let accum_i_y = accum.1.min(255.0) as u8;
+        let accum_i_z = accum.2.min(255.0) as u8;
+
+        (accum_i_x, accum_i_y, accum_i_z)
+    }
+
+    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
+        let mut accum = (0.0, 0.0, 0.0, 0.0);
+
+        let (t1, t2) = match self.intersect(ray) {
+            Some(tup) => tup,
+            None => return (0, 0, 0),
+        };
+
+        let begin = ray.point_from_t(t1);
+        let direction = ray.get_direction();
+
+        let step_size = 1.0;
+
+        let step = direction * step_size; // normalized
+
+        let mut pos = begin;
+
+        //let mut steps_count = 0;
+
+        loop {
+            let sample = self.sample_at(pos);
+
+            let color = transfer_function(sample);
+
+            pos += step;
+
+            if color.3 == 0.0 {
+                if !self.is_in(pos) {
+                    break;
+                }
+                continue;
+            }
+
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
+
+            accum.0 += (1.0 - accum.3) * color.0;
+            accum.1 += (1.0 - accum.3) * color.1;
+            accum.2 += (1.0 - accum.3) * color.2;
+            accum.3 += (1.0 - accum.3) * color.3;
 
             if !self.is_in(pos) {
                 break;

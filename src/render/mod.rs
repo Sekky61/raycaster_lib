@@ -1,9 +1,9 @@
-mod mt_linear;
 mod renderer;
+
+mod mt_linear;
 mod st_linear;
 
-pub use renderer::Render;
-pub use renderer::{Renderer, MULTI_THREAD, SINGLE_THREAD};
+pub use renderer::{Renderer, RendererOptions};
 
 use crate::Camera;
 use crate::{

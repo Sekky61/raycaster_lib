@@ -2,9 +2,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use raycaster_lib::render::{Render, Renderer};
+use raycaster_lib::render::{Renderer, RendererOptions};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
-use raycaster_lib::{Camera, SINGLE_THREAD};
+use raycaster_lib::Camera;
 
 use nalgebra::vector;
 use sixtyfps::{sixtyfps, Image, Rgb8Pixel, SharedPixelBuffer};
@@ -100,7 +100,12 @@ fn main() {
 
     //let volume = volume_b.build::<LinearVolume>();
 
-    let mut renderer = Renderer::<LinearVolume, SINGLE_THREAD>::new(volume_b.build(), camera);
+    let mut renderer = Renderer::<LinearVolume>::new(volume_b.build(), camera);
+    renderer.render_settings(RendererOptions {
+        ray_termination: true,
+        empty_index: false,
+        multi_thread: false,
+    });
 
     // threading communication
     //let (tx, rx) = mpsc::channel();

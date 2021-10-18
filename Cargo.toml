@@ -19,6 +19,9 @@ criterion = "0.3"
 name = "render"
 harness = false
 
+[profile.bench]
+debug = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

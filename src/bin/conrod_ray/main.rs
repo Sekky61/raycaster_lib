@@ -4,9 +4,7 @@
 #[macro_use]
 extern crate conrod_core;
 extern crate conrod_glium;
-#[macro_use]
 extern crate conrod_winit;
-//extern crate find_folder;
 extern crate glium;
 
 mod support;
@@ -16,7 +14,7 @@ use std::thread;
 use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use glium::Surface;
 use nalgebra::vector;
-use raycaster_lib::{render::Render, volumetric::LinearVolume, SINGLE_THREAD};
+use raycaster_lib::{volumetric::LinearVolume, Renderer, RendererOptions};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 700;
@@ -67,8 +65,13 @@ fn main() {
 
     let camera = raycaster_lib::Camera::new(512, 512);
 
-    let mut raycast_renderer =
-        raycaster_lib::Renderer::<LinearVolume, SINGLE_THREAD>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<LinearVolume>::new(volume, camera);
+
+    raycast_renderer.render_settings(RendererOptions {
+        ray_termination: true,
+        empty_index: false,
+        multi_thread: false,
+    });
 
     let mut image_map = conrod_core::image::Map::new();
 
