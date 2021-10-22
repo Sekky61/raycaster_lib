@@ -2,12 +2,7 @@ use nalgebra::Vector3;
 
 use crate::ray::Ray;
 
-use super::{
-    empty_index::{EmptyIndex, EmptyIndexes},
-    vol_builder::BuildVolume,
-    volume::transfer_function,
-    Volume, VolumeBuilder,
-};
+use super::{vol_builder::BuildVolume, Volume, VolumeBuilder};
 
 pub struct LinearVolume {
     size: Vector3<usize>,
@@ -15,7 +10,6 @@ pub struct LinearVolume {
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<f32>,
-    empty_index: EmptyIndexes,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -42,181 +36,6 @@ impl LinearVolume {
             Some(&v) => v,
             None => 0.0,
         }
-    }
-
-    pub fn collect_light_term_index(&self, ray: &Ray) -> (u8, u8, u8) {
-        println!("Render index len {}", self.empty_index.len());
-        let mut accum = (0.0, 0.0, 0.0, 0.0);
-
-        let (t1, t2) = match self.intersect(ray) {
-            Some(tup) => tup,
-            None => return (0, 0, 0),
-        };
-
-        let begin = ray.point_from_t(t1);
-        let direction = ray.get_direction();
-
-        let step_size = 1.0;
-
-        let step = direction * step_size; // normalized
-
-        let mut pos = begin;
-
-        //let mut steps_count = 0;
-
-        // Safety: self.empty_index[0] always exists
-        let m = self.empty_index.len() - 1;
-
-        loop {
-            //let block_type = self.empty_index[m].
-
-            let sample = self.sample_at(pos);
-
-            let color = transfer_function(sample);
-
-            pos += step;
-
-            if color.3 == 0.0 {
-                if !self.is_in(pos) {
-                    break;
-                }
-                continue;
-            }
-
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
-            accum.0 += (1.0 - accum.3) * color.0;
-            accum.1 += (1.0 - accum.3) * color.1;
-            accum.2 += (1.0 - accum.3) * color.2;
-            accum.3 += (1.0 - accum.3) * color.3;
-
-            // early ray termination
-            if (color.3 - 0.99) > 0.0 {
-                break;
-            }
-
-            if !self.is_in(pos) {
-                break;
-            }
-        }
-
-        let accum_i_x = accum.0.min(255.0) as u8;
-        let accum_i_y = accum.1.min(255.0) as u8;
-        let accum_i_z = accum.2.min(255.0) as u8;
-
-        (accum_i_x, accum_i_y, accum_i_z)
-    }
-
-    pub fn collect_light_term(&self, ray: &Ray) -> (u8, u8, u8) {
-        let mut accum = (0.0, 0.0, 0.0, 0.0);
-
-        let (t1, t2) = match self.intersect(ray) {
-            Some(tup) => tup,
-            None => return (0, 0, 0),
-        };
-
-        let begin = ray.point_from_t(t1);
-        let direction = ray.get_direction();
-
-        let step_size = 1.0;
-
-        let step = direction * step_size; // normalized
-
-        let mut pos = begin;
-
-        //let mut steps_count = 0;
-
-        loop {
-            let sample = self.sample_at(pos);
-
-            let color = transfer_function(sample);
-
-            pos += step;
-
-            if color.3 == 0.0 {
-                if !self.is_in(pos) {
-                    break;
-                }
-                continue;
-            }
-
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
-            accum.0 += (1.0 - accum.3) * color.0;
-            accum.1 += (1.0 - accum.3) * color.1;
-            accum.2 += (1.0 - accum.3) * color.2;
-            accum.3 += (1.0 - accum.3) * color.3;
-
-            // early ray termination
-            if (color.3 - 0.99) > 0.0 {
-                break;
-            }
-
-            if !self.is_in(pos) {
-                break;
-            }
-        }
-
-        let accum_i_x = accum.0.min(255.0) as u8;
-        let accum_i_y = accum.1.min(255.0) as u8;
-        let accum_i_z = accum.2.min(255.0) as u8;
-
-        (accum_i_x, accum_i_y, accum_i_z)
-    }
-
-    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
-        let mut accum = (0.0, 0.0, 0.0, 0.0);
-
-        let (t1, t2) = match self.intersect(ray) {
-            Some(tup) => tup,
-            None => return (0, 0, 0),
-        };
-
-        let begin = ray.point_from_t(t1);
-        let direction = ray.get_direction();
-
-        let step_size = 1.0;
-
-        let step = direction * step_size; // normalized
-
-        let mut pos = begin;
-
-        //let mut steps_count = 0;
-
-        loop {
-            let sample = self.sample_at(pos);
-
-            let color = transfer_function(sample);
-
-            pos += step;
-
-            if color.3 == 0.0 {
-                if !self.is_in(pos) {
-                    break;
-                }
-                continue;
-            }
-
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
-            accum.0 += (1.0 - accum.3) * color.0;
-            accum.1 += (1.0 - accum.3) * color.1;
-            accum.2 += (1.0 - accum.3) * color.2;
-            accum.3 += (1.0 - accum.3) * color.3;
-
-            if !self.is_in(pos) {
-                break;
-            }
-        }
-
-        let accum_i_x = accum.0.min(255.0) as u8;
-        let accum_i_y = accum.1.min(255.0) as u8;
-        let accum_i_z = accum.2.min(255.0) as u8;
-
-        (accum_i_x, accum_i_y, accum_i_z)
     }
 }
 
@@ -310,16 +129,13 @@ impl Volume for LinearVolume {
 impl BuildVolume for LinearVolume {
     fn build(builder: VolumeBuilder) -> Self {
         let vol_dims = builder.size.cast::<f32>().component_mul(&builder.scale);
-        let mut volume = LinearVolume {
+        LinearVolume {
             size: builder.size,
             border: builder.border,
             scale: builder.scale,
             vol_dims,
             data: builder.data,
-            empty_index: EmptyIndexes::default(),
-        };
-        volume.empty_index = EmptyIndexes::from_volume(&volume);
-        volume
+        }
     }
 }
 

@@ -6,6 +6,7 @@ pub mod volumetric;
 pub use camera::Camera;
 pub use render::{Renderer, RendererOptions};
 pub use volumetric::vol_reader;
+pub use volumetric::EmptyIndexes;
 
 use crate::volumetric::LinearVolume;
 

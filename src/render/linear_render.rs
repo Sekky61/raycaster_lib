@@ -1,26 +1,9 @@
 use super::*;
 
 impl Renderer<LinearVolume> {
-    pub fn render_settings(&mut self, options: RendererOptions) {
-        self.render = match options {
-            RendererOptions {
-                ray_termination: true,
-                empty_index: false,
-                multi_thread: false,
-            } => Self::render_linear_term_st,
-            RendererOptions {
-                ray_termination: false,
-                empty_index: false,
-                multi_thread: false,
-            } => Self::render_linear_st,
-            _ => panic!("Not implemented"),
-        };
-    }
+    fn render_st(&mut self) {}
 
-    fn render_linear_st(&mut self) {}
-
-    fn render_linear_term_st(&mut self) {
-        let buffer = self.buffer.as_mut_slice();
+    fn render_rt_ei(&mut self) {
         println!("RENDER BUM st term");
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
@@ -52,20 +35,19 @@ impl Renderer<LinearVolume> {
                 let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
 
                 let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
-                let mut dir_world_3 = dir_world.xyz();
-                dir_world_3.normalize_mut();
+                let dir_world_3 = dir_world.xyz().normalize();
 
                 //println!("{}", dir_world_3);
 
                 let ray_world = Ray::from_3(self.camera.position, dir_world_3);
 
-                let ray_color = self.volume.collect_light_term(&ray_world);
+                let ray_color = self.collect_light_term(&ray_world);
 
                 let index = (y * self.camera.resolution.0 + x) * 3; // packed structs -/-
 
-                buffer[index] = ray_color.0;
-                buffer[index + 1] = ray_color.1;
-                buffer[index + 2] = ray_color.2;
+                self.buffer[index] = ray_color.0;
+                self.buffer[index + 1] = ray_color.1;
+                self.buffer[index + 2] = ray_color.2;
             }
         }
     }

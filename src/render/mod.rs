@@ -1,7 +1,6 @@
 mod renderer;
 
-mod mt_linear;
-mod st_linear;
+mod linear_render;
 
 pub use renderer::{Renderer, RendererOptions};
 

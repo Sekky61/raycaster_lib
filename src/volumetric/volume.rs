@@ -19,18 +19,3 @@ pub trait Volume {
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
 }
-
-// R G B A -- A <0;1>
-pub fn transfer_function(sample: f32) -> (f32, f32, f32, f32) {
-    if sample > 180.0 {
-        (60.0, 230.0, 40.0, 0.3)
-    } else if sample > 70.0 {
-        (230.0, 10.0, 10.0, 0.3)
-    } else if sample > 50.0 {
-        (10.0, 20.0, 100.0, 0.1)
-    } else if sample > 5.0 {
-        (10.0, 10.0, 40.0, 0.05)
-    } else {
-        (0.0, 0.0, 0.0, 0.0)
-    }
-}
