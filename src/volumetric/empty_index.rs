@@ -11,43 +11,51 @@ pub enum BlockType {
 #[derive(Default)]
 pub struct EmptyIndexes {
     indexes: Vec<EmptyIndex>,
-    data_size: Vector3<usize>,
 }
 
 impl EmptyIndexes {
+    pub fn get_index_size(m: usize) -> usize {
+        2u32.pow(m as u32) as usize
+    }
+
+    pub fn get_block_coords(level: usize, pos: Vector3<f32>) -> Vector3<usize> {
+        let low_pos = pos.map(|f| f.floor() as usize);
+
+        let index_block_size = EmptyIndexes::get_index_size(level);
+
+        low_pos.map(|p| p / index_block_size)
+    }
+
     pub fn from_volume(volume: &impl Volume) -> EmptyIndexes {
         let mut indexes = vec![EmptyIndex::from_data(volume)];
         while let Some(ind) = EmptyIndex::from_empty_index(indexes.last().unwrap()) {
             indexes.push(ind);
         }
 
-        EmptyIndexes {
-            indexes,
-            data_size: volume.get_size(),
-        }
+        EmptyIndexes { indexes }
     }
 
     pub fn get_index_at(&self, level: usize, pos: Vector3<f32>) -> BlockType {
         assert!(level < self.indexes.len());
 
-        let low_pos = pos.map(|f| f.floor() as usize);
-
-        let index_block_size = 2u32.pow(level as u32) as usize;
-
-        let block_pos = low_pos.map(|p| p / index_block_size);
+        let block_pos = EmptyIndexes::get_block_coords(level, pos);
 
         let index_3d = self.get_3d_index_level(level, &block_pos);
 
         self.indexes[level].blocks[index_3d]
     }
 
-    fn get_3d_index_level(&self, level: usize, block_pos: &Vector3<usize>) -> usize {
+    pub fn get_3d_index_level(&self, level: usize, block_pos: &Vector3<usize>) -> usize {
         let index_size = self.indexes[level].size;
         block_pos.z + block_pos.y * index_size.z + block_pos.x * index_size.y * index_size.z
     }
 
     pub fn len(&self) -> usize {
         self.indexes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

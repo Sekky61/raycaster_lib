@@ -4,7 +4,7 @@ pub mod render;
 pub mod volumetric;
 
 pub use camera::Camera;
-pub use render::{Renderer, RendererOptions};
+pub use render::{RenderOptions, Renderer};
 pub use volumetric::vol_reader;
 pub use volumetric::EmptyIndexes;
 
@@ -25,13 +25,13 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let volume = volume_b.build();
 
     let mut renderer = Renderer::<LinearVolume>::new(volume, camera);
-    renderer.render_settings(RendererOptions {
+    renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
     });
 
-    renderer.render();
+    renderer.render_to_buffer();
 
     renderer.get_buffer()
 }

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use raycaster_lib::render::{Renderer, RendererOptions};
+use raycaster_lib::render::{RenderOptions, Renderer};
 use raycaster_lib::volumetric::{vol_reader, LinearVolume};
 use raycaster_lib::Camera;
 
@@ -101,7 +101,7 @@ fn main() {
     //let volume = volume_b.build::<LinearVolume>();
 
     let mut renderer = Renderer::<LinearVolume>::new(volume_b.build(), camera);
-    renderer.render_settings(RendererOptions {
+    renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
@@ -178,7 +178,7 @@ fn main() {
         //let mut buf = vec![0u8; WIDTH * HEIGHT * 4];
         let window_handle_copy = main_window_weak.clone();
 
-        renderer.render();
+        renderer.render_to_buffer();
         let buf: Vec<u8> = renderer.get_data().to_owned();
 
         sixtyfps::invoke_from_event_loop(move || {

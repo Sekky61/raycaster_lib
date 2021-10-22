@@ -14,7 +14,7 @@ use std::thread;
 use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use glium::Surface;
 use nalgebra::vector;
-use raycaster_lib::{volumetric::LinearVolume, Renderer, RendererOptions};
+use raycaster_lib::{volumetric::LinearVolume, RenderOptions, Renderer};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 700;
@@ -67,7 +67,7 @@ fn main() {
 
     let mut raycast_renderer = Renderer::<LinearVolume>::new(volume, camera);
 
-    raycast_renderer.render_settings(RendererOptions {
+    raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
@@ -83,7 +83,7 @@ fn main() {
     let (sender, reciever) = std::sync::mpsc::channel();
 
     thread::spawn(move || loop {
-        raycast_renderer.render();
+        raycast_renderer.render_to_buffer();
 
         let x = raycast_renderer.get_data();
 

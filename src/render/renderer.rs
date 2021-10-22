@@ -1,4 +1,4 @@
-use crate::EmptyIndexes;
+use crate::{volumetric::BlockType, EmptyIndexes};
 
 use super::*;
 
@@ -9,10 +9,20 @@ pub enum BufferStatus {
 }
 
 #[derive(Default)]
-pub struct RendererOptions {
+pub struct RenderOptions {
     pub ray_termination: bool,
     pub empty_index: bool,
     pub multi_thread: bool,
+}
+
+impl RenderOptions {
+    pub fn new(ray_termination: bool, empty_index: bool, multi_thread: bool) -> Self {
+        Self {
+            ray_termination,
+            empty_index,
+            multi_thread,
+        }
+    }
 }
 
 pub struct Renderer<V>
@@ -23,8 +33,8 @@ where
     pub(super) camera: Camera,
     pub(super) buffer: Vec<u8>,
     pub(super) buf_status: BufferStatus,
-    pub(super) render: fn(&mut Self),
     pub(super) empty_index: EmptyIndexes,
+    render_options: RenderOptions,
 }
 
 impl<V> Renderer<V>
@@ -39,9 +49,17 @@ where
             camera,
             buffer: vec![0; w * h * 3],
             buf_status: BufferStatus::NotReady,
-            render: Self::default_render,
             empty_index,
+            render_options: RenderOptions {
+                ray_termination: true,
+                empty_index: false,
+                multi_thread: false,
+            },
         }
+    }
+
+    pub fn set_render_options(&mut self, opts: RenderOptions) {
+        self.render_options = opts;
     }
 
     pub fn set_camera_pos(&mut self, pos: Vector3<f32>) {
@@ -62,7 +80,7 @@ where
     }
 
     pub fn render_to_buffer(&mut self) {
-        (self.render)(self);
+        self.render();
         self.buf_status = BufferStatus::Ready;
     }
 
@@ -74,39 +92,8 @@ where
         self.buffer.as_slice()
     }
 
-    fn default_render(&mut self) {
-        panic!("Render not specified");
-    }
-
-    pub fn render(&mut self) {
-        (self.render)(self);
-        self.buf_status = BufferStatus::Ready;
-    }
-
-    pub fn render_settings(&mut self, options: RendererOptions) {
-        self.render = match options {
-            RendererOptions {
-                ray_termination: true,
-                empty_index: false,
-                multi_thread: false,
-            } => Self::render_rt_st,
-            // RendererOptions {
-            //     ray_termination: false,
-            //     empty_index: false,
-            //     multi_thread: false,
-            // } => Self::render_st,
-            // RendererOptions {
-            //     ray_termination: true,
-            //     empty_index: true,
-            //     multi_thread: false,
-            // } => Self::render_rt_ei,
-            _ => panic!("Not implemented"),
-        };
-    }
-
-    fn render_rt_st(&mut self) {
-        //let buffer = self.buffer.as_mut_slice();
-        println!("RENDER BUM st term");
+    fn render(&mut self) {
+        println!("THE RENDER");
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
             self.camera.resolution.1 as f32,
@@ -143,7 +130,7 @@ where
 
                 let ray_world = Ray::from_3(self.camera.position, dir_world_3);
 
-                let ray_color = self.collect_light_term(&ray_world);
+                let ray_color = self.collect_light_index(&ray_world);
 
                 let index = (y * self.camera.resolution.0 + x) * 3; // packed structs -/-
 
@@ -154,7 +141,7 @@ where
         }
     }
 
-    pub fn collect_light_term(&self, ray: &Ray) -> (u8, u8, u8) {
+    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
         let mut accum = (0.0, 0.0, 0.0, 0.0);
 
         let (t1, t2) = match self.volume.intersect(ray) {
@@ -170,8 +157,6 @@ where
         let step = direction * step_size; // normalized
 
         let mut pos = begin;
-
-        //let mut steps_count = 0;
 
         loop {
             let sample = self.volume.sample_at(pos);
@@ -195,9 +180,104 @@ where
             accum.2 += (1.0 - accum.3) * color.2;
             accum.3 += (1.0 - accum.3) * color.3;
 
-            // early ray termination
-            if (color.3 - 0.99) > 0.0 {
+            // relying on branch predictor to "eliminate" branch
+            if self.render_options.ray_termination {
+                // early ray termination
+                if (color.3 - 0.99) > 0.0 {
+                    break;
+                }
+            }
+
+            if !self.volume.is_in(pos) {
                 break;
+            }
+        }
+
+        let accum_i_x = accum.0.min(255.0) as u8;
+        let accum_i_y = accum.1.min(255.0) as u8;
+        let accum_i_z = accum.2.min(255.0) as u8;
+
+        (accum_i_x, accum_i_y, accum_i_z)
+    }
+
+    pub fn collect_light_index(&self, ray: &Ray) -> (u8, u8, u8) {
+        let mut accum = (0.0, 0.0, 0.0, 0.0);
+
+        let (t1, t2) = match self.volume.intersect(ray) {
+            Some(tup) => tup,
+            None => return (0, 0, 0),
+        };
+
+        let begin = ray.point_from_t(t1);
+        let direction = ray.get_direction();
+
+        let step_size = 1.0;
+
+        let step = direction * step_size; // normalized
+
+        let mut pos = begin;
+
+        let m_max = self.empty_index.len() - 1;
+        let mut m = m_max;
+
+        loop {
+            let index = self.empty_index.get_index_at(m, pos);
+
+            if index == BlockType::NonEmpty {
+                if m > 0 {
+                    // go down a level
+                    m -= 1;
+                    continue;
+                } else {
+                    // m == 0
+                    // sample
+                    let sample = self.volume.sample_at(pos);
+
+                    let color = transfer_function(sample);
+
+                    accum.0 += (1.0 - accum.3) * color.0;
+                    accum.1 += (1.0 - accum.3) * color.1;
+                    accum.2 += (1.0 - accum.3) * color.2;
+                    accum.3 += (1.0 - accum.3) * color.3;
+
+                    if self.render_options.ray_termination {
+                        // early ray termination
+                        if (color.3 - 0.99) > 0.0 {
+                            break;
+                        }
+                    }
+
+                    continue;
+                }
+            }
+
+            // empty
+
+            // step to next on same level
+
+            let ray_dirs = step.map(|v| if v > 0.0 { 1.0f32 } else { 0.0 });
+            let index_edge = EmptyIndexes::get_index_size(m);
+            let index_3d_offset = EmptyIndexes::get_block_coords(m, pos);
+            let index_low_coords = index_3d_offset * index_edge;
+            let index_low_coords = index_low_coords.map(|v| v as f32);
+
+            // remember parent
+            let parent_offset = EmptyIndexes::get_block_coords(m + 1, pos);
+
+            let delta_i =
+                (ray_dirs * (index_edge as f32) + index_low_coords - pos).component_div(&step);
+
+            let delta_i = delta_i.map(|f| f.ceil() as usize);
+
+            let n_of_steps = delta_i.min().max(1);
+
+            pos += step * (n_of_steps as f32);
+
+            let new_parent_offset = EmptyIndexes::get_block_coords(m + 1, pos);
+
+            while parent_offset != new_parent_offset && m < m_max - 1 {
+                // parents changed
+                m += 1;
             }
 
             if !self.volume.is_in(pos) {
