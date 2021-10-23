@@ -160,7 +160,7 @@ where
         let mut pos = begin;
 
         loop {
-            let sample = self.volume.sample_at(pos);
+            let sample = self.volume.sample_at(&pos);
 
             let color = transfer_function(sample);
 
@@ -221,19 +221,21 @@ where
         let m_max = self.empty_index.len() - 1;
         let mut m = m_max;
 
+        let mut index = self.empty_index.get_index_at(m, &pos);
+
         loop {
-            let index = self.empty_index.get_index_at(m, pos);
             //println!("> m {} index {:?}", m, index);
 
             if index == BlockType::NonEmpty {
                 if m > 0 {
                     // go down a level
                     m -= 1;
+                    index = self.empty_index.get_index_at(m, &pos);
                     continue;
                 } else {
                     // m == 0
                     // sample
-                    let sample = self.volume.sample_at(pos);
+                    let sample = self.volume.sample_at(&pos);
 
                     let color = transfer_function(sample);
 
@@ -251,7 +253,14 @@ where
                         }
                     }
 
-                    //continue;
+                    pos += step;
+
+                    if !self.volume.is_in(pos) {
+                        break;
+                    }
+
+                    index = self.empty_index.get_index_at(m, &pos);
+                    continue;
                 }
             }
 
@@ -259,9 +268,9 @@ where
 
             // step to next on same level
 
-            let ray_dirs = step.map(|v| if v > 0.0 { 1.0f32 } else { 0.0 });
+            let ray_dirs = step.map(|v| if v.is_sign_positive() { 1.0 } else { 0.0 });
             let index_edge = EmptyIndexes::get_index_size(m);
-            let index_3d_offset = EmptyIndexes::get_block_coords(m, pos);
+            let index_3d_offset = EmptyIndexes::get_block_coords(m, &pos);
             let index_low_coords = index_3d_offset * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
@@ -280,11 +289,19 @@ where
             //println!("{} is in", new_pos);
 
             // parents
-            if m < m_max - 1 && self.empty_index.get_index_at(m + 1, new_pos) == BlockType::Empty {
-                m += 1;
+            if m < m_max - 1 {
+                let parent_index = self.empty_index.get_index_at(m + 1, &new_pos);
+                if parent_index == BlockType::Empty {
+                    m += 1;
+                    index = parent_index;
+
+                    pos = new_pos;
+                    continue;
+                }
             }
 
             pos = new_pos;
+            index = self.empty_index.get_index_at(m, &pos);
         }
 
         let accum_i_x = accum.0.min(255.0) as u8;

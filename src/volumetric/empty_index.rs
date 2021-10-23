@@ -32,12 +32,10 @@ impl EmptyIndexes {
         2u32.pow(m as u32) as usize
     }
 
-    pub fn get_block_coords(level: usize, pos: Vector3<f32>) -> Vector3<usize> {
-        let low_pos = pos.map(|f| f.floor() as usize);
-
+    pub fn get_block_coords(level: usize, pos: &Vector3<f32>) -> Vector3<usize> {
         let index_block_size = EmptyIndexes::get_index_size(level);
 
-        low_pos.map(|p| p / index_block_size)
+        pos.map(|f| (f as usize) / index_block_size)
     }
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndexes {
@@ -49,7 +47,7 @@ impl EmptyIndexes {
         EmptyIndexes { indexes }
     }
 
-    pub fn get_index_at(&self, level: usize, pos: Vector3<f32>) -> BlockType {
+    pub fn get_index_at(&self, level: usize, pos: &Vector3<f32>) -> BlockType {
         assert!(level < self.indexes.len());
 
         let block_pos = EmptyIndexes::get_block_coords(level, pos);
@@ -345,11 +343,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_at(0, vector![0.0, 0.0, 0.0]),
+                empty_index.get_index_at(0, &vector![0.0, 0.0, 0.0]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_at(0, vector![0.78, 0.55, 1.4]),
+                empty_index.get_index_at(0, &vector![0.78, 0.55, 1.4]),
                 BlockType::NonEmpty
             );
         }
@@ -360,11 +358,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_at(1, vector![0.6, 0.5, 0.4]),
+                empty_index.get_index_at(1, &vector![0.6, 0.5, 0.4]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_at(1, vector![2.1, 2.1, 1.2]),
+                empty_index.get_index_at(1, &vector![2.1, 2.1, 1.2]),
                 BlockType::Empty
             );
         }
@@ -375,11 +373,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_at(2, vector![0.6, 0.5, 0.4]),
+                empty_index.get_index_at(2, &vector![0.6, 0.5, 0.4]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_at(2, vector![1.1, 3.1, 3.2]),
+                empty_index.get_index_at(2, &vector![1.1, 3.1, 3.2]),
                 BlockType::Empty
             );
         }

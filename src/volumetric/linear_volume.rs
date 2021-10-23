@@ -44,10 +44,10 @@ impl Volume for LinearVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: Vector3<f32>) -> f32 {
-        let x_low = pos[0].floor() as usize;
-        let y_low = pos[1].floor() as usize;
-        let z_low = pos[2].floor() as usize;
+    fn sample_at(&self, pos: &Vector3<f32>) -> f32 {
+        let x_low = pos.x as usize;
+        let y_low = pos.y as usize;
+        let z_low = pos.z as usize;
 
         let x_high = x_low + 1;
         let y_high = y_low + 1;

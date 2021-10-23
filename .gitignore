@@ -1,5 +1,5 @@
 /target
-perf.data
+perf.data*
 flamegraph.svg
 *.vol
 *.dat
