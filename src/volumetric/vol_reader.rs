@@ -128,12 +128,16 @@ fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
 
     let rest = &fb[28..];
 
-    // println!(
-    //     "Parsed file. Rest: {} | Rest / 68 = {} | Rest / 256*256 = {}",
-    //     rest.len(),
-    //     rest.len() / 68,
-    //     rest.len() / (256 * 256)
-    // );
+    println!(
+        "Parsed file. voxels: {} | planes: {} | plane: {}x{} ZxY | scale: {} {} {}",
+        rest.len(),
+        x,
+        z,
+        y,
+        scale_x,
+        scale_y,
+        scale_z
+    );
 
     let data = rest.to_owned();
 
@@ -143,7 +147,7 @@ fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
 
     let volume_builder = VolumeBuilder::new()
         .set_size(vector![x, y, z])
-        .set_scale(vector![scale_x, scale_y, scale_z])
+        //.set_scale(vector![scale_x, scale_y, scale_z])
         .set_data(data)
         .set_border(0);
 

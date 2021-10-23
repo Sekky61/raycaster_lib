@@ -94,6 +94,7 @@ where
 
     fn render(&mut self) {
         println!("THE RENDER");
+        println!("Index: {:?}", self.empty_index);
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
             self.camera.resolution.1 as f32,
@@ -222,6 +223,7 @@ where
 
         loop {
             let index = self.empty_index.get_index_at(m, pos);
+            //println!("> m {} index {:?}", m, index);
 
             if index == BlockType::NonEmpty {
                 if m > 0 {
@@ -235,6 +237,8 @@ where
 
                     let color = transfer_function(sample);
 
+                    //println!("Sample {:?}", color);
+
                     accum.0 += (1.0 - accum.3) * color.0;
                     accum.1 += (1.0 - accum.3) * color.1;
                     accum.2 += (1.0 - accum.3) * color.2;
@@ -247,7 +251,7 @@ where
                         }
                     }
 
-                    continue;
+                    //continue;
                 }
             }
 
@@ -261,9 +265,6 @@ where
             let index_low_coords = index_3d_offset * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
-            // remember parent
-            let parent_offset = EmptyIndexes::get_block_coords(m + 1, pos);
-
             let delta_i =
                 (ray_dirs * (index_edge as f32) + index_low_coords - pos).component_div(&step);
 
@@ -271,18 +272,19 @@ where
 
             let n_of_steps = delta_i.min().max(1);
 
-            pos += step * (n_of_steps as f32);
+            let new_pos = pos + step * (n_of_steps as f32);
 
-            let new_parent_offset = EmptyIndexes::get_block_coords(m + 1, pos);
+            if !self.volume.is_in(new_pos) {
+                break;
+            }
+            //println!("{} is in", new_pos);
 
-            while parent_offset != new_parent_offset && m < m_max - 1 {
-                // parents changed
+            // parents
+            if m < m_max - 1 && self.empty_index.get_index_at(m + 1, new_pos) == BlockType::Empty {
                 m += 1;
             }
 
-            if !self.volume.is_in(pos) {
-                break;
-            }
+            pos = new_pos;
         }
 
         let accum_i_x = accum.0.min(255.0) as u8;

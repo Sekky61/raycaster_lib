@@ -13,6 +13,20 @@ pub struct EmptyIndexes {
     indexes: Vec<EmptyIndex>,
 }
 
+impl std::fmt::Debug for EmptyIndexes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut stru = f.debug_struct("EmptyIndexes");
+        stru.field("indexes: ", &self.indexes.len());
+        stru.field("last index dims: ", &self.indexes.last().unwrap().size);
+
+        for (i, ind) in self.indexes.iter().enumerate() {
+            let key = format!("[{}] non-empty: ", i);
+            stru.field(&key, &ind.non_empty_blocks());
+        }
+        stru.finish()
+    }
+}
+
 impl EmptyIndexes {
     pub fn get_index_size(m: usize) -> usize {
         2u32.pow(m as u32) as usize
@@ -39,9 +53,8 @@ impl EmptyIndexes {
         assert!(level < self.indexes.len());
 
         let block_pos = EmptyIndexes::get_block_coords(level, pos);
-
+        //println!("Pos {} Block pos {}", pos, block_pos);
         let index_3d = self.get_3d_index_level(level, &block_pos);
-
         self.indexes[level].blocks[index_3d]
     }
 
@@ -59,12 +72,24 @@ impl EmptyIndexes {
     }
 }
 
+#[derive(Debug)]
 pub struct EmptyIndex {
     size: Vector3<usize>,
     blocks: Vec<BlockType>,
 }
 
 impl EmptyIndex {
+    pub fn len(&self) -> usize {
+        self.blocks.len()
+    }
+
+    pub fn non_empty_blocks(&self) -> usize {
+        self.blocks
+            .iter()
+            .filter(|&&b| b == BlockType::NonEmpty)
+            .count()
+    }
+
     fn from_empty_index(base: &EmptyIndex) -> Option<EmptyIndex> {
         let base_dims = base.size;
         if base_dims.iter().any(|&x| x == 1) {
@@ -82,7 +107,7 @@ impl EmptyIndex {
         for x in 0..index_size.x {
             for y in 0..index_size.y {
                 for z in 0..index_size.z {
-                    let block_type = EmptyIndex::join_blocks(base, x, y, z);
+                    let block_type = EmptyIndex::join_blocks(base, x * 2, y * 2, z * 2);
                     blocks.push(block_type);
                 }
             }

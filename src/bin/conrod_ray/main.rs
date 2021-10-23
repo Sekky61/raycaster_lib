@@ -59,7 +59,7 @@ fn main() {
     // for drawing to the glium `Surface`.
     let mut renderer = conrod_glium::Renderer::new(&display).unwrap();
 
-    let volume = raycaster_lib::vol_reader::from_file("C60Large.vol")
+    let volume = raycaster_lib::vol_reader::from_file("Skull.vol")
         .expect("bad read of file")
         .build();
 
@@ -124,7 +124,7 @@ fn main() {
                         glium::texture::Texture2d::new(display, raw_image).unwrap();
                     image_map.replace(render_target_id, rendered_texture);
                     *should_update_ui = true;
-                    println!("Set true");
+                    println!("UI update set true");
                 };
 
                 match event {

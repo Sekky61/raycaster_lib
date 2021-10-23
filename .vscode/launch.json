@@ -1,0 +1,157 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'raycaster_lib'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "raycaster_lib",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'minifb_raycaster'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=minifb_raycaster",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "minifb_raycaster",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'minifb_raycaster'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=minifb_raycaster",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "minifb_raycaster",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'sixtyfps_raycaster'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=sixtyfps_raycaster",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "sixtyfps_raycaster",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'sixtyfps_raycaster'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=sixtyfps_raycaster",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "sixtyfps_raycaster",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'conrod_ray'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=conrod_ray",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "conrod_ray",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'conrod_ray'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=conrod_ray",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "conrod_ray",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'render'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=render",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "render",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
