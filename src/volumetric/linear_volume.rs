@@ -57,22 +57,24 @@ impl Volume for LinearVolume {
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let c000 = self.get_3d_data(x_low, y_low, z_low) as f32;
-        let c001 = self.get_3d_data(x_low, y_low, z_high) as f32;
-        let c010 = self.get_3d_data(x_low, y_high, z_low) as f32;
-        let c011 = self.get_3d_data(x_low, y_high, z_high) as f32;
-        let c100 = self.get_3d_data(x_high, y_low, z_low) as f32;
-        let c101 = self.get_3d_data(x_high, y_low, z_high) as f32;
-        let c110 = self.get_3d_data(x_high, y_high, z_low) as f32;
-        let c111 = self.get_3d_data(x_high, y_high, z_high) as f32;
+        let c000 = self.get_3d_data(x_low, y_low, z_low);
+        let c001 = self.get_3d_data(x_low, y_low, z_high);
+        let c010 = self.get_3d_data(x_low, y_high, z_low);
+        let c011 = self.get_3d_data(x_low, y_high, z_high);
+        let c100 = self.get_3d_data(x_high, y_low, z_low);
+        let c101 = self.get_3d_data(x_high, y_low, z_high);
+        let c110 = self.get_3d_data(x_high, y_high, z_low);
+        let c111 = self.get_3d_data(x_high, y_high, z_high);
 
-        let c00 = c000 * (1.0 - x_t) + c100 * x_t;
-        let c01 = c001 * (1.0 - x_t) + c101 * x_t;
-        let c10 = c010 * (1.0 - x_t) + c110 * x_t;
-        let c11 = c011 * (1.0 - x_t) + c111 * x_t;
+        let inv_x_t = 1.0 - x_t;
+        let c00 = c000 * inv_x_t + c100 * x_t;
+        let c01 = c001 * inv_x_t + c101 * x_t;
+        let c10 = c010 * inv_x_t + c110 * x_t;
+        let c11 = c011 * inv_x_t + c111 * x_t;
 
-        let c0 = c00 * (1.0 - y_t) + c10 * y_t;
-        let c1 = c01 * (1.0 - y_t) + c11 * y_t;
+        let inv_y_t = 1.0 - y_t;
+        let c0 = c00 * inv_y_t + c10 * y_t;
+        let c1 = c01 * inv_y_t + c11 * y_t;
 
         c0 * (1.0 - z_t) + c1 * z_t
     }

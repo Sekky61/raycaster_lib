@@ -94,6 +94,7 @@ where
 
     fn render(&mut self) {
         println!("THE RENDER");
+        println!("Vol: {:?}", self.volume.get_dims());
         println!("Index: {:?}", self.empty_index);
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
@@ -216,12 +217,13 @@ where
 
         let step = direction * step_size; // normalized
 
-        let mut pos = begin;
-
         let m_max = self.empty_index.len() - 1;
         let mut m = m_max;
 
-        let mut index = self.empty_index.get_index_at(m, &pos);
+        let mut pos = begin;
+        let mut pos_usize = EmptyIndexes::get_block_coords(m, &pos);
+
+        let mut index = self.empty_index.get_index_from_usize(m, &pos_usize);
 
         loop {
             //println!("> m {} index {:?}", m, index);
@@ -230,7 +232,9 @@ where
                 if m > 0 {
                     // go down a level
                     m -= 1;
-                    index = self.empty_index.get_index_at(m, &pos);
+                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
+                    //println!("#5 pos set level {} us {}", m, pos_usize);
+                    index = self.empty_index.get_index_from_usize(m, &pos_usize);
                     continue;
                 } else {
                     // m == 0
@@ -259,7 +263,9 @@ where
                         break;
                     }
 
-                    index = self.empty_index.get_index_at(m, &pos);
+                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
+                    //println!("#6 pos set level {} us {}", m, pos_usize);
+                    index = self.empty_index.get_index_from_usize(m, &pos_usize);
                     continue;
                 }
             }
@@ -270,8 +276,13 @@ where
 
             let ray_dirs = step.map(|v| if v.is_sign_positive() { 1.0 } else { 0.0 });
             let index_edge = EmptyIndexes::get_index_size(m);
-            let index_3d_offset = EmptyIndexes::get_block_coords(m, &pos);
-            let index_low_coords = index_3d_offset * index_edge;
+            //let index_3d_offset = EmptyIndexes::get_block_coords(m, &pos);
+            // println!("#1 level {} us {}", m, index_3d_offset);
+            // if index_3d_offset != pos_usize {
+            //     println!("DIFFERS {} {}", index_3d_offset, pos_usize);
+            // }
+            // let index_low_coords = index_3d_offset * index_edge;
+            let index_low_coords = pos_usize * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
             let delta_i =
@@ -282,6 +293,8 @@ where
             let n_of_steps = delta_i.min().max(1);
 
             let new_pos = pos + step * (n_of_steps as f32);
+            let new_pos_usize = EmptyIndexes::get_block_coords(m, &new_pos);
+            // println!("#2 new pos level {} us {}", m, new_pos_usize);
 
             if !self.volume.is_in(new_pos) {
                 break;
@@ -290,18 +303,22 @@ where
 
             // parents
             if m < m_max - 1 {
-                let parent_index = self.empty_index.get_index_at(m + 1, &new_pos);
+                let parent_index = self.empty_index.get_parent_index(m, &new_pos_usize);
                 if parent_index == BlockType::Empty {
                     m += 1;
-                    index = parent_index;
 
                     pos = new_pos;
+                    index = parent_index;
+                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
+                    // println!("#3 pos set level {} us {}", m, pos_usize);
                     continue;
                 }
             }
 
             pos = new_pos;
-            index = self.empty_index.get_index_at(m, &pos);
+            //println!("#4 pos set level {} us {}", m, new_pos_usize);
+            pos_usize = new_pos_usize;
+            index = self.empty_index.get_index_from_usize(m, &pos_usize);
         }
 
         let accum_i_x = accum.0.min(255.0) as u8;
