@@ -47,6 +47,6 @@ fn float_to_int_vector(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, full_render, pure_render);
+criterion_group!(benches, pure_render);
 //criterion_group!(benches, float_to_int_vector);
 criterion_main!(benches);

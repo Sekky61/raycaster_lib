@@ -113,6 +113,8 @@ where
         // cam to world
         let lookat_matrix = self.camera.get_look_at_matrix();
 
+        let mut buffer_index = 0;
+
         for y in 0..self.camera.resolution.1 {
             for x in 0..self.camera.resolution.0 {
                 let pixel_ndc_x = (x as f32 + 0.5) / image_width;
@@ -132,13 +134,13 @@ where
 
                 let ray_world = Ray::from_3(self.camera.position, dir_world_3);
 
-                let ray_color = self.collect_light_index(&ray_world);
+                let ray_color = self.collect_light(&ray_world);
 
-                let index = (y * self.camera.resolution.0 + x) * 3; // packed structs -/-
+                self.buffer[buffer_index] = ray_color.0;
+                self.buffer[buffer_index + 1] = ray_color.1;
+                self.buffer[buffer_index + 2] = ray_color.2;
 
-                self.buffer[index] = ray_color.0;
-                self.buffer[index + 1] = ray_color.1;
-                self.buffer[index + 2] = ray_color.2;
+                buffer_index += 3;
             }
         }
     }
@@ -274,19 +276,13 @@ where
 
             // step to next on same level
 
-            let ray_dirs = step.map(|v| if v.is_sign_positive() { 1.0 } else { 0.0 });
+            let ray_dirs = step.map(|v| if v.is_sign_positive() { 1usize } else { 0 });
             let index_edge = EmptyIndexes::get_index_size(m);
-            //let index_3d_offset = EmptyIndexes::get_block_coords(m, &pos);
-            // println!("#1 level {} us {}", m, index_3d_offset);
-            // if index_3d_offset != pos_usize {
-            //     println!("DIFFERS {} {}", index_3d_offset, pos_usize);
-            // }
-            // let index_low_coords = index_3d_offset * index_edge;
             let index_low_coords = pos_usize * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
-            let delta_i =
-                (ray_dirs * (index_edge as f32) + index_low_coords - pos).component_div(&step);
+            let delta_i = ((ray_dirs * index_edge).map(|f| f as f32) + index_low_coords - pos)
+                .component_div(&step);
 
             let delta_i = delta_i.map(|f| f.ceil() as usize);
 
