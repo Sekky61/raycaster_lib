@@ -93,9 +93,9 @@ where
     }
 
     fn render(&mut self) {
-        println!("THE RENDER");
-        println!("Vol: {:?}", self.volume.get_dims());
-        println!("Index: {:?}", self.empty_index);
+        // println!("THE RENDER");
+        // println!("Vol: {:?}", self.volume.get_dims());
+        // println!("Index: {:?}", self.empty_index);
         let (image_width, image_height) = (
             self.camera.resolution.0 as f32,
             self.camera.resolution.1 as f32,
@@ -134,7 +134,7 @@ where
 
                 let ray_world = Ray::from_3(self.camera.position, dir_world_3);
 
-                let ray_color = self.collect_light(&ray_world);
+                let ray_color = self.collect_light_index(&ray_world);
 
                 self.buffer[buffer_index] = ray_color.0;
                 self.buffer[buffer_index + 1] = ray_color.1;

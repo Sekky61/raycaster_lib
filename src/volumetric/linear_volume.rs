@@ -88,37 +88,6 @@ impl Volume for LinearVolume {
             && pos.z > 0.0
     }
 
-    fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
-        // t value of intersection with 6 planes of bounding box
-        let t0x = (0.0 - ray.origin.x) / ray.direction.x;
-        let t1x = (self.vol_dims.x - ray.origin.x) / ray.direction.x;
-        let t0y = (0.0 - ray.origin.y) / ray.direction.y;
-        let t1y = (self.vol_dims.y - ray.origin.y) / ray.direction.y;
-        let t0z = (0.0 - ray.origin.z) / ray.direction.z;
-        let t1z = (self.vol_dims.z - ray.origin.z) / ray.direction.z;
-
-        let tmin = f32::max(
-            f32::max(f32::min(t0x, t1x), f32::min(t0y, t1y)),
-            f32::min(t0z, t1z),
-        );
-        let tmax = f32::min(
-            f32::min(f32::max(t0x, t1x), f32::max(t0y, t1y)),
-            f32::max(t0z, t1z),
-        );
-
-        // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
-        if tmax.is_sign_negative() {
-            return None;
-        }
-
-        // if tmin > tmax, ray doesn't intersect AABB
-        if tmin > tmax {
-            return None;
-        }
-
-        Some((tmin, tmax))
-    }
-
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
     }
