@@ -31,8 +31,6 @@ debug = true
 [dependencies]
 #nom = "7.0.0"
 nalgebra = "0.29.0"
-sixtyfps = "0.1.2"
-minifb = "0.19.3"
 conrod_core = "0.75.0"
 conrod_glium = "0.75.0"
 conrod_winit = "0.75.0"
