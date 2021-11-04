@@ -46,6 +46,7 @@ impl Volume for LinearVolume {
     }
 
     fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
+        // todo taky zkusit rozseknout
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
         let z_low = pos.z as usize;

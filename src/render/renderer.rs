@@ -291,7 +291,6 @@ where
                     index_edge_fl = index_edge as f32;
 
                     //println!("#5 pos set level {} us {}", m, index_coords);
-                    continue;
                 } else {
                     // m == 0
                     // sample
@@ -313,8 +312,8 @@ where
                     }
 
                     index = position.get_block_type();
-                    continue;
                 }
+                continue;
             }
 
             // empty

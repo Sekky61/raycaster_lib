@@ -51,39 +51,7 @@ impl BlockVolume {
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         let block_index = self.get_block_index(x, y, z);
         let block_offset = self.get_block_offset(x, y, z);
-        let res = self.data[block_index].data[block_offset];
-        // println!(
-        //     "> ({},{},{}) -> block {} offset {} = {}",
-        //     x, y, z, block_index, block_offset, res
-        // );
-        res
-    }
-
-    // block data, base offset
-    fn get_block_data(&self, pos: Vector3<f32>) -> [RGBA; 8] {
-        let x = pos.x as usize;
-        let y = pos.y as usize;
-        let z = pos.z as usize;
-
-        let (block_index, block_offset) = self.get_indexes(x, y, z);
-
-        let block = &self.data[block_index];
-
-        [
-            block.data[block_offset],
-            block.data[block_offset + 1],
-            block.data[block_offset + BLOCK_SIDE],
-            block.data[block_offset + BLOCK_SIDE + 1],
-            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE],
-            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + 1],
-            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + BLOCK_SIDE],
-            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + BLOCK_SIDE + 1],
-        ]
-
-        // println!(
-        //     "> ({},{},{}) -> block {} offset {}",
-        //     x, y, z, block_index, block_offset
-        // );
+        self.data[block_index].data[block_offset]
     }
 }
 
@@ -94,6 +62,15 @@ pub struct Block {
 impl Block {
     pub fn from_data(data: [RGBA; BLOCK_DATA_LEN]) -> Block {
         Block { data }
+    }
+
+    fn get_block_data_half(&self, start_index: usize) -> [RGBA; 4] {
+        [
+            self.data[start_index],
+            self.data[start_index + 1],
+            self.data[start_index + BLOCK_SIDE],
+            self.data[start_index + BLOCK_SIDE + 1],
+        ]
     }
 }
 
@@ -107,25 +84,44 @@ impl Volume for BlockVolume {
     }
 
     fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
-        let data = self.get_block_data(pos);
+        //let data = self.get_block_data(pos);
+
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
 
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let [c000, c001, c010, c011, c100, c101, c110, c111] = data;
+        let (block_index, block_offset) = self.get_indexes(x, y, z);
 
-        let inv_x_t = 1.0 - x_t;
-        let c00 = c000 * inv_x_t + c100 * x_t; // todo zmena poradi trilin. - nejdriv steny co jsou u sebe adresove
-        let c01 = c001 * inv_x_t + c101 * x_t;
-        let c10 = c010 * inv_x_t + c110 * x_t;
-        let c11 = c011 * inv_x_t + c111 * x_t;
+        let block = &self.data[block_index];
+        let first_index = block_offset;
+        let second_index = block_offset + BLOCK_SIDE * BLOCK_SIDE;
 
+        let first_data = block.get_block_data_half(first_index);
+        let [c000, c001, c010, c011] = first_data;
+
+        let inv_z_t = 1.0 - z_t;
         let inv_y_t = 1.0 - y_t;
-        let c0 = c00 * inv_y_t + c10 * y_t;
-        let c1 = c01 * inv_y_t + c11 * y_t;
 
-        c0 * (1.0 - z_t) + c1 * z_t
+        // first plane
+
+        let c00 = c000 * inv_z_t + c001 * z_t; // z low
+        let c01 = c010 * inv_z_t + c011 * z_t; // z high
+        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+
+        // second plane
+
+        let second_data = block.get_block_data_half(second_index);
+        let [c100, c101, c110, c111] = second_data;
+
+        let c10 = c100 * inv_z_t + c101 * z_t; // z low
+        let c11 = c110 * inv_z_t + c111 * z_t; // z high
+        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+
+        c0 * (1.0 - x_t) + c1 * x_t
     }
 
     fn is_in(&self, pos: &Vector3<f32>) -> bool {
