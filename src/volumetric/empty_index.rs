@@ -28,14 +28,22 @@ impl std::fmt::Debug for EmptyIndexes {
 }
 
 impl EmptyIndexes {
+    pub fn get_index_ref(&self, level: usize) -> &EmptyIndex {
+        &self.indexes[level]
+    }
+
     pub fn get_index_size(m: usize) -> usize {
         2u32.pow(m as u32) as usize
     }
 
     pub fn get_block_coords(level: usize, pos: &Vector3<f32>) -> Vector3<usize> {
-        let index_block_size = 1.0 / (EmptyIndexes::get_index_size(level) as f32);
+        //let index_block_size = 1.0 / (EmptyIndexes::get_index_size(level) as f32);
 
-        pos.map(|f| (f * index_block_size) as usize)
+        (pos / EmptyIndexes::get_index_size(level) as f32).map(|f| f as usize)
+    }
+
+    pub fn get_block_coords_int(level: usize, pos: &Vector3<usize>) -> Vector3<usize> {
+        vector![pos.x >> level, pos.y >> level, pos.z >> level]
     }
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndexes {
@@ -86,7 +94,7 @@ impl EmptyIndexes {
 
 #[derive(Debug)]
 pub struct EmptyIndex {
-    size: Vector3<usize>,
+    pub size: Vector3<usize>,
     blocks: Vec<BlockType>,
 }
 
@@ -174,6 +182,21 @@ impl EmptyIndex {
 
     fn index_3d(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
+    }
+
+    fn index_3d_vec(&self, pos: &Vector3<usize>) -> usize {
+        pos.z + pos.y * self.size.z + pos.x * self.size.y * self.size.z
+    }
+
+    pub fn get_block_vec(&self, pos: &Vector3<usize>) -> BlockType {
+        let offset = self.index_3d_vec(pos);
+        match self.blocks.get(offset) {
+            Some(x) => *x,
+            None => {
+                println!("BAD {} dims {}", pos, self.size);
+                BlockType::Empty
+            }
+        }
     }
 
     fn get_block(&self, x: usize, y: usize, z: usize) -> BlockType {

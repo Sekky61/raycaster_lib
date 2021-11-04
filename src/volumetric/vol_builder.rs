@@ -82,6 +82,9 @@ impl VolumeBuilder {
     }
 
     pub fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+        if x > self.size.x || y > self.size.y || z > self.size.z {
+            return 0.0;
+        }
         let index = self.get_3d_index(x, y, z);
         match self.data.get(index) {
             Some(&v) => v,

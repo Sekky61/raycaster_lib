@@ -1,4 +1,7 @@
-use crate::{volumetric::BlockType, EmptyIndexes};
+use crate::{
+    volumetric::{BlockType, EmptyIndex},
+    EmptyIndexes,
+};
 
 use super::*;
 
@@ -25,6 +28,68 @@ impl RenderOptions {
     }
 }
 
+pub struct Position<'a> {
+    pos: Vector3<f32>,
+    pos_int: Vector3<usize>,
+    level: usize,
+    index_pos: Vector3<usize>,
+    index: &'a EmptyIndex,
+}
+
+impl<'a> Position<'a> {
+    pub fn new(pos: Vector3<f32>, level: usize, index: &'a EmptyIndex) -> Self {
+        let mut position = Position {
+            pos,
+            pos_int: Default::default(),
+            level,
+            index_pos: Default::default(),
+            index,
+        };
+        position.sync_pos();
+        position
+    }
+
+    pub fn set_pos(&mut self, pos: Vector3<f32>) {
+        self.pos = pos;
+        self.sync_pos();
+    }
+
+    pub fn sync_pos(&mut self) {
+        self.pos_int = self.pos.map(|f| f as usize);
+        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
+    }
+
+    pub fn lower_level(&mut self, index_ref: &'a EmptyIndexes) {
+        self.level -= 1;
+        self.index = index_ref.get_index_ref(self.level);
+        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
+    }
+
+    pub fn get_block_type(&self) -> BlockType {
+        // if self.pos.x > 64.0 {
+        //     println!(
+        //         "Iter {}) ({} {} {}) === ({} {} {}) block ({} {} {})",
+        //         self.level,
+        //         self.pos.x,
+        //         self.pos.y,
+        //         self.pos.z,
+        //         self.pos_int.x,
+        //         self.pos_int.y,
+        //         self.pos_int.z,
+        //         self.index_pos.x,
+        //         self.index_pos.y,
+        //         self.index_pos.z,
+        //     );
+        // }
+        self.index.get_block_vec(&self.index_pos)
+    }
+
+    pub fn change_pos(&mut self, delta: &Vector3<f32>) {
+        self.pos += delta;
+        self.sync_pos();
+    }
+}
+
 pub struct Renderer<V>
 where
     V: Volume,
@@ -33,7 +98,7 @@ where
     pub(super) camera: Camera,
     pub(super) buffer: Vec<u8>,
     pub(super) buf_status: BufferStatus,
-    pub(super) empty_index: EmptyIndexes,
+    pub empty_index: EmptyIndexes,
     render_options: RenderOptions,
 }
 
@@ -170,7 +235,7 @@ where
             pos += step;
 
             if color.3 == 0.0 {
-                if !self.volume.is_in(pos) {
+                if !self.volume.is_in(&pos) {
                     break;
                 }
                 continue;
@@ -192,7 +257,7 @@ where
                 }
             }
 
-            if !self.volume.is_in(pos) {
+            if !self.volume.is_in(&pos) {
                 break;
             }
         }
@@ -218,34 +283,34 @@ where
         let step_size = 1.0;
 
         let step = direction * step_size; // normalized
+        let ray_dirs = step.map(|v| if v.is_sign_positive() { 1usize } else { 0 });
 
         let m_max = self.empty_index.len() - 1;
-        let mut m = m_max;
+        let starting_m = m_max - 1;
 
-        let mut pos = begin;
-        let mut pos_usize = EmptyIndexes::get_block_coords(m, &pos);
+        let begin_index = self.empty_index.get_index_ref(starting_m);
 
-        let mut index = self.empty_index.get_index_from_usize(m, &pos_usize);
+        let mut position = Position::new(begin, starting_m, begin_index);
+
+        let mut index = position.index.get_block_vec(&position.index_pos);
 
         loop {
             //println!("> m {} index {:?}", m, index);
 
             if index == BlockType::NonEmpty {
-                if m > 0 {
+                if position.level > 0 {
                     // go down a level
-                    m -= 1;
-                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
-                    //println!("#5 pos set level {} us {}", m, pos_usize);
-                    index = self.empty_index.get_index_from_usize(m, &pos_usize);
+                    position.lower_level(&self.empty_index);
+                    index = position.get_block_type();
+
+                    //println!("#5 pos set level {} us {}", m, index_coords);
                     continue;
                 } else {
                     // m == 0
                     // sample
-                    let sample = self.volume.sample_at(&pos);
+                    let sample = self.volume.sample_at(&position.pos);
 
                     let color = transfer_function(sample);
-
-                    //println!("Sample {:?}", color);
 
                     accum.0 += (1.0 - accum.3) * color.0;
                     accum.1 += (1.0 - accum.3) * color.1;
@@ -259,15 +324,13 @@ where
                         }
                     }
 
-                    pos += step;
+                    position.change_pos(&step);
 
-                    if !self.volume.is_in(pos) {
+                    if !self.volume.is_in(&position.pos) {
                         break;
                     }
 
-                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
-                    //println!("#6 pos set level {} us {}", m, pos_usize);
-                    index = self.empty_index.get_index_from_usize(m, &pos_usize);
+                    index = position.get_block_type();
                     continue;
                 }
             }
@@ -276,21 +339,30 @@ where
 
             // step to next on same level
 
-            let ray_dirs = step.map(|v| if v.is_sign_positive() { 1usize } else { 0 });
-            let index_edge = EmptyIndexes::get_index_size(m);
-            let index_low_coords = pos_usize * index_edge;
+            let index_edge = EmptyIndexes::get_index_size(position.level); // todo recalculate only on level change
+            let index_low_coords = position.index_pos * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
-            let delta_i = ((ray_dirs * index_edge).map(|f| f as f32) + index_low_coords - pos)
+            let delta_i = ((ray_dirs * index_edge).map(|f| f as f32) + index_low_coords
+                - position.pos)
                 .component_div(&step);
 
             let delta_i = delta_i.map(|f| f.ceil() as usize);
 
             let n_of_steps = delta_i.min().max(1);
+            let change = step * (n_of_steps as f32);
 
-            let new_pos = pos + step * (n_of_steps as f32);
-            let new_pos_usize = EmptyIndexes::get_block_coords(m, &new_pos);
-            // println!("#2 new pos level {} us {}", m, new_pos_usize);
+            position.change_pos(&change);
+
+            if !self.volume.is_in(&position.pos) {
+                break;
+            }
+
+            index = position.get_block_type();
+
+            /*let new_pos = position.pos + step * (n_of_steps as f32);
+            let new_index_coords = EmptyIndexes::get_block_coords(m, &new_pos);
+            // println!("#2 new pos level {} us {}", m, new_index_coords);
 
             if !self.volume.is_in(new_pos) {
                 break;
@@ -299,22 +371,22 @@ where
 
             // parents
             if m < m_max - 1 {
-                let parent_index = self.empty_index.get_parent_index(m, &new_pos_usize);
+                let parent_index = self.empty_index.get_parent_index(m, &new_index_coords);
                 if parent_index == BlockType::Empty {
                     m += 1;
 
                     pos = new_pos;
                     index = parent_index;
-                    pos_usize = EmptyIndexes::get_block_coords(m, &pos);
-                    // println!("#3 pos set level {} us {}", m, pos_usize);
+                    index_coords = EmptyIndexes::get_block_coords(m, &pos);
+                    // println!("#3 pos set level {} us {}", m, index_coords);
                     continue;
                 }
             }
 
             pos = new_pos;
-            //println!("#4 pos set level {} us {}", m, new_pos_usize);
-            pos_usize = new_pos_usize;
-            index = self.empty_index.get_index_from_usize(m, &pos_usize);
+            //println!("#4 pos set level {} us {}", m, new_index_coords);
+            index_coords = new_index_coords;
+            index = self.empty_index.get_index_from_usize(m, &index_coords);*/
         }
 
         let accum_i_x = accum.0.min(255.0) as u8;

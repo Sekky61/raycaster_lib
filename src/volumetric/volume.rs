@@ -13,7 +13,7 @@ pub trait Volume {
     fn sample_at(&self, pos: &Vector3<f32>) -> f32;
 
     // position is inside volume
-    fn is_in(&self, pos: Vector3<f32>) -> bool;
+    fn is_in(&self, pos: &Vector3<f32>) -> bool;
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
 

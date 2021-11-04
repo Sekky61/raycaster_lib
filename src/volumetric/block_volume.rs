@@ -1,8 +1,10 @@
 use nalgebra::{vector, Vector3};
 
-use crate::ray::Ray;
-
 use super::{vol_builder::BuildVolume, Volume, VolumeBuilder};
+
+const BLOCK_SIDE: usize = 3;
+const BLOCK_OVERLAP: usize = 1;
+const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
 pub struct BlockVolume {
     data_size: Vector3<usize>,
@@ -14,32 +16,74 @@ pub struct BlockVolume {
 }
 
 impl BlockVolume {
+    // block 3d index -> 2d index
     fn get_block_offset(&self, x: usize, y: usize, z: usize) -> usize {
-        (z % BLOCK_SIDE)
-            + (y % BLOCK_SIDE) * BLOCK_SIDE
-            + (x % BLOCK_SIDE) * BLOCK_SIDE * BLOCK_SIDE
+        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP; // todo bug here for low coords
+        (z % jump_per_block)
+            + (y % jump_per_block) * BLOCK_SIDE
+            + (x % jump_per_block) * BLOCK_SIDE * BLOCK_SIDE
     }
 
-    // return: block, offset
+    // return: voxel 3d index -> block 2d index
     fn get_block_index(&self, x: usize, y: usize, z: usize) -> usize {
-        (z / BLOCK_SIDE)
-            + (y / BLOCK_SIDE) * self.block_size.z
-            + (x / BLOCK_SIDE) * self.block_size.y * self.block_size.z
+        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
+        (z / jump_per_block)
+            + (y / jump_per_block) * self.block_size.z
+            + (x / jump_per_block) * self.block_size.y * self.block_size.z
     }
 
+    // returns (block index, block offset)
+    fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
+        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
+        let block_offset = (z % jump_per_block)
+            + (y % jump_per_block) * jump_per_block
+            + (x % jump_per_block) * jump_per_block * jump_per_block;
+        let block_index = (z / jump_per_block)
+            + (y / jump_per_block) * self.block_size.z
+            + (x / jump_per_block) * self.block_size.y * self.block_size.z;
+        (block_index, block_offset)
+    }
+
+    // get voxel
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
         let block_index = self.get_block_index(x, y, z);
         let block_offset = self.get_block_offset(x, y, z);
+        let res = self.data[block_index].data[block_offset];
+        // println!(
+        //     "> ({},{},{}) -> block {} offset {} = {}",
+        //     x, y, z, block_index, block_offset, res
+        // );
+        res
+    }
+
+    // block data, base offset
+    fn get_block_data(&self, pos: &Vector3<f32>) -> [f32; 8] {
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
+
+        let block_index = self.get_block_index(x, y, z);
+        let block_offset = self.get_block_offset(x, y, z);
+
+        let block = &self.data[block_index];
+
+        [
+            block.data[block_offset],
+            block.data[block_offset + 1],
+            block.data[block_offset + BLOCK_SIDE],
+            block.data[block_offset + BLOCK_SIDE + 1],
+            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE],
+            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + 1],
+            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + BLOCK_SIDE],
+            block.data[block_offset + BLOCK_SIDE * BLOCK_SIDE + BLOCK_SIDE + 1],
+        ]
+
         // println!(
         //     "> ({},{},{}) -> block {} offset {}",
         //     x, y, z, block_index, block_offset
         // );
-        self.data[block_index].data[block_offset]
     }
 }
-
-const BLOCK_SIDE: usize = 3;
-const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
 pub struct Block {
     data: [f32; BLOCK_DATA_LEN],
@@ -61,26 +105,13 @@ impl Volume for BlockVolume {
     }
 
     fn sample_at(&self, pos: &Vector3<f32>) -> f32 {
-        let x_low = pos.x as usize;
-        let y_low = pos.y as usize;
-        let z_low = pos.z as usize;
-
-        let x_high = x_low + 1;
-        let y_high = y_low + 1;
-        let z_high = z_low + 1;
+        let data = self.get_block_data(pos);
 
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let c000 = self.get_3d_data(x_low, y_low, z_low);
-        let c001 = self.get_3d_data(x_low, y_low, z_high);
-        let c010 = self.get_3d_data(x_low, y_high, z_low);
-        let c011 = self.get_3d_data(x_low, y_high, z_high);
-        let c100 = self.get_3d_data(x_high, y_low, z_low);
-        let c101 = self.get_3d_data(x_high, y_low, z_high);
-        let c110 = self.get_3d_data(x_high, y_high, z_low);
-        let c111 = self.get_3d_data(x_high, y_high, z_high);
+        let [c000, c001, c010, c011, c100, c101, c110, c111] = data;
 
         let inv_x_t = 1.0 - x_t;
         let c00 = c000 * inv_x_t + c100 * x_t;
@@ -95,7 +126,7 @@ impl Volume for BlockVolume {
         c0 * (1.0 - z_t) + c1 * z_t
     }
 
-    fn is_in(&self, pos: Vector3<f32>) -> bool {
+    fn is_in(&self, pos: &Vector3<f32>) -> bool {
         self.vol_dims.x > pos.x
             && self.vol_dims.y > pos.y
             && self.vol_dims.z > pos.z
@@ -115,26 +146,35 @@ pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
             for off_z in 0..BLOCK_SIDE {
-                let value = builder.get_data(x + off_x, y + off_y, z + off_z);
-                v[ptr] = value;
+                if x + off_x >= builder.size.x
+                    || y + off_y >= builder.size.y
+                    || z + off_z >= builder.size.z
+                {
+                    v[ptr] = 0.0;
+                } else {
+                    let value = builder.get_data(x + off_x, y + off_y, z + off_z);
+                    v[ptr] = value;
+                }
                 ptr += 1;
             }
         }
     }
-    Block { data: v }
+    Block::from_data(v)
 }
 
 impl BuildVolume for BlockVolume {
     fn build(builder: VolumeBuilder) -> Self {
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
-            .cast::<f32>()
-            .component_mul(&builder.scale);
+            .cast::<f32>();
+        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&builder.scale); // todo workaround
 
         let mut data = vec![];
 
-        for x in (0..builder.size.x).step_by(3) {
-            for y in (0..builder.size.y).step_by(3) {
-                for z in (0..builder.size.z).step_by(3) {
+        let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
+
+        for x in (0..builder.size.x).step_by(step_size) {
+            for y in (0..builder.size.y).step_by(step_size) {
+                for z in (0..builder.size.z).step_by(step_size) {
                     let block = get_block(&builder, x, y, z);
                     data.push(block);
                 }
@@ -142,9 +182,9 @@ impl BuildVolume for BlockVolume {
         }
 
         let block_size = vector![
-            (builder.size.x as f32 / BLOCK_SIDE as f32).ceil() as usize,
-            (builder.size.y as f32 / BLOCK_SIDE as f32).ceil() as usize,
-            (builder.size.z as f32 / BLOCK_SIDE as f32).ceil() as usize
+            (builder.size.x / step_size) as usize,
+            (builder.size.y / step_size) as usize,
+            (builder.size.z / step_size) as usize
         ];
 
         println!(
@@ -191,16 +231,21 @@ mod test {
         for x in 0..vol_size.x {
             for y in 0..vol_size.y {
                 for z in 0..vol_size.z {
-                    assert!(
-                        (linear.get_data(x, y, z) - block.get_data(x, y, z)).abs() < f32::EPSILON
-                    );
+                    let lin_data = linear.get_data(x, y, z);
+                    let bl_data = block.get_data(x, y, z);
+                    println!("check {} {} {} -- {} vs {}", x, y, z, lin_data, bl_data);
+
+                    if !((lin_data - bl_data).abs() < f32::EPSILON) {
+                        println!("failed");
+                        assert!(false);
+                    }
                 }
             }
         }
     }
 
     #[test] // #[ignore]
-    fn matches_with_skull() {
+    fn matches_with_linear_skull() {
         let builder = vol_reader::from_file("Skull.vol").expect("skull error");
         let linear: LinearVolume = builder.build();
         let builder = vol_reader::from_file("Skull.vol").expect("skull error");
@@ -212,9 +257,16 @@ mod test {
         for x in 0..vol_size.x {
             for y in 0..vol_size.y {
                 for z in 0..vol_size.z {
-                    assert!(
-                        (linear.get_data(x, y, z) - block.get_data(x, y, z)).abs() < f32::EPSILON
-                    );
+                    let lin = linear.get_data(x, y, z);
+                    let bl = block.get_data(x, y, z);
+                    let matching = (lin - bl).abs() < f32::EPSILON;
+                    if !matching {
+                        println!("Not matching ({} {} {}) = {} vs {}", x, y, z, lin, bl);
+                        assert!(
+                            (linear.get_data(x, y, z) - block.get_data(x, y, z)).abs()
+                                < f32::EPSILON
+                        );
+                    }
                 }
             }
         }

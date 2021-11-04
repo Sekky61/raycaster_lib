@@ -79,7 +79,7 @@ impl Volume for LinearVolume {
         c0 * (1.0 - z_t) + c1 * z_t
     }
 
-    fn is_in(&self, pos: Vector3<f32>) -> bool {
+    fn is_in(&self, pos: &Vector3<f32>) -> bool {
         self.vol_dims.x > pos.x
             && self.vol_dims.y > pos.y
             && self.vol_dims.z > pos.z
