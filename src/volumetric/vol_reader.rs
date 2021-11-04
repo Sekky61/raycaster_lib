@@ -4,6 +4,7 @@ use std::{fs::File, io::Read};
 
 use nalgebra::vector;
 
+use super::vol_builder::{color, RGBA};
 use super::VolumeBuilder;
 
 pub fn from_file<P>(path: P) -> Result<VolumeBuilder, &'static str>
@@ -71,7 +72,7 @@ fn dat_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
 
     let volume_builder = VolumeBuilder::new()
         .set_size(vector![x, y, z])
-        .set_data(fb)
+        .set_data(fb, transfer_function)
         .set_border(0);
 
     Ok(volume_builder)
@@ -148,8 +149,23 @@ fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
     let volume_builder = VolumeBuilder::new()
         .set_size(vector![x, y, z])
         //.set_scale(vector![scale_x, scale_y, scale_z])
-        .set_data(data)
+        .set_data(data, transfer_function)
         .set_border(0);
 
     Ok(volume_builder)
+}
+
+// R G B A -- A <0;1>
+pub fn transfer_function(sample: f32) -> RGBA {
+    if sample > 180.0 {
+        RGBA::new(60.0, 230.0, 40.0, 0.3)
+    } else if sample > 70.0 {
+        RGBA::new(230.0, 10.0, 10.0, 0.3)
+    } else if sample > 50.0 {
+        RGBA::new(10.0, 20.0, 100.0, 0.1)
+    } else if sample > 5.0 {
+        RGBA::new(10.0, 10.0, 40.0, 0.05)
+    } else {
+        color::zero()
+    }
 }

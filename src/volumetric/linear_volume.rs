@@ -1,15 +1,16 @@
 use nalgebra::{vector, Vector3};
 
-use crate::ray::Ray;
-
-use super::{vol_builder::BuildVolume, Volume, VolumeBuilder};
+use super::{
+    vol_builder::{color, BuildVolume, RGBA},
+    Volume, VolumeBuilder,
+};
 
 pub struct LinearVolume {
     size: Vector3<usize>,
     border: u32,
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
-    data: Vec<f32>,
+    data: Vec<RGBA>,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -29,12 +30,12 @@ impl LinearVolume {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         //println!("Getting {} {} {}", x, y, z);
         let val = self.data.get(self.get_3d_index(x, y, z));
         match val {
             Some(&v) => v,
-            None => 0.0,
+            None => color::zero(),
         }
     }
 }
@@ -44,7 +45,7 @@ impl Volume for LinearVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: &Vector3<f32>) -> f32 {
+    fn sample_at(&self, pos: &Vector3<f32>) -> RGBA {
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
         let z_low = pos.z as usize;
@@ -88,7 +89,7 @@ impl Volume for LinearVolume {
             && pos.z > 0.0
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         self.get_3d_data(x, y, z)
     }
 
@@ -116,6 +117,8 @@ impl BuildVolume for LinearVolume {
 mod test {
 
     use nalgebra::vector;
+
+    use crate::ray::Ray;
 
     use super::*;
 

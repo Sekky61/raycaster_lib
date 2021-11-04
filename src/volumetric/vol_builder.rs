@@ -2,12 +2,32 @@ use nalgebra::{vector, Vector3};
 
 use super::Volume;
 
+use nalgebra::Vector4;
+
+pub type RGBA = Vector4<f32>;
+
+pub mod color {
+    use super::*;
+
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> RGBA {
+        vector![r, g, b, a]
+    }
+
+    pub fn zero() -> RGBA {
+        vector![0.0, 0.0, 0.0, 0.0]
+    }
+
+    pub fn mono(v: f32) -> RGBA {
+        vector![v, v, v, v]
+    }
+}
+
 // pub(super) -- fields visible in parent module
 pub struct VolumeBuilder {
     pub(super) size: Vector3<usize>,
     pub(super) border: u32,
     pub(super) scale: Vector3<f32>, // shape of voxels
-    pub(super) data: Vec<f32>,
+    pub(super) data: Vec<RGBA>,
 }
 
 pub trait BuildVolume {
@@ -25,11 +45,15 @@ impl VolumeBuilder {
     }
 
     pub fn white_vol() -> VolumeBuilder {
-        VolumeBuilder {
+        let mut vb = VolumeBuilder {
             size: vector![2, 2, 2],
             border: 0,
             scale: vector![100.0, 100.0, 100.0], // shape of voxels
-            data: vec![
+            data: Default::default(),
+        };
+
+        vb = vb.set_data(
+            vec![
                 0.0,
                 32.0,
                 64.0,
@@ -39,7 +63,9 @@ impl VolumeBuilder {
                 128.0 + 64.0,
                 255.0,
             ],
-        }
+            |f| RGBA::new(f, f, f, f),
+        );
+        vb
     }
 
     pub fn set_size(mut self, size: Vector3<usize>) -> VolumeBuilder {
@@ -57,11 +83,11 @@ impl VolumeBuilder {
         self
     }
 
-    pub fn set_data<T>(mut self, data: Vec<T>) -> VolumeBuilder
+    pub fn set_data<T>(mut self, data: Vec<T>, tf: impl Fn(f32) -> RGBA) -> VolumeBuilder
     where
         T: Into<f32> + Copy,
     {
-        let data = data.iter().map(|&t_val| t_val.into()).collect();
+        let data = data.iter().map(|&t_val| tf(t_val.into())).collect();
         self.data = data;
         self
     }
@@ -81,18 +107,18 @@ impl VolumeBuilder {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    pub fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    pub fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         if x > self.size.x || y > self.size.y || z > self.size.z {
-            return 0.0;
+            return color::zero();
         }
         let index = self.get_3d_index(x, y, z);
         match self.data.get(index) {
             Some(&v) => v,
-            None => 0.0,
+            None => color::zero(),
         }
     }
 
-    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [f32; 8] {
+    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [RGBA; 8] {
         [
             self.get_data(x, y, z),
             self.get_data(x, y, z + 1),

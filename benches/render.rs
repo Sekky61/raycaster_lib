@@ -62,5 +62,11 @@ fn render_block(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, render_linear, render_block);
+criterion_group! {
+    name = benches;
+    // This can be any expression that returns a `Criterion` object.
+    config = Criterion::default().significance_level(0.1).sample_size(10);
+    targets = render_linear, render_block
+}
+
 criterion_main!(benches);

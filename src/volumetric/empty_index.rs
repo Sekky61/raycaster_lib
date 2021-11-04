@@ -103,6 +103,10 @@ impl EmptyIndex {
         self.blocks.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn non_empty_blocks(&self) -> usize {
         self.blocks
             .iter()
@@ -173,7 +177,7 @@ impl EmptyIndex {
             volume.get_data(x + 1, y + 1, z + 1),
         ];
 
-        let any_nonzero = samples.iter().any(|&val| val != 0.0);
+        let any_nonzero = samples.iter().any(|&val| val.w != 0.0);
         match any_nonzero {
             true => BlockType::NonEmpty,
             false => BlockType::Empty,
@@ -190,13 +194,14 @@ impl EmptyIndex {
 
     pub fn get_block_vec(&self, pos: &Vector3<usize>) -> BlockType {
         let offset = self.index_3d_vec(pos);
-        match self.blocks.get(offset) {
-            Some(x) => *x,
-            None => {
-                println!("BAD {} dims {}", pos, self.size);
-                BlockType::Empty
-            }
-        }
+        // match self.blocks.get(offset) {
+        //     Some(x) => *x,
+        //     None => {
+        //         println!("BAD {} dims {}", pos, self.size);
+        //         BlockType::Empty
+        //     }
+        // }
+        self.blocks[offset]
     }
 
     fn get_block(&self, x: usize, y: usize, z: usize) -> BlockType {
@@ -229,7 +234,7 @@ impl EmptyIndex {
 #[cfg(test)]
 mod test {
 
-    use crate::volumetric::{LinearVolume, VolumeBuilder};
+    use crate::volumetric::{vol_builder::color, LinearVolume, VolumeBuilder};
     use nalgebra::vector;
 
     use super::*;
@@ -237,7 +242,7 @@ mod test {
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         VolumeBuilder::new()
             .set_size(vector![x, y, z])
-            .set_data(vec![0.0; x * y * z])
+            .set_data(vec![0.0; x * y * z], color::mono)
             .build()
     }
 
@@ -246,7 +251,7 @@ mod test {
         data[2] = 17.0;
         VolumeBuilder::new()
             .set_size(vector![x, y, z])
-            .set_data(data)
+            .set_data(data, color::mono)
             .build()
     }
 

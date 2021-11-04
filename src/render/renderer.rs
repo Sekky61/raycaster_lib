@@ -59,6 +59,11 @@ impl<'a> Position<'a> {
         self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
     }
 
+    pub fn sync_pos_same_level(&mut self) {
+        self.pos_int = self.pos.map(|f| f as usize);
+        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
+    }
+
     pub fn lower_level(&mut self, index_ref: &'a EmptyIndexes) {
         self.level -= 1;
         self.index = index_ref.get_index_ref(self.level);
@@ -211,7 +216,7 @@ where
     }
 
     pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
-        let mut accum = (0.0, 0.0, 0.0, 0.0);
+        let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
         let (t1, t2) = match self.volume.intersect(ray) {
             Some(tup) => tup,
@@ -228,13 +233,11 @@ where
         let mut pos = begin;
 
         loop {
-            let sample = self.volume.sample_at(&pos);
-
-            let color = transfer_function(sample);
+            let color = self.volume.sample_at(&pos);
 
             pos += step;
 
-            if color.3 == 0.0 {
+            if color.w == 0.0 {
                 if !self.volume.is_in(&pos) {
                     break;
                 }
@@ -244,15 +247,12 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum.0 += (1.0 - accum.3) * color.0;
-            accum.1 += (1.0 - accum.3) * color.1;
-            accum.2 += (1.0 - accum.3) * color.2;
-            accum.3 += (1.0 - accum.3) * color.3;
+            accum += (1.0 - accum.w) * color;
 
             // relying on branch predictor to "eliminate" branch
             if self.render_options.ray_termination {
                 // early ray termination
-                if (color.3 - 0.99) > 0.0 {
+                if (color.w - 0.99) > 0.0 {
                     break;
                 }
             }
@@ -262,15 +262,15 @@ where
             }
         }
 
-        let accum_i_x = accum.0.min(255.0) as u8;
-        let accum_i_y = accum.1.min(255.0) as u8;
-        let accum_i_z = accum.2.min(255.0) as u8;
+        let accum_i_x = accum.x.min(255.0) as u8;
+        let accum_i_y = accum.y.min(255.0) as u8;
+        let accum_i_z = accum.z.min(255.0) as u8;
 
         (accum_i_x, accum_i_y, accum_i_z)
     }
 
     pub fn collect_light_index(&self, ray: &Ray) -> (u8, u8, u8) {
-        let mut accum = (0.0, 0.0, 0.0, 0.0);
+        let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
         let (t1, t2) = match self.volume.intersect(ray) {
             Some(tup) => tup,
@@ -308,18 +308,13 @@ where
                 } else {
                     // m == 0
                     // sample
-                    let sample = self.volume.sample_at(&position.pos);
+                    let color = self.volume.sample_at(&position.pos);
 
-                    let color = transfer_function(sample);
-
-                    accum.0 += (1.0 - accum.3) * color.0;
-                    accum.1 += (1.0 - accum.3) * color.1;
-                    accum.2 += (1.0 - accum.3) * color.2;
-                    accum.3 += (1.0 - accum.3) * color.3;
+                    accum += (1.0 - accum.w) * color;
 
                     if self.render_options.ray_termination {
                         // early ray termination
-                        if (color.3 - 0.99) > 0.0 {
+                        if (color.w - 0.99) > 0.0 {
                             break;
                         }
                     }
@@ -389,25 +384,10 @@ where
             index = self.empty_index.get_index_from_usize(m, &index_coords);*/
         }
 
-        let accum_i_x = accum.0.min(255.0) as u8;
-        let accum_i_y = accum.1.min(255.0) as u8;
-        let accum_i_z = accum.2.min(255.0) as u8;
+        let accum_i_x = accum.x.min(255.0) as u8;
+        let accum_i_y = accum.y.min(255.0) as u8;
+        let accum_i_z = accum.z.min(255.0) as u8;
 
         (accum_i_x, accum_i_y, accum_i_z)
-    }
-}
-
-// R G B A -- A <0;1>
-pub fn transfer_function(sample: f32) -> (f32, f32, f32, f32) {
-    if sample > 180.0 {
-        (60.0, 230.0, 40.0, 0.3)
-    } else if sample > 70.0 {
-        (230.0, 10.0, 10.0, 0.3)
-    } else if sample > 50.0 {
-        (10.0, 20.0, 100.0, 0.1)
-    } else if sample > 5.0 {
-        (10.0, 10.0, 40.0, 0.05)
-    } else {
-        (0.0, 0.0, 0.0, 0.0)
     }
 }

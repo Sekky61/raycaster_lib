@@ -1,6 +1,9 @@
 use nalgebra::{vector, Vector3};
 
-use super::{vol_builder::BuildVolume, Volume, VolumeBuilder};
+use super::{
+    vol_builder::{color, BuildVolume, RGBA},
+    Volume, VolumeBuilder,
+};
 
 const BLOCK_SIDE: usize = 3;
 const BLOCK_OVERLAP: usize = 1;
@@ -45,7 +48,7 @@ impl BlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         let block_index = self.get_block_index(x, y, z);
         let block_offset = self.get_block_offset(x, y, z);
         let res = self.data[block_index].data[block_offset];
@@ -57,7 +60,7 @@ impl BlockVolume {
     }
 
     // block data, base offset
-    fn get_block_data(&self, pos: &Vector3<f32>) -> [f32; 8] {
+    fn get_block_data(&self, pos: &Vector3<f32>) -> [RGBA; 8] {
         let x = pos.x as usize;
         let y = pos.y as usize;
         let z = pos.z as usize;
@@ -86,11 +89,11 @@ impl BlockVolume {
 }
 
 pub struct Block {
-    data: [f32; BLOCK_DATA_LEN],
+    data: [RGBA; BLOCK_DATA_LEN],
 }
 
 impl Block {
-    pub fn from_data(data: [f32; BLOCK_DATA_LEN]) -> Block {
+    pub fn from_data(data: [RGBA; BLOCK_DATA_LEN]) -> Block {
         Block { data }
     }
 }
@@ -104,7 +107,7 @@ impl Volume for BlockVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: &Vector3<f32>) -> f32 {
+    fn sample_at(&self, pos: &Vector3<f32>) -> RGBA {
         let data = self.get_block_data(pos);
 
         let x_t = pos.x.fract();
@@ -135,13 +138,13 @@ impl Volume for BlockVolume {
             && pos.z > 0.0
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         self.get_3d_data(x, y, z)
     }
 }
 
 pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block {
-    let mut v = [0.0; BLOCK_DATA_LEN];
+    let mut v = [color::zero(); BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
@@ -150,7 +153,7 @@ pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block
                     || y + off_y >= builder.size.y
                     || z + off_z >= builder.size.z
                 {
-                    v[ptr] = 0.0;
+                    v[ptr] = color::zero(); // todo inefficient
                 } else {
                     let value = builder.get_data(x + off_x, y + off_y, z + off_z);
                     v[ptr] = value;
@@ -208,8 +211,6 @@ impl BuildVolume for BlockVolume {
 #[cfg(test)]
 mod test {
 
-    use nalgebra::vector;
-
     use crate::{vol_reader, volumetric::LinearVolume};
 
     use super::*;
@@ -235,7 +236,9 @@ mod test {
                     let bl_data = block.get_data(x, y, z);
                     println!("check {} {} {} -- {} vs {}", x, y, z, lin_data, bl_data);
 
-                    if !((lin_data - bl_data).abs() < f32::EPSILON) {
+                    let dif = (lin_data - bl_data).abs();
+
+                    if dif.iter().any(|&f| f > f32::EPSILON) {
                         println!("failed");
                         assert!(false);
                     }
@@ -259,14 +262,10 @@ mod test {
                 for z in 0..vol_size.z {
                     let lin = linear.get_data(x, y, z);
                     let bl = block.get_data(x, y, z);
-                    let matching = (lin - bl).abs() < f32::EPSILON;
-                    if !matching {
-                        println!("Not matching ({} {} {}) = {} vs {}", x, y, z, lin, bl);
-                        assert!(
-                            (linear.get_data(x, y, z) - block.get_data(x, y, z)).abs()
-                                < f32::EPSILON
-                        );
-                    }
+                    let dif = (lin - bl).abs();
+
+                    let matching = dif.iter().all(|&f| f < f32::EPSILON);
+                    assert!(matching);
                 }
             }
         }
