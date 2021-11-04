@@ -59,11 +59,6 @@ impl<'a> Position<'a> {
         self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
     }
 
-    pub fn sync_pos_same_level(&mut self) {
-        self.pos_int = self.pos.map(|f| f as usize);
-        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
-    }
-
     pub fn lower_level(&mut self, index_ref: &'a EmptyIndexes) {
         self.level -= 1;
         self.index = index_ref.get_index_ref(self.level);
@@ -71,21 +66,6 @@ impl<'a> Position<'a> {
     }
 
     pub fn get_block_type(&self) -> BlockType {
-        // if self.pos.x > 64.0 {
-        //     println!(
-        //         "Iter {}) ({} {} {}) === ({} {} {}) block ({} {} {})",
-        //         self.level,
-        //         self.pos.x,
-        //         self.pos.y,
-        //         self.pos.z,
-        //         self.pos_int.x,
-        //         self.pos_int.y,
-        //         self.pos_int.z,
-        //         self.index_pos.x,
-        //         self.index_pos.y,
-        //         self.index_pos.z,
-        //     );
-        // }
         self.index.get_block_vec(&self.index_pos)
     }
 
@@ -233,7 +213,7 @@ where
         let mut pos = begin;
 
         loop {
-            let color = self.volume.sample_at(&pos);
+            let color = self.volume.sample_at(pos);
 
             pos += step;
 
@@ -262,9 +242,9 @@ where
             }
         }
 
-        let accum_i_x = accum.x.min(255.0) as u8;
-        let accum_i_y = accum.y.min(255.0) as u8;
-        let accum_i_z = accum.z.min(255.0) as u8;
+        let accum_i_x = accum.x as u8;
+        let accum_i_y = accum.y as u8;
+        let accum_i_z = accum.z as u8;
 
         (accum_i_x, accum_i_y, accum_i_z)
     }
@@ -294,6 +274,10 @@ where
 
         let mut index = position.index.get_block_vec(&position.index_pos);
 
+        // index edge
+        let mut index_edge = EmptyIndexes::get_index_size(position.level);
+        let mut index_edge_fl = index_edge as f32;
+
         loop {
             //println!("> m {} index {:?}", m, index);
 
@@ -303,12 +287,15 @@ where
                     position.lower_level(&self.empty_index);
                     index = position.get_block_type();
 
+                    index_edge = EmptyIndexes::get_index_size(position.level);
+                    index_edge_fl = index_edge as f32;
+
                     //println!("#5 pos set level {} us {}", m, index_coords);
                     continue;
                 } else {
                     // m == 0
                     // sample
-                    let color = self.volume.sample_at(&position.pos);
+                    let color = self.volume.sample_at(position.pos);
 
                     accum += (1.0 - accum.w) * color;
 
@@ -338,14 +325,14 @@ where
             let index_low_coords = position.index_pos * index_edge;
             let index_low_coords = index_low_coords.map(|v| v as f32);
 
-            let delta_i = ((ray_dirs * index_edge).map(|f| f as f32) + index_low_coords
-                - position.pos)
-                .component_div(&step);
+            let delta_i = ray_dirs.map(|d| if d != 0 { index_edge_fl } else { 0.0 });
 
-            let delta_i = delta_i.map(|f| f.ceil() as usize);
+            let delta_i = (delta_i + index_low_coords - position.pos).component_div(&step);
 
-            let n_of_steps = delta_i.min().max(1);
-            let change = step * (n_of_steps as f32);
+            let delta_i = delta_i.map(|f| f.ceil());
+
+            let n_of_steps = delta_i.min().max(1.0);
+            let change = step * n_of_steps;
 
             position.change_pos(&change);
 
@@ -384,9 +371,9 @@ where
             index = self.empty_index.get_index_from_usize(m, &index_coords);*/
         }
 
-        let accum_i_x = accum.x.min(255.0) as u8;
-        let accum_i_y = accum.y.min(255.0) as u8;
-        let accum_i_z = accum.z.min(255.0) as u8;
+        let accum_i_x = accum.x as u8;
+        let accum_i_y = accum.y as u8;
+        let accum_i_z = accum.z as u8;
 
         (accum_i_x, accum_i_y, accum_i_z)
     }

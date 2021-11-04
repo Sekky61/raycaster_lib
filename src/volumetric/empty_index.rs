@@ -33,7 +33,8 @@ impl EmptyIndexes {
     }
 
     pub fn get_index_size(m: usize) -> usize {
-        2u32.pow(m as u32) as usize
+        //2u32.pow(m as u32) as usize
+        1 << m
     }
 
     pub fn get_block_coords(level: usize, pos: &Vector3<f32>) -> Vector3<usize> {

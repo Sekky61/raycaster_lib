@@ -60,13 +60,12 @@ impl BlockVolume {
     }
 
     // block data, base offset
-    fn get_block_data(&self, pos: &Vector3<f32>) -> [RGBA; 8] {
+    fn get_block_data(&self, pos: Vector3<f32>) -> [RGBA; 8] {
         let x = pos.x as usize;
         let y = pos.y as usize;
         let z = pos.z as usize;
 
-        let block_index = self.get_block_index(x, y, z);
-        let block_offset = self.get_block_offset(x, y, z);
+        let (block_index, block_offset) = self.get_indexes(x, y, z);
 
         let block = &self.data[block_index];
 
@@ -107,7 +106,7 @@ impl Volume for BlockVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: &Vector3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
         let data = self.get_block_data(pos);
 
         let x_t = pos.x.fract();
@@ -117,7 +116,7 @@ impl Volume for BlockVolume {
         let [c000, c001, c010, c011, c100, c101, c110, c111] = data;
 
         let inv_x_t = 1.0 - x_t;
-        let c00 = c000 * inv_x_t + c100 * x_t;
+        let c00 = c000 * inv_x_t + c100 * x_t; // todo zmena poradi trilin. - nejdriv steny co jsou u sebe adresove
         let c01 = c001 * inv_x_t + c101 * x_t;
         let c10 = c010 * inv_x_t + c110 * x_t;
         let c11 = c011 * inv_x_t + c111 * x_t;

@@ -45,7 +45,7 @@ impl Volume for LinearVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: &Vector3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
         let z_low = pos.z as usize;

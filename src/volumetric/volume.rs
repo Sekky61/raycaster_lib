@@ -12,7 +12,7 @@ pub trait Volume {
     fn get_dims(&self) -> Vector3<f32>;
 
     // trilinear interpolation sample, zero if outside
-    fn sample_at(&self, pos: &Vector3<f32>) -> RGBA;
+    fn sample_at(&self, pos: Vector3<f32>) -> RGBA;
 
     // position is inside volume
     fn is_in(&self, pos: &Vector3<f32>) -> bool;
