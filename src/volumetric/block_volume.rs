@@ -39,8 +39,8 @@ impl BlockVolume {
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
         let block_offset = (z % jump_per_block)
-            + (y % jump_per_block) * jump_per_block
-            + (x % jump_per_block) * jump_per_block * jump_per_block;
+            + (y % jump_per_block) * BLOCK_SIDE
+            + (x % jump_per_block) * BLOCK_SIDE * BLOCK_SIDE;
         let block_index = (z / jump_per_block)
             + (y / jump_per_block) * self.block_size.z
             + (x / jump_per_block) * self.block_size.y * self.block_size.z;
@@ -49,8 +49,7 @@ impl BlockVolume {
 
     // get voxel
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
-        let block_index = self.get_block_index(x, y, z);
-        let block_offset = self.get_block_offset(x, y, z);
+        let (block_index, block_offset) = self.get_indexes(x, y, z);
         self.data[block_index].data[block_offset]
     }
 }
@@ -199,70 +198,6 @@ impl BuildVolume for BlockVolume {
             scale: builder.scale,
             vol_dims,
             data,
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-
-    use crate::{vol_reader, volumetric::LinearVolume};
-
-    use super::*;
-
-    fn cube_volume<V>() -> V
-    where
-        V: Volume + BuildVolume,
-    {
-        VolumeBuilder::white_vol().build()
-    }
-
-    #[test]
-    fn matches_with_linear() {
-        let linear: LinearVolume = cube_volume();
-        let block: BlockVolume = cube_volume();
-
-        let vol_size = linear.get_size();
-
-        for x in 0..vol_size.x {
-            for y in 0..vol_size.y {
-                for z in 0..vol_size.z {
-                    let lin_data = linear.get_data(x, y, z);
-                    let bl_data = block.get_data(x, y, z);
-                    println!("check {} {} {} -- {} vs {}", x, y, z, lin_data, bl_data);
-
-                    let dif = (lin_data - bl_data).abs();
-
-                    if dif.iter().any(|&f| f > f32::EPSILON) {
-                        println!("failed");
-                        assert!(false);
-                    }
-                }
-            }
-        }
-    }
-
-    #[test] // #[ignore]
-    fn matches_with_linear_skull() {
-        let builder = vol_reader::from_file("Skull.vol").expect("skull error");
-        let linear: LinearVolume = builder.build();
-        let builder = vol_reader::from_file("Skull.vol").expect("skull error");
-        let block: BlockVolume = builder.build();
-
-        let vol_size = linear.get_size();
-        println!("Volsize {}", vol_size);
-
-        for x in 0..vol_size.x {
-            for y in 0..vol_size.y {
-                for z in 0..vol_size.z {
-                    let lin = linear.get_data(x, y, z);
-                    let bl = block.get_data(x, y, z);
-                    let dif = (lin - bl).abs();
-
-                    let matching = dif.iter().all(|&f| f < f32::EPSILON);
-                    assert!(matching);
-                }
-            }
         }
     }
 }

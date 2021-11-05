@@ -72,7 +72,7 @@ fn main() {
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
-        empty_index: false,
+        empty_index: true,
         multi_thread: false,
     });
 

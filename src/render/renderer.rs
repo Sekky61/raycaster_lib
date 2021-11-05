@@ -184,7 +184,12 @@ where
 
                 let ray_world = Ray::from_3(self.camera.position, dir_world_3);
 
-                let ray_color = self.collect_light_index(&ray_world);
+                // rationale: branch gets almost optimized away since it is predictable
+                let ray_color = if self.render_options.empty_index {
+                    self.collect_light_index(&ray_world)
+                } else {
+                    self.collect_light(&ray_world)
+                };
 
                 self.buffer[buffer_index] = ray_color.0;
                 self.buffer[buffer_index + 1] = ray_color.1;

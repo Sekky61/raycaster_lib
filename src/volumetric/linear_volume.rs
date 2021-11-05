@@ -38,6 +38,16 @@ impl LinearVolume {
             None => color::zero(),
         }
     }
+
+    fn get_block_data_half(&self, x: usize, y: usize, z: usize) -> [RGBA; 4] {
+        let base = self.get_3d_index(x, y, z);
+        [
+            self.data[base],
+            self.data[base + 1],
+            self.data[base + self.size.y],
+            self.data[base + self.size.y + 1],
+        ]
+    }
 }
 
 impl Volume for LinearVolume {
