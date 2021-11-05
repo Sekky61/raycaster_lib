@@ -39,8 +39,7 @@ impl LinearVolume {
         }
     }
 
-    fn get_block_data_half(&self, x: usize, y: usize, z: usize) -> [RGBA; 4] {
-        let base = self.get_3d_index(x, y, z);
+    fn get_block_data_half(&self, base: usize) -> [RGBA; 4] {
         [
             self.data[base],
             self.data[base + 1],
@@ -61,34 +60,37 @@ impl Volume for LinearVolume {
         let y_low = pos.y as usize;
         let z_low = pos.z as usize;
 
-        let x_high = x_low + 1;
-        let y_high = y_low + 1;
-        let z_high = z_low + 1;
-
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let c000 = self.get_3d_data(x_low, y_low, z_low);
-        let c001 = self.get_3d_data(x_low, y_low, z_high);
-        let c010 = self.get_3d_data(x_low, y_high, z_low);
-        let c011 = self.get_3d_data(x_low, y_high, z_high);
-        let c100 = self.get_3d_data(x_high, y_low, z_low);
-        let c101 = self.get_3d_data(x_high, y_low, z_high);
-        let c110 = self.get_3d_data(x_high, y_high, z_low);
-        let c111 = self.get_3d_data(x_high, y_high, z_high);
+        let base = self.get_3d_index(x_low, y_low, z_low);
 
-        let inv_x_t = 1.0 - x_t;
-        let c00 = c000 * inv_x_t + c100 * x_t;
-        let c01 = c001 * inv_x_t + c101 * x_t;
-        let c10 = c010 * inv_x_t + c110 * x_t;
-        let c11 = c011 * inv_x_t + c111 * x_t;
+        let first_index = base;
+        let second_index = base + self.size.z * self.size.y;
 
+        let first_data = self.get_block_data_half(first_index);
+        let [c000, c001, c010, c011] = first_data;
+
+        let inv_z_t = 1.0 - z_t;
         let inv_y_t = 1.0 - y_t;
-        let c0 = c00 * inv_y_t + c10 * y_t;
-        let c1 = c01 * inv_y_t + c11 * y_t;
 
-        c0 * (1.0 - z_t) + c1 * z_t
+        // first plane
+
+        let c00 = c000 * inv_z_t + c001 * z_t; // z low
+        let c01 = c010 * inv_z_t + c011 * z_t; // z high
+        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+
+        // second plane
+
+        let second_data = self.get_block_data_half(second_index);
+        let [c100, c101, c110, c111] = second_data;
+
+        let c10 = c100 * inv_z_t + c101 * z_t; // z low
+        let c11 = c110 * inv_z_t + c111 * z_t; // z high
+        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+
+        c0 * (1.0 - x_t) + c1 * x_t
     }
 
     fn is_in(&self, pos: &Vector3<f32>) -> bool {

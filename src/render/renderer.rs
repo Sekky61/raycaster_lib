@@ -49,11 +49,6 @@ impl<'a> Position<'a> {
         position
     }
 
-    pub fn set_pos(&mut self, pos: Vector3<f32>) {
-        self.pos = pos;
-        self.sync_pos();
-    }
-
     pub fn sync_pos(&mut self) {
         self.pos_int = self.pos.map(|f| f as usize);
         self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
@@ -203,7 +198,7 @@ where
     pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
         let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
-        let (t1, t2) = match self.volume.intersect(ray) {
+        let (t1, _) = match self.volume.intersect(ray) {
             Some(tup) => tup,
             None => return (0, 0, 0),
         };
@@ -257,7 +252,7 @@ where
     pub fn collect_light_index(&self, ray: &Ray) -> (u8, u8, u8) {
         let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
-        let (t1, t2) = match self.volume.intersect(ray) {
+        let (t1, _) = match self.volume.intersect(ray) {
             Some(tup) => tup,
             None => return (0, 0, 0),
         };
