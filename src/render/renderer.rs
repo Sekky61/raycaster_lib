@@ -76,7 +76,7 @@ where
 {
     pub(super) volume: V,
     pub(super) camera: Camera,
-    pub(super) buffer: Vec<u8>,
+    pub buffer: Vec<u8>,
     pub(super) buf_status: BufferStatus,
     pub empty_index: EmptyIndexes,
     render_options: RenderOptions,
