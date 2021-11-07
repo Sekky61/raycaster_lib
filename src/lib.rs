@@ -31,7 +31,9 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
         multi_thread: false,
     });
 
-    renderer.render_to_buffer();
+    let mut buffer = vec![0; 3 * width * height];
 
-    renderer.get_buffer()
+    renderer.render_to_buffer(buffer.as_mut_slice());
+
+    buffer
 }

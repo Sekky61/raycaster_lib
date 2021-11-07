@@ -5,12 +5,6 @@ use crate::{
 
 use super::*;
 
-#[derive(PartialEq, Eq)]
-pub enum BufferStatus {
-    Ready,
-    NotReady,
-}
-
 #[derive(Default)]
 pub struct RenderOptions {
     pub ray_termination: bool,
@@ -76,8 +70,6 @@ where
 {
     pub(super) volume: V,
     pub(super) camera: Camera,
-    pub buffer: Vec<u8>,
-    pub(super) buf_status: BufferStatus,
     pub empty_index: EmptyIndexes,
     render_options: RenderOptions,
 }
@@ -87,13 +79,10 @@ where
     V: Volume,
 {
     pub fn new(volume: V, camera: Camera) -> Renderer<V> {
-        let (w, h) = camera.get_resolution();
         let empty_index = EmptyIndexes::from_volume(&volume);
         Renderer {
             volume,
             camera,
-            buffer: vec![0; w * h * 3],
-            buf_status: BufferStatus::NotReady,
             empty_index,
             render_options: RenderOptions {
                 ray_termination: true,
@@ -115,29 +104,11 @@ where
         self.camera.change_pos(delta);
     }
 
-    pub fn try_get_frame(&mut self) -> Option<&[u8]> {
-        if self.buf_status == BufferStatus::NotReady {
-            return None;
-        }
-
-        self.buf_status = BufferStatus::NotReady;
-        Some(self.buffer.as_slice())
+    pub fn render_to_buffer(&mut self, buffer: &mut [u8]) {
+        self.render(buffer);
     }
 
-    pub fn render_to_buffer(&mut self) {
-        self.render();
-        self.buf_status = BufferStatus::Ready;
-    }
-
-    pub fn get_buffer(self) -> Vec<u8> {
-        self.buffer
-    }
-
-    pub fn get_data(&self) -> &[u8] {
-        self.buffer.as_slice()
-    }
-
-    fn render(&mut self) {
+    fn render(&mut self, buffer: &mut [u8]) {
         // println!("THE RENDER");
         // println!("Vol: {:?}", self.volume.get_dims());
         // println!("Index: {:?}", self.empty_index);
@@ -186,9 +157,9 @@ where
                     self.collect_light(&ray_world)
                 };
 
-                self.buffer[buffer_index] = ray_color.0;
-                self.buffer[buffer_index + 1] = ray_color.1;
-                self.buffer[buffer_index + 2] = ray_color.2;
+                buffer[buffer_index] = ray_color.0;
+                buffer[buffer_index + 1] = ray_color.1;
+                buffer[buffer_index + 2] = ray_color.2;
 
                 buffer_index += 3;
             }

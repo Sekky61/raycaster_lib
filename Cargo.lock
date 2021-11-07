@@ -2030,6 +2030,7 @@ dependencies = [
  "glium",
  "gtk",
  "nalgebra",
+ "parking_lot",
  "winit",
 ]
 

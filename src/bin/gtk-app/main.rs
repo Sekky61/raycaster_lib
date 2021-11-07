@@ -25,7 +25,9 @@ fn main() {
         multi_thread: false,
     });
 
-    raycast_renderer.render_to_buffer();
+    let mut buffer = vec![0; 3 * 512 * 512];
+
+    raycast_renderer.render_to_buffer(buffer.as_mut_slice());
 
     let buf = raycast_renderer.get_buffer();
 

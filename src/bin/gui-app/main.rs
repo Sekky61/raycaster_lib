@@ -9,12 +9,16 @@ extern crate glium;
 
 mod support;
 
-use std::thread;
+use std::{thread, time::Duration};
+
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use glium::Surface;
 use nalgebra::vector;
 use raycaster_lib::{
+    render::BufferStatus,
     volumetric::{BlockVolume, LinearVolume},
     RenderOptions, Renderer,
 };
@@ -83,19 +87,46 @@ fn main() {
 
     let render_output_id = image_map.insert(empty_tex);
 
-    let (sender, reciever) = std::sync::mpsc::channel();
+    let frame1 = Arc::new(RwLock::new(vec![0; 3 * 512 * 512]));
+    let frame1_cpy = frame1.clone();
+
+    let frame2 = Arc::new(RwLock::new(vec![0; 3 * 512 * 512]));
+    let frame2_cpy = frame2.clone();
+
+    let bufferstatus = Arc::new(RwLock::new(BufferStatus::new()));
+    let bufferstatus_cpy = bufferstatus.clone();
 
     thread::spawn(move || loop {
-        raycast_renderer.render_to_buffer();
+        let render_target = {
+            let fr = bufferstatus_cpy.read();
+            match *fr {
+                BufferStatus(false, false) => 1,
+                BufferStatus(true, false) => 2,
+                BufferStatus(false, true) => 1,
+                BufferStatus(true, true) => 1, // tu
+            }
+        };
 
-        let x = raycast_renderer.get_data();
+        let mut buff_lock = match render_target {
+            1 => frame1_cpy.write(),
+            2 => frame2_cpy.write(),
+            _ => continue,
+        };
 
-        sender.send(x.to_owned());
+        raycast_renderer.render_to_buffer(&mut (*buff_lock));
+
+        drop(buff_lock);
+        {
+            let mut status = bufferstatus_cpy.write();
+            match render_target {
+                1 => (*status).0 = true,
+                2 => (*status).1 = true,
+                _ => continue,
+            };
+        };
+
         raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
     });
-
-    // let mut image_vec = vec![0; 512 * 512 * 3];
-    // raycast_renderer.render(&mut image_vec[..]);
 
     let texture_1 = glium::texture::Texture2d::empty(&display, 512, 512).unwrap();
 
@@ -119,9 +150,36 @@ fn main() {
                     *should_update_ui = true;
                 }
 
-                let img_data = reciever.try_recv();
-                if let Ok(data) = img_data {
-                    let raw_image = glium::texture::RawImage2d::from_raw_rgb(data, (512, 512));
+                let render_target = {
+                    let fr = bufferstatus.read();
+                    match *fr {
+                        BufferStatus(false, false) => 0,
+                        BufferStatus(true, false) => 1,
+                        BufferStatus(false, true) => 2,
+                        BufferStatus(true, true) => 1, // todo
+                    }
+                };
+
+                if render_target != 0 {
+                    let buff_lock = match render_target {
+                        1 => frame1.read(),
+                        2 => frame2.read(),
+                        _ => panic!("Should not happen"),
+                    };
+
+                    let raw_image =
+                        glium::texture::RawImage2d::from_raw_rgb(buff_lock.to_owned(), (512, 512));
+
+                    drop(buff_lock);
+
+                    {
+                        let mut fr = bufferstatus.write();
+                        match render_target {
+                            1 => (*fr).0 = false,
+                            2 => (*fr).1 = false,
+                            _ => panic!("Should not happen 2"),
+                        }
+                    };
 
                     let rendered_texture =
                         glium::texture::Texture2d::new(display, raw_image).unwrap();
