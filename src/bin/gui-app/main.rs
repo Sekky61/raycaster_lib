@@ -99,12 +99,7 @@ fn main() {
     thread::spawn(move || loop {
         let render_target = {
             let fr = bufferstatus_cpy.read();
-            match *fr {
-                BufferStatus(false, false) => 1,
-                BufferStatus(true, false) => 2,
-                BufferStatus(false, true) => 1,
-                BufferStatus(true, true) => 1, // tu
-            }
+            fr.get_render_target()
         };
 
         let mut buff_lock = match render_target {
@@ -113,7 +108,7 @@ fn main() {
             _ => continue,
         };
 
-        raycast_renderer.render_to_buffer(&mut (*buff_lock));
+        raycast_renderer.render_to_buffer(&mut (buff_lock));
 
         drop(buff_lock);
         {
@@ -150,18 +145,13 @@ fn main() {
                     *should_update_ui = true;
                 }
 
-                let render_target = {
+                let finished_render = {
                     let fr = bufferstatus.read();
-                    match *fr {
-                        BufferStatus(false, false) => 0,
-                        BufferStatus(true, false) => 1,
-                        BufferStatus(false, true) => 2,
-                        BufferStatus(true, true) => 1, // todo
-                    }
+                    fr.get_finished_target()
                 };
 
-                if render_target != 0 {
-                    let buff_lock = match render_target {
+                if finished_render != 0 {
+                    let buff_lock = match finished_render {
                         1 => frame1.read(),
                         2 => frame2.read(),
                         _ => panic!("Should not happen"),
@@ -174,7 +164,7 @@ fn main() {
 
                     {
                         let mut fr = bufferstatus.write();
-                        match render_target {
+                        match finished_render {
                             1 => (*fr).0 = false,
                             2 => (*fr).1 = false,
                             _ => panic!("Should not happen 2"),

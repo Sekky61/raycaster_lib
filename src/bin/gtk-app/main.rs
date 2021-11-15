@@ -1,6 +1,13 @@
-use gtk::prelude::*;
+use std::sync::Arc;
+use std::thread;
+
+use gtk::gdk_pixbuf::Colorspace;
+use gtk::{glib, prelude::*};
 use gtk::{Application, ApplicationWindow};
 
+use nalgebra::vector;
+use parking_lot::RwLock;
+use raycaster_lib::render::BufferStatus;
 use raycaster_lib::{
     volumetric::{BlockVolume, LinearVolume},
     RenderOptions, Renderer,
@@ -11,40 +18,53 @@ fn main() {
         .application_id("org.example.HelloWorld")
         .build();
 
-    let volume = raycaster_lib::vol_reader::from_file("Skull.vol")
-        .expect("bad read of file")
-        .build();
+    let frame1 = Arc::new(RwLock::new(vec![0; 3 * 512 * 512]));
+    let frame1_cpy = frame1.clone();
 
-    let camera = raycaster_lib::Camera::new(512, 512);
+    let frame2 = Arc::new(RwLock::new(vec![0; 3 * 512 * 512]));
+    let frame2_cpy = frame2.clone();
 
-    let mut raycast_renderer = Renderer::<BlockVolume>::new(volume, camera);
-
-    raycast_renderer.set_render_options(RenderOptions {
-        ray_termination: true,
-        empty_index: true,
-        multi_thread: false,
-    });
-
-    let mut buffer = vec![0; 3 * 512 * 512];
-
-    raycast_renderer.render_to_buffer(buffer.as_mut_slice());
-
-    let buf = raycast_renderer.get_buffer();
+    let bufferstatus = Arc::new(RwLock::new(BufferStatus::new()));
+    let bufferstatus_checker = bufferstatus.clone();
+    let bufferstatus_cpy = bufferstatus.clone();
 
     app.connect_activate(move |app| {
-        let bytes = gtk::glib::Bytes::from_owned(buf.clone());
-        let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_bytes(
-            &bytes,
-            gtk::gdk_pixbuf::Colorspace::Rgb,
-            false,
-            8,
-            512,
-            512,
-            512 * 3,
-        );
+        let mut img = gtk::Image::new();
 
-        let imgb = gtk::ImageBuilder::new();
-        let img = imgb.pixbuf(&pixbuf).build();
+        let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+
+        thread::spawn(move || loop {
+            let mut buf = vec![0; 3 * 512 * 512];
+
+            let volume = raycaster_lib::vol_reader::from_file("Skull.vol")
+                .expect("bad read of file")
+                .build();
+
+            let camera = raycaster_lib::Camera::new(512, 512);
+
+            let mut raycast_renderer = Renderer::<BlockVolume>::new(volume, camera);
+
+            raycast_renderer.set_render_options(RenderOptions {
+                ray_termination: true,
+                empty_index: true,
+                multi_thread: false,
+            });
+
+            raycast_renderer.render_to_buffer(&mut buf);
+
+            tx.send(buf);
+
+            raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
+        });
+
+        rx.attach(None, move |buf| {
+            let buf = glib::Bytes::from_owned(buf);
+            let pixbuf =
+                gtk::gdk_pixbuf::Pixbuf::from_bytes(&buf, Colorspace::Rgb, false, 8, 512, 512, 0);
+            img = gtk::Image::from_pixbuf(Some(&pixbuf));
+            glib::Continue(true)
+        });
+
         // We create the main window.
         let win = ApplicationWindow::builder()
             .application(app)
