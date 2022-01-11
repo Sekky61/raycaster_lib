@@ -80,7 +80,7 @@ fn main() {
         // win.add(&img);
         let grid = gtk::GridBuilder::new().row_spacing(200).build();
         grid.add(&label);
-        grid.add(&img);
+        //grid.add(&img);
         win.add(&grid);
 
         // Don't forget to make all widgets visible.

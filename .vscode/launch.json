@@ -26,15 +26,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'minifb_raycaster'",
+            "name": "Debug executable 'sdl-app'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=minifb_raycaster",
+                    "--bin=sdl-app",
                     "--package=raycaster"
                 ],
                 "filter": {
-                    "name": "minifb_raycaster",
+                    "name": "sdl-app",
                     "kind": "bin"
                 }
             },
@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'minifb_raycaster'",
+            "name": "Debug unit tests in executable 'sdl-app'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=minifb_raycaster",
+                    "--bin=sdl-app",
                     "--package=raycaster"
                 ],
                 "filter": {
-                    "name": "minifb_raycaster",
+                    "name": "sdl-app",
                     "kind": "bin"
                 }
             },
@@ -63,15 +63,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'sixtyfps_raycaster'",
+            "name": "Debug executable 'minifb-app'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=sixtyfps_raycaster",
+                    "--bin=minifb-app",
                     "--package=raycaster"
                 ],
                 "filter": {
-                    "name": "sixtyfps_raycaster",
+                    "name": "minifb-app",
                     "kind": "bin"
                 }
             },
@@ -81,53 +81,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'sixtyfps_raycaster'",
+            "name": "Debug unit tests in executable 'minifb-app'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=sixtyfps_raycaster",
+                    "--bin=minifb-app",
                     "--package=raycaster"
                 ],
                 "filter": {
-                    "name": "sixtyfps_raycaster",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'conrod_ray'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=conrod_ray",
-                    "--package=raycaster"
-                ],
-                "filter": {
-                    "name": "conrod_ray",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'conrod_ray'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=conrod_ray",
-                    "--package=raycaster"
-                ],
-                "filter": {
-                    "name": "conrod_ray",
+                    "name": "minifb-app",
                     "kind": "bin"
                 }
             },
@@ -147,6 +110,25 @@
                 ],
                 "filter": {
                     "name": "render",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'experiment'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=experiment",
+                    "--package=raycaster"
+                ],
+                "filter": {
+                    "name": "experiment",
                     "kind": "bench"
                 }
             },

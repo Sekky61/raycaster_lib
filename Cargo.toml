@@ -31,10 +31,13 @@ debug = true
 [dependencies]
 #nom = "7.0.0"
 nalgebra = "0.29.0"
-conrod_core = "0.75.0"
-conrod_glium = "0.75.0"
-conrod_winit = "0.75.0"
-glium = "0.28"
-winit = "0.23"
-gtk = "0.14.3"
 parking_lot = "0.11.2"
+sdl2 = { version = "0.35.1", features = ["bundled", "static-link", "use-pkgconfig"] }
+gl = "0.14.0"
+minifb = "0.20"
+
+#conrod_core = "0.75.0"
+#conrod_glium = "0.75.0"
+#conrod_winit = "0.75.0"
+#glium = "0.28"
+#gtk = "0.14.3"
