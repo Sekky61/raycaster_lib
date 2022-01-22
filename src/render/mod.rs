@@ -7,4 +7,4 @@ pub use frame_swap::BufferStatus;
 
 use crate::Camera;
 use crate::{ray::Ray, volumetric::Volume};
-use nalgebra::{vector, Vector3, Vector4};
+use nalgebra::{vector, Vector3};
