@@ -1,9 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use raycaster_lib::render::Renderer;
-use raycaster_lib::volumetric::vol_builder::BuildVolume;
-use raycaster_lib::volumetric::{vol_reader, BlockVolume, LinearVolume, Volume};
-use raycaster_lib::{Camera, RenderOptions};
+use raycaster_lib::{
+    render::Renderer,
+    volumetric::{vol_builder::BuildVolume, vol_reader, BlockVolume, LinearVolume, Volume},
+    RenderOptions, TargetCamera,
+};
 
 fn get_volume<V>() -> V
 where
@@ -22,10 +23,10 @@ where
 }
 
 fn render_linear(c: &mut Criterion) {
-    let camera = Camera::new(512, 512);
+    let camera = TargetCamera::new(512, 512);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<LinearVolume>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,
@@ -38,10 +39,10 @@ fn render_linear(c: &mut Criterion) {
 }
 
 fn render_linear_ei(c: &mut Criterion) {
-    let camera = Camera::new(512, 512);
+    let camera = TargetCamera::new(512, 512);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<LinearVolume>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: true,
@@ -54,10 +55,10 @@ fn render_linear_ei(c: &mut Criterion) {
 }
 
 fn render_block(c: &mut Criterion) {
-    let camera = Camera::new(512, 512);
+    let camera = TargetCamera::new(512, 512);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<BlockVolume>::new(volume, camera);
+    let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,
@@ -69,10 +70,10 @@ fn render_block(c: &mut Criterion) {
 }
 
 fn render_block_ei(c: &mut Criterion) {
-    let camera = Camera::new(512, 512);
+    let camera = TargetCamera::new(512, 512);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<BlockVolume>::new(volume, camera);
+    let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: true,

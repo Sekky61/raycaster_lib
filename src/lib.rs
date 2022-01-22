@@ -3,7 +3,7 @@ mod ray;
 pub mod render;
 pub mod volumetric;
 
-pub use camera::Camera;
+pub use camera::{Camera, TargetCamera};
 pub use render::{RenderOptions, Renderer};
 pub use volumetric::vol_reader;
 pub use volumetric::EmptyIndexes;
@@ -11,7 +11,7 @@ pub use volumetric::EmptyIndexes;
 use crate::volumetric::LinearVolume;
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
-    let camera = Camera::new(width, height);
+    let camera = TargetCamera::new(width, height);
     let read_result = vol_reader::from_file("Skull.vol");
 
     let volume_b = match read_result {
@@ -24,7 +24,7 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
 
     let volume = volume_b.build();
 
-    let mut renderer = Renderer::<LinearVolume>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
         ray_termination: true,
         empty_index: false,

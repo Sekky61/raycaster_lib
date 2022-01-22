@@ -1,5 +1,5 @@
 use crate::ray::Ray;
-use nalgebra::Vector3;
+use nalgebra::{Point3, Vector3};
 
 use super::vol_builder::RGBA;
 
@@ -12,10 +12,10 @@ pub trait Volume {
     fn get_dims(&self) -> Vector3<f32>;
 
     // trilinear interpolation sample, zero if outside
-    fn sample_at(&self, pos: Vector3<f32>) -> RGBA;
+    fn sample_at(&self, pos: Point3<f32>) -> RGBA;
 
     // position is inside volume
-    fn is_in(&self, pos: &Vector3<f32>) -> bool;
+    fn is_in(&self, pos: &Point3<f32>) -> bool;
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA;
 

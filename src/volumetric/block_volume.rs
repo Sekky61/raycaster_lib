@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3};
+use nalgebra::{vector, Point3, Vector3};
 
 use super::{
     vol_builder::{color, BuildVolume, RGBA},
@@ -82,7 +82,7 @@ impl Volume for BlockVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Point3<f32>) -> RGBA {
         //let data = self.get_block_data(pos);
 
         let x = pos.x as usize;
@@ -123,7 +123,7 @@ impl Volume for BlockVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn is_in(&self, pos: &Vector3<f32>) -> bool {
+    fn is_in(&self, pos: &Point3<f32>) -> bool {
         self.vol_dims.x > pos.x
             && self.vol_dims.y > pos.y
             && self.vol_dims.z > pos.z

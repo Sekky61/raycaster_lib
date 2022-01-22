@@ -4,7 +4,7 @@ use nalgebra::vector;
 use raycaster_lib::{
     render::BufferStatus,
     volumetric::{BlockVolume, LinearVolume},
-    Camera, RenderOptions, Renderer,
+    Camera, RenderOptions, Renderer, TargetCamera,
 };
 
 use minifb::{Key, Window, WindowOptions};
@@ -31,9 +31,9 @@ fn main() {
         .expect("bad read of file")
         .build();
 
-    let camera = raycaster_lib::Camera::new(WIDTH, HEIGHT);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
 
-    let mut raycast_renderer = Renderer::<BlockVolume>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<BlockVolume, _>::new(volume, camera);
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
@@ -43,22 +43,13 @@ fn main() {
 
     let mut buf_vec = vec![0; 3 * WIDTH * HEIGHT];
 
-    println!("b1");
-
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        // for i in buffer.iter_mut() {
-        //     *i = 0; // write something more funny here!
-        // }
-        println!("b2");
-
         let w = window.is_key_down(Key::W);
         let a = window.is_key_down(Key::A);
         let s = window.is_key_down(Key::S);
         let d = window.is_key_down(Key::D);
         let plus = window.is_key_down(Key::NumPadPlus);
         let minus = window.is_key_down(Key::NumPadMinus);
-
-        println!("b3");
 
         let step = 10.0;
 
@@ -72,13 +63,9 @@ fn main() {
 
         let change = vector![z_p + z_m, x_p + x_m, y_p + y_m];
 
-        println!("b4");
-
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
 
-        raycast_renderer.change_camera_pos(change);
-
-        println!("b5");
+        raycast_renderer.camera.change_pos(change);
 
         let converted: Vec<_> = buf_vec
             .as_slice()

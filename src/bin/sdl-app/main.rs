@@ -7,8 +7,11 @@ use nalgebra::vector;
 use raycaster_lib::{
     render::BufferStatus,
     volumetric::{BlockVolume, LinearVolume},
-    RenderOptions, Renderer,
+    RenderOptions, Renderer, TargetCamera,
 };
+
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -28,9 +31,9 @@ fn main() -> Result<(), String> {
         .expect("bad read of file")
         .build();
 
-    let camera = raycaster_lib::Camera::new(512, 512);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
 
-    let mut raycast_renderer = Renderer::<BlockVolume>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<BlockVolume, _>::new(volume, camera);
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
@@ -38,18 +41,12 @@ fn main() -> Result<(), String> {
         multi_thread: false,
     });
 
-    println!("Tex1");
-
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 512, 512)
+        .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH as u32, HEIGHT as u32)
         .map_err(|e| e.to_string())?;
-
-    println!("Tex2");
 
     let mut buf_vec = vec![0; 3 * 512 * 512];
     raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
-
-    println!("Tex3");
 
     let mut event_pump = sdl_context.event_pump()?;
 
@@ -72,13 +69,13 @@ fn main() -> Result<(), String> {
 
         let mut buf_vec = vec![0; 3 * 512 * 512];
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
-        raycast_renderer.change_camera_pos(vector![20.0, 20.0, 20.0]);
+        raycast_renderer
+            .camera
+            .change_pos(vector![20.0, 20.0, 20.0]);
 
         // Create a red-green gradient
-        texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
-            println!("About to copy");
+        texture.with_lock(None, |buffer: &mut [u8], active_frame: usize| {
             buffer[..(512 * 512 * 3)].clone_from_slice(&buf_vec[..(512 * 512 * 3)]);
-            println!("copied");
         })?;
 
         println!("About to clear");

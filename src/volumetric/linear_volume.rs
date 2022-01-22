@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3};
+use nalgebra::{vector, Point3, Vector3};
 
 use super::{
     vol_builder::{color, BuildVolume, RGBA},
@@ -54,7 +54,7 @@ impl Volume for LinearVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: Vector3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Point3<f32>) -> RGBA {
         // todo taky zkusit rozseknout
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
@@ -93,7 +93,7 @@ impl Volume for LinearVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn is_in(&self, pos: &Vector3<f32>) -> bool {
+    fn is_in(&self, pos: &Point3<f32>) -> bool {
         self.vol_dims.x > pos.x
             && self.vol_dims.y > pos.y
             && self.vol_dims.z > pos.z
@@ -129,7 +129,7 @@ impl BuildVolume for LinearVolume {
 #[cfg(test)]
 mod test {
 
-    use nalgebra::vector;
+    use nalgebra::{point, vector};
 
     use crate::ray::Ray;
 
@@ -143,7 +143,7 @@ mod test {
     fn intersect_works() {
         let bbox = cube_volume();
         let ray = Ray {
-            origin: vector![-1.0, -1.0, 0.0],
+            origin: point![-1.0, -1.0, 0.0],
             direction: vector![1.0, 1.0, 1.0],
         };
         let inter = bbox.intersect(&ray);
@@ -155,7 +155,7 @@ mod test {
     fn intersect_works2() {
         let vol = cube_volume();
         let ray = Ray {
-            origin: vector![-0.4, 0.73, 0.0],
+            origin: point![-0.4, 0.73, 0.0],
             direction: vector![1.0, 0.0, 1.0],
         };
         let inter = vol.intersect(&ray);
@@ -167,7 +167,7 @@ mod test {
     fn not_intersecting() {
         let vol = cube_volume();
         let ray = Ray {
-            origin: vector![200.0, 200.0, 200.0],
+            origin: point![200.0, 200.0, 200.0],
             direction: vector![1.0, 0.0, 0.0],
         };
 

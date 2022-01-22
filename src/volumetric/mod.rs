@@ -18,7 +18,7 @@ mod test {
     use super::*;
 
     use crate::{vol_reader, volumetric::LinearVolume};
-    use nalgebra::vector;
+    use nalgebra::{point, vector};
     use vol_builder::BuildVolume;
 
     fn cube_volume<V>() -> V
@@ -85,7 +85,7 @@ mod test {
         let linear: LinearVolume = skull_volume();
         let block: BlockVolume = skull_volume();
 
-        let sampling_coord = vector![0.0, 25.0, 114.0];
+        let sampling_coord = point![0.0, 25.0, 114.0];
         let sampling_spots = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
         for spot_offset in sampling_spots {
@@ -111,7 +111,7 @@ mod test {
         for x in 0..vol_size_l.x {
             for y in 0..vol_size_l.y {
                 for z in 0..vol_size_l.z {
-                    let pos = vector![x as f32, y as f32, z as f32];
+                    let pos = point![x as f32, y as f32, z as f32];
                     let lin_data = linear.sample_at(pos);
                     let bl_data = block.sample_at(pos);
                     let dif = (lin_data - bl_data).abs();

@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
 
 use super::Volume;
 
@@ -37,14 +37,14 @@ impl EmptyIndexes {
         1 << m
     }
 
-    pub fn get_block_coords(level: usize, pos: &Vector3<f32>) -> Vector3<usize> {
+    pub fn get_block_coords(level: usize, pos: &Point3<f32>) -> Point3<usize> {
         //let index_block_size = 1.0 / (EmptyIndexes::get_index_size(level) as f32);
 
         (pos / EmptyIndexes::get_index_size(level) as f32).map(|f| f as usize)
     }
 
-    pub fn get_block_coords_int(level: usize, pos: &Vector3<usize>) -> Vector3<usize> {
-        vector![pos.x >> level, pos.y >> level, pos.z >> level]
+    pub fn get_block_coords_int(level: usize, pos: &Point3<usize>) -> Point3<usize> {
+        point![pos.x >> level, pos.y >> level, pos.z >> level]
     }
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndexes {
@@ -56,12 +56,12 @@ impl EmptyIndexes {
         EmptyIndexes { indexes }
     }
 
-    pub fn get_parent_index(&self, level: usize, pos: &Vector3<usize>) -> BlockType {
+    pub fn get_parent_index(&self, level: usize, pos: &Point3<usize>) -> BlockType {
         let parent_pos = pos / 2;
         self.get_index_from_usize(level + 1, &parent_pos)
     }
 
-    pub fn get_index_from_usize(&self, level: usize, pos: &Vector3<usize>) -> BlockType {
+    pub fn get_index_from_usize(&self, level: usize, pos: &Point3<usize>) -> BlockType {
         let index_3d = self.get_3d_index_level(level, pos);
         let bl_len = self.indexes[level].blocks.len();
         if index_3d >= bl_len {
@@ -71,7 +71,7 @@ impl EmptyIndexes {
         self.indexes[level].blocks[index_3d]
     }
 
-    pub fn get_index_from_float(&self, level: usize, pos: &Vector3<f32>) -> BlockType {
+    pub fn get_index_from_float(&self, level: usize, pos: &Point3<f32>) -> BlockType {
         assert!(level < self.indexes.len());
 
         let block_pos = EmptyIndexes::get_block_coords(level, pos);
@@ -79,7 +79,7 @@ impl EmptyIndexes {
         self.get_index_from_usize(level, &block_pos)
     }
 
-    pub fn get_3d_index_level(&self, level: usize, block_pos: &Vector3<usize>) -> usize {
+    pub fn get_3d_index_level(&self, level: usize, block_pos: &Point3<usize>) -> usize {
         let index_size = self.indexes[level].size;
         block_pos.z + block_pos.y * index_size.z + block_pos.x * index_size.y * index_size.z
     }
@@ -189,11 +189,11 @@ impl EmptyIndex {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn index_3d_vec(&self, pos: &Vector3<usize>) -> usize {
+    fn index_3d_vec(&self, pos: &Point3<usize>) -> usize {
         pos.z + pos.y * self.size.z + pos.x * self.size.y * self.size.z
     }
 
-    pub fn get_block_vec(&self, pos: &Vector3<usize>) -> BlockType {
+    pub fn get_block_vec(&self, pos: &Point3<usize>) -> BlockType {
         let offset = self.index_3d_vec(pos);
         // match self.blocks.get(offset) {
         //     Some(x) => *x,
@@ -386,11 +386,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_from_float(0, &vector![0.0, 0.0, 0.0]),
+                empty_index.get_index_from_float(0, &point![0.0, 0.0, 0.0]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_from_float(0, &vector![0.78, 0.55, 1.4]),
+                empty_index.get_index_from_float(0, &point![0.78, 0.55, 1.4]),
                 BlockType::NonEmpty
             );
         }
@@ -401,11 +401,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_from_float(1, &vector![0.6, 0.5, 0.4]),
+                empty_index.get_index_from_float(1, &point![0.6, 0.5, 0.4]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_from_float(1, &vector![2.1, 2.1, 1.2]),
+                empty_index.get_index_from_float(1, &point![2.1, 2.1, 1.2]),
                 BlockType::Empty
             );
         }
@@ -416,11 +416,11 @@ mod test {
             let empty_index = EmptyIndexes::from_volume(&volume);
 
             assert_eq!(
-                empty_index.get_index_from_float(2, &vector![0.6, 0.5, 0.4]),
+                empty_index.get_index_from_float(2, &point![0.6, 0.5, 0.4]),
                 BlockType::Empty
             );
             assert_eq!(
-                empty_index.get_index_from_float(2, &vector![1.1, 3.1, 3.2]),
+                empty_index.get_index_from_float(2, &point![1.1, 3.1, 3.2]),
                 BlockType::Empty
             );
         }

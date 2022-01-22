@@ -1,3 +1,5 @@
+use nalgebra::{point, Point3};
+
 use crate::{
     volumetric::{BlockType, EmptyIndex},
     EmptyIndexes,
@@ -23,20 +25,20 @@ impl RenderOptions {
 }
 
 pub struct Position<'a> {
-    pos: Vector3<f32>,
-    pos_int: Vector3<usize>,
+    pos: Point3<f32>,
+    pos_int: Point3<usize>,
     level: usize,
-    index_pos: Vector3<usize>,
+    index_pos: Point3<usize>,
     index: &'a EmptyIndex,
 }
 
 impl<'a> Position<'a> {
-    pub fn new(pos: Vector3<f32>, level: usize, index: &'a EmptyIndex) -> Self {
+    pub fn new(pos: Point3<f32>, level: usize, index: &'a EmptyIndex) -> Self {
         let mut position = Position {
             pos,
-            pos_int: Default::default(),
+            pos_int: point![0, 0, 0],
             level,
-            index_pos: Default::default(),
+            index_pos: point![0, 0, 0],
             index,
         };
         position.sync_pos();
@@ -64,21 +66,23 @@ impl<'a> Position<'a> {
     }
 }
 
-pub struct Renderer<V>
+pub struct Renderer<V, C>
 where
     V: Volume,
+    C: Camera,
 {
-    pub(super) volume: V,
-    pub(super) camera: Camera,
+    pub volume: V,
+    pub camera: C,
     pub empty_index: EmptyIndexes,
     render_options: RenderOptions,
 }
 
-impl<V> Renderer<V>
+impl<V, C> Renderer<V, C>
 where
     V: Volume,
+    C: Camera,
 {
-    pub fn new(volume: V, camera: Camera) -> Renderer<V> {
+    pub fn new(volume: V, camera: C) -> Renderer<V, C> {
         let empty_index = EmptyIndexes::from_volume(&volume);
         Renderer {
             volume,
@@ -96,14 +100,6 @@ where
         self.render_options = opts;
     }
 
-    pub fn set_camera_pos(&mut self, pos: Vector3<f32>) {
-        self.camera.set_pos(pos);
-    }
-
-    pub fn change_camera_pos(&mut self, delta: Vector3<f32>) {
-        self.camera.change_pos(delta);
-    }
-
     pub fn render_to_buffer(&mut self, buffer: &mut [u8]) {
         self.render(buffer);
     }
@@ -112,27 +108,22 @@ where
         // println!("THE RENDER");
         // println!("Vol: {:?}", self.volume.get_dims());
         // println!("Index: {:?}", self.empty_index);
-        let (image_width, image_height) = (
-            self.camera.resolution.0 as f32,
-            self.camera.resolution.1 as f32,
-        );
 
-        let origin_4 = Vector4::new(
-            self.camera.position.x,
-            self.camera.position.y,
-            self.camera.position.z,
-            1.0,
-        );
+        let (img_w, img_h) = self.camera.get_resolution();
+
+        let (image_width, image_height) = (img_w as f32, img_h as f32);
+
+        let origin_4 = self.camera.get_position().to_homogeneous();
 
         let aspect_ratio = image_width / image_height;
 
         // cam to world
-        let lookat_matrix = self.camera.get_look_at_matrix();
+        let lookat_matrix = self.camera.view_matrix();
 
         let mut buffer_index = 0;
 
-        for y in 0..self.camera.resolution.1 {
-            for x in 0..self.camera.resolution.0 {
+        for y in 0..img_h {
+            for x in 0..img_w {
                 let pixel_ndc_x = (x as f32 + 0.5) / image_width;
                 let pixel_ndc_y = (y as f32 + 0.5) / image_height;
 
@@ -146,11 +137,9 @@ where
                 let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
                 let dir_world_3 = dir_world.xyz().normalize();
 
-                //println!("{}", dir_world_3);
+                let ray_world = Ray::from_3(self.camera.get_position(), dir_world_3);
 
-                let ray_world = Ray::from_3(self.camera.position, dir_world_3);
-
-                // rationale: branch gets almost optimized away since it is predictable
+                // performance: branch gets almost optimized away since it is predictable
                 let ray_color = if self.render_options.empty_index {
                     self.collect_light_index(&ray_world)
                 } else {
@@ -297,7 +286,7 @@ where
 
             let delta_i = ray_dirs.map(|d| if d != 0 { index_edge_fl } else { 0.0 });
 
-            let delta_i = (delta_i + index_low_coords - position.pos).component_div(&step);
+            let delta_i = (index_low_coords + delta_i - position.pos).component_div(&step);
 
             let delta_i = delta_i.map(|f| f.ceil());
 
