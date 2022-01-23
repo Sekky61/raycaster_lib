@@ -1,4 +1,4 @@
-use nalgebra::{point, Point3};
+use nalgebra::{point, Point3, Vector4};
 
 use crate::{
     volumetric::{BlockType, EmptyIndex},
@@ -146,21 +146,24 @@ where
                     self.collect_light(&ray_world)
                 };
 
-                buffer[buffer_index] = ray_color.0;
-                buffer[buffer_index + 1] = ray_color.1;
-                buffer[buffer_index + 2] = ray_color.2;
+                let opacity = ray_color.w;
+
+                // expects black background
+                buffer[buffer_index] = (ray_color.x * opacity) as u8;
+                buffer[buffer_index + 1] = (ray_color.y * opacity) as u8;
+                buffer[buffer_index + 2] = (ray_color.z * opacity) as u8;
 
                 buffer_index += 3;
             }
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray) -> (u8, u8, u8) {
+    pub fn collect_light(&self, ray: &Ray) -> Vector4<f32> {
         let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
         let (t1, _) = match self.volume.intersect(ray) {
             Some(tup) => tup,
-            None => return (0, 0, 0),
+            None => return accum,
         };
 
         let begin = ray.point_from_t(t1);
@@ -202,19 +205,19 @@ where
             }
         }
 
-        let accum_i_x = accum.x as u8;
-        let accum_i_y = accum.y as u8;
-        let accum_i_z = accum.z as u8;
+        // let accum_i_x = accum.x as u8;
+        // let accum_i_y = accum.y as u8;
+        // let accum_i_z = accum.z as u8;
 
-        (accum_i_x, accum_i_y, accum_i_z)
+        accum
     }
 
-    pub fn collect_light_index(&self, ray: &Ray) -> (u8, u8, u8) {
+    pub fn collect_light_index(&self, ray: &Ray) -> Vector4<f32> {
         let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
         let (t1, _) = match self.volume.intersect(ray) {
             Some(tup) => tup,
-            None => return (0, 0, 0),
+            None => return accum,
         };
 
         let begin = ray.point_from_t(t1);
@@ -330,10 +333,10 @@ where
             index = self.empty_index.get_index_from_usize(m, &index_coords);*/
         }
 
-        let accum_i_x = accum.x as u8;
-        let accum_i_y = accum.y as u8;
-        let accum_i_z = accum.z as u8;
+        // let accum_i_x = accum.x as u8;
+        // let accum_i_y = accum.y as u8;
+        // let accum_i_z = accum.z as u8;
 
-        (accum_i_x, accum_i_y, accum_i_z)
+        accum
     }
 }

@@ -157,14 +157,14 @@ fn vol_parser(path: &Path) -> Result<VolumeBuilder, &'static str> {
 
 // R G B A -- A <0;1>
 pub fn transfer_function(sample: f32) -> RGBA {
-    if sample > 180.0 {
-        RGBA::new(60.0, 230.0, 40.0, 0.3)
+    if sample > 120.0 {
+        RGBA::new(255.0, 0.0, 0.0, 0.01)
     } else if sample > 70.0 {
-        RGBA::new(230.0, 10.0, 10.0, 0.3)
-    } else if sample > 50.0 {
-        RGBA::new(10.0, 20.0, 100.0, 0.1)
+        RGBA::new(0.0, 255.0, 0.0, 0.01)
+    } else if sample > 30.0 {
+        RGBA::new(0.0, 0.0, 255.0, 0.01)
     } else if sample > 5.0 {
-        RGBA::new(10.0, 10.0, 40.0, 0.05)
+        RGBA::new(10.0, 10.0, 10.0, 0.01)
     } else {
         color::zero()
     }
