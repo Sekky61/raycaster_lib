@@ -1,4 +1,4 @@
-use nalgebra::{matrix, point, vector, Matrix4, Point3, Vector2, Vector3};
+use nalgebra::{matrix, point, vector, Matrix4, Point3, Vector3};
 use sdl2::event::Event;
 
 use super::Camera;
@@ -7,7 +7,6 @@ pub struct TargetCamera {
     position: Point3<f32>,
     target: Point3<f32>,
     resolution: (usize, usize),
-    drag: Vector2<i32>,
     mouse_down: bool,
 }
 
@@ -17,7 +16,6 @@ impl TargetCamera {
             position: point![300.0, 300.0, 300.0],
             target: point![34.0, 128.0, 128.0],
             resolution: (width, height),
-            drag: vector![0, 0],
             mouse_down: false,
         }
     }
@@ -36,6 +34,17 @@ impl TargetCamera {
 
     pub fn get_resolution(&self) -> (usize, usize) {
         self.resolution
+    }
+
+    // get spherical coordinates, relative to target
+    // return r, theta, phi
+    fn spherical(&self) -> (f32, f32, f32) {
+        let dif = self.position - self.target;
+        let r = dif.magnitude() as f32;
+        let theta = (dif.z / r).acos();
+        let phi = dif.y.atan2(dif.x);
+
+        (r, theta, phi)
     }
 }
 
@@ -64,33 +73,27 @@ impl Camera for TargetCamera {
 
     fn get_user_input(&mut self, event: sdl2::event::Event) {
         match event {
-            Event::MouseButtonDown { x, y, .. } => {
-                self.drag = vector![x, y];
+            Event::MouseButtonDown { .. } => {
                 self.mouse_down = true;
             }
-            Event::MouseMotion { x, y, .. } => {
+            Event::MouseButtonUp { .. } => {
+                self.mouse_down = false;
+            }
+            Event::MouseMotion { xrel, yrel, .. } => {
+                // When mouse button is down, drag camera around
                 if !self.mouse_down {
                     return;
                 }
 
-                let speed = 0.05;
+                let drag_diff = (xrel as f32, yrel as f32);
 
-                let drag_diff = ((x - self.drag.x) as f32, (y - self.drag.y) as f32);
-                self.drag = vector![x, y];
+                let (r, mut theta, mut phi) = self.spherical();
 
-                let dif = self.position - self.target;
-                let r = dif.magnitude();
-                let r = r as f32;
-                let mut theta = (dif.z / r).acos();
-                let mut phi = dif.y.atan2(dif.x);
+                println!("Current: > r {} theta {} phi {}", r, theta, phi);
 
-                println!(
-                    "Current: > drag {:?} dif {} r {} t {} p {}",
-                    drag_diff, dif, r, theta, phi
-                );
-
-                theta += speed * drag_diff.1;
-                phi += speed * drag_diff.0;
+                let drag_speed = 0.05;
+                theta += drag_speed * drag_diff.1;
+                phi += drag_speed * drag_diff.0;
 
                 // convert back
                 let sphere_offset = vector![
@@ -103,11 +106,7 @@ impl Camera for TargetCamera {
 
                 println!("New pos > {:?}", self.position);
             }
-            Event::MouseButtonUp { x, y, .. } => {
-                let drag_diff = (x - self.drag.x, y - self.drag.y);
-                self.drag = vector![x, y];
-                self.mouse_down = false;
-            }
+
             _ => {}
         }
     }
