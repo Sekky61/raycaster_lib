@@ -3,11 +3,11 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;
 
-use nalgebra::vector;
+use nalgebra::{vector, Vector3};
 use raycaster_lib::{
     render::BufferStatus,
     volumetric::{BlockVolume, LinearVolume},
-    RenderOptions, Renderer, TargetCamera,
+    Camera, RenderOptions, Renderer, TargetCamera,
 };
 
 const WIDTH: usize = 512;
@@ -58,20 +58,15 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-                Event::MouseButtonDown { x, y, .. } => {
-                    println!("mouse btn down at ({},{})", x, y);
-                }
                 _ => {}
             }
+            raycast_renderer.camera.get_user_input(event);
         }
         // The rest of the game loop goes here...
         println!("Game loop");
 
         let mut buf_vec = vec![0; 3 * 512 * 512];
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
-        raycast_renderer
-            .camera
-            .change_pos(vector![20.0, 20.0, 20.0]);
 
         // Create a red-green gradient
         texture.with_lock(None, |buffer: &mut [u8], active_frame: usize| {
