@@ -168,15 +168,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake"
-version = "0.1.48"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "criterion"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -827,7 +818,8 @@ dependencies = [
  "minifb",
  "nalgebra",
  "parking_lot",
- "sdl2 0.35.1",
+ "rust-pushrod",
+ "sdl2 0.33.0",
 ]
 
 [[package]]
@@ -912,6 +904,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-pushrod"
+version = "0.4.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "808ee961a1f29191ad93b3279b1cac07942cf99ca1ef3d3801998199f00993e4"
+dependencies = [
+ "sdl2 0.33.0",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -972,14 +973,14 @@ dependencies = [
 
 [[package]]
 name = "sdl2"
-version = "0.35.1"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f035f8e87735fa3a8437292be49fe6056450f7cbb13c230b4bcd1bdd7279421f"
+checksum = "1f74124048ea86b5cd50236b2443f6f57cf4625a8e8818009b4e50dbb8729a43"
 dependencies = [
  "bitflags 1.2.1",
  "lazy_static 1.4.0",
  "libc",
- "sdl2-sys 0.35.1",
+ "sdl2-sys 0.33.0",
 ]
 
 [[package]]
@@ -993,15 +994,12 @@ dependencies = [
 
 [[package]]
 name = "sdl2-sys"
-version = "0.35.1"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94cb479353c0603785c834e2307440d83d196bf255f204f7f6741358de8d6a2f"
+checksum = "c2e1deb61ff274d29fb985017d4611d4004b113676eaa9c06754194caf82094e"
 dependencies = [
- "cfg-if 1.0.0",
- "cmake",
+ "cfg-if 0.1.10",
  "libc",
- "pkg-config",
- "version-compare",
 ]
 
 [[package]]
@@ -1155,12 +1153,6 @@ name = "vec_map"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
-
-[[package]]
-name = "version-compare"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe88247b92c1df6b6de80ddc290f3976dbdf2f5f5d3fd049a9fb598c6dd5ca73"
 
 [[package]]
 name = "version_check"
