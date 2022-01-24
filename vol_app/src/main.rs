@@ -1,84 +1,152 @@
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::PixelFormatEnum;
-use sdl2::rect::Rect;
+use pushrod::base_widget::BaseWidget;
+use pushrod::box_widget::BoxWidget;
+use pushrod::button_widget::ButtonWidget;
+use pushrod::engine::Engine;
+use pushrod::geometry::{Point, Size};
+use pushrod::text_widget::{TextAlignment, TextWidget};
+use pushrod::widget::{SystemWidget, Widget};
+use sdl2::pixels::Color;
 
-use nalgebra::{vector, Vector3};
-use raycaster_lib::{
-    render::BufferStatus,
-    volumetric::{BlockVolume, LinearVolume},
-    Camera, RenderOptions, Renderer, TargetCamera,
-};
-
-const WIDTH: usize = 512;
-const HEIGHT: usize = 512;
-
-fn main() -> Result<(), String> {
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
-
+pub fn main() {
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("rust-sdl2 demo: Video", 800, 600)
+        .window("pushrod", 600, 400)
         .position_centered()
         .opengl()
         .build()
-        .map_err(|e| e.to_string())?;
+        .unwrap();
+    let mut engine = Engine::new(Size::new(600, 400), 30);
 
-    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    let texture_creator = canvas.texture_creator();
+    let mut base_widget = BaseWidget::new(Point::new(20, 20), Size::new(560, 360));
+    base_widget.set_color(Color::RGBA(127, 127, 127, 255));
+    let base_widget_id = engine.add_widget(SystemWidget::Base(Box::new(base_widget)));
 
-    let volume = raycaster_lib::vol_reader::from_file("volumes/Skull.vol")
-        .expect("bad read of file")
-        .build();
+    eprintln!("Added base widget ID: {}", base_widget_id);
 
-    let camera = TargetCamera::new(WIDTH, HEIGHT);
+    let mut text_widget = TextWidget::new(
+        Point::new(0, 20),
+        Size::new(600, 40),
+        String::from("Hello, Pushrod World!"),
+        TextAlignment::AlignCenter,
+    );
+    let text_widget_id1 = engine.add_widget(SystemWidget::Text(Box::new(text_widget)));
 
-    let mut raycast_renderer = Renderer::<BlockVolume, _>::new(volume, camera);
+    let mut box_widget1 = BoxWidget::new(Point::new(40, 40), Size::new(100, 100), Color::BLUE, 3);
+    box_widget1.set_color(Color::CYAN);
+    let box_widget_id1 = engine.add_widget(SystemWidget::Box(Box::new(box_widget1)));
 
-    raycast_renderer.set_render_options(RenderOptions {
-        ray_termination: true,
-        empty_index: true,
-        multi_thread: false,
-    });
+    eprintln!("Added box widget ID: {}", box_widget_id1);
 
-    let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH as u32, HEIGHT as u32)
-        .map_err(|e| e.to_string())?;
+    let mut box_widget2 = BoxWidget::new(Point::new(180, 40), Size::new(100, 100), Color::GREEN, 5);
+    box_widget2.set_color(Color::GRAY);
+    let box_widget_id2 = engine.add_widget(SystemWidget::Box(Box::new(box_widget2)));
 
-    let mut buf_vec = vec![0; 3 * 512 * 512];
-    raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
+    eprintln!("Added box widget ID: {}", box_widget_id2);
 
-    let mut event_pump = sdl_context.event_pump()?;
+    let mut box_widget3 = BoxWidget::new(Point::new(320, 40), Size::new(100, 100), Color::RED, 10);
+    box_widget3.set_color(Color::MAGENTA);
+    let box_widget_id3 = engine.add_widget(SystemWidget::Box(Box::new(box_widget3)));
 
-    'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                _ => {}
-            }
-            raycast_renderer.camera.get_user_input(event);
-        }
-        // The rest of the game loop goes here...
-        println!("Game loop");
+    eprintln!("Added box widget ID: {}", box_widget_id3);
 
-        let mut buf_vec = vec![0; 3 * 512 * 512];
-        raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
+    let mut button_widget1 = ButtonWidget::new(Point::new(40, 160), Size::new(140, 60));
+    let button_widget_id1 = engine.add_widget(SystemWidget::Button(Box::new(button_widget1)));
 
-        // Create a red-green gradient
-        texture.with_lock(None, |buffer: &mut [u8], active_frame: usize| {
-            buffer[..(512 * 512 * 3)].clone_from_slice(&buf_vec[..(512 * 512 * 3)]);
-        })?;
+    eprintln!("Added button widget ID: {}", button_widget_id1);
 
-        println!("About to clear");
+    //let mut new_base_widget = BaseWidget::new(make_points(100, 100), make_size(600, 400));
 
-        canvas.clear();
-        canvas.copy(&texture, None, Some(Rect::new(50, 50, 512, 512)))?;
-        canvas.present();
-    }
+    // new_base_widget
+    //     .get_config()
+    //     .set_color(CONFIG_COLOR_BORDER, Color::RGB(0, 0, 0));
+    // new_base_widget
+    //     .get_config()
+    //     .set_numeric(CONFIG_BORDER_WIDTH, 2);
 
-    Ok(())
+    // new_base_widget
+    //     .get_callbacks()
+    //     .on_mouse_entered(|x, _widgets, _layouts| {
+    //         x.get_config()
+    //             .set_color(CONFIG_COLOR_BASE, Color::RGB(255, 0, 0));
+    //         x.get_config().set_invalidated(true);
+    //         _widgets[0]
+    //             .widget
+    //             .borrow_mut()
+    //             .get_config()
+    //             .set_invalidated(true);
+    //         eprintln!("Mouse Entered");
+    //     });
+    //
+    // new_base_widget
+    //     .get_callbacks()
+    //     .on_mouse_exited(|x, _widgets, _layouts| {
+    //         x.get_config()
+    //             .set_color(CONFIG_COLOR_BASE, Color::RGB(255, 255, 255));
+    //         x.get_config().set_invalidated(true);
+    //         _widgets[0]
+    //             .widget
+    //             .borrow_mut()
+    //             .get_config()
+    //             .set_invalidated(true);
+    //         eprintln!("Mouse Exited");
+    //     });
+    //
+    // new_base_widget
+    //     .get_callbacks()
+    //     .on_mouse_moved(|_widget, _widgets, _layouts, points| {
+    //         eprintln!("Mouse Moved: {:?}", points);
+    //     });
+    //
+    // new_base_widget
+    //     .get_callbacks()
+    //     .on_mouse_scrolled(|_widget, _widgets, _layouts, points| {
+    //         eprintln!("Mouse Scrolled: {:?}", points);
+    //     });
+    //
+    // new_base_widget.get_callbacks().on_mouse_clicked(
+    //     |_widget, _widgets, _layouts, button, clicks, state| {
+    //         eprintln!(
+    //             "Mouse Clicked: button={} clicks={} state={}",
+    //             button, clicks, state
+    //         );
+    //     },
+    // );
+    //
+    // engine.add_widget(Box::new(new_base_widget), String::from("widget1"));
+    //
+    // engine.on_exit(|engine| {
+    //     let buttons: Vec<_> = vec![
+    //         ButtonData {
+    //             flags: MessageBoxButtonFlag::RETURNKEY_DEFAULT,
+    //             button_id: 1,
+    //             text: "Yes",
+    //         },
+    //         ButtonData {
+    //             flags: MessageBoxButtonFlag::ESCAPEKEY_DEFAULT,
+    //             button_id: 2,
+    //             text: "No",
+    //         },
+    //     ];
+    //
+    //     let res = show_message_box(
+    //         MessageBoxFlag::WARNING,
+    //         buttons.as_slice(),
+    //         "Quit",
+    //         "Are you sure?",
+    //         None,
+    //         None,
+    //     )
+    //         .unwrap();
+    //
+    //     if let ClickedButton::CustomButton(x) = res {
+    //         if x.button_id == 1 {
+    //             return true;
+    //         }
+    //     }
+    //
+    //     false
+    // });
+
+    engine.run(sdl_context, window);
 }

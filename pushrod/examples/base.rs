@@ -1,14 +1,11 @@
-use std::convert::TryInto;
-
-use pushrod::render::engine::Engine;
-use pushrod::render::widget::{BaseWidget, Widget};
-use pushrod::render::{make_points, make_size, Points, Size};
-use pushrod::widgets::checkbox_widget::CheckboxWidget;
-use pushrod::widgets::text_widget::TextWidget;
+use pushrod::base_widget::BaseWidget;
+use pushrod::box_widget::BoxWidget;
+use pushrod::button_widget::ButtonWidget;
+use pushrod::engine::Engine;
+use pushrod::geometry::{Point, Size};
+use pushrod::text_widget::{TextAlignment, TextWidget};
+use pushrod::widget::{SystemWidget, Widget};
 use sdl2::pixels::Color;
-
-use pushrod::widgets::text_widget::TextJustify;
-use sdl2::ttf::FontStyle;
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -19,60 +16,53 @@ pub fn main() {
         .opengl()
         .build()
         .unwrap();
-    let mut engine = Engine::new(600, 400, 30);
+    let mut engine = Engine::new(Size::new(600, 400), 30);
 
-    let config_id = 45;
-
-    let mut base_widget = BaseWidget::new(vec![20, 20], vec![560, 360]);
-    base_widget.set_color(config_id, Color::RGBA(127, 127, 127, 255));
-    let base_widget_id = engine.add_widget(Box::new(base_widget), "sys_wid_name".into());
+    let mut base_widget = BaseWidget::new(Point::new(20, 20), Size::new(560, 360));
+    base_widget.set_color(Color::RGBA(127, 127, 127, 255));
+    let base_widget_id = engine.add_widget(SystemWidget::Base(Box::new(base_widget)));
 
     eprintln!("Added base widget ID: {}", base_widget_id);
 
-    let font_path = std::env::current_dir().expect("No curr dir");
-    let font_path = font_path.join("Roboto-Regular.ttf");
-    let font_path = font_path.to_str().expect("err on path").to_owned();
-
     let mut text_widget = TextWidget::new(
-        "assets/Roboto-Regular.ttf".into(),
-        FontStyle::NORMAL,
-        96,
-        TextJustify::Left,
+        Point::new(0, 20),
+        Size::new(600, 40),
         String::from("Hello, Pushrod World!"),
-        vec![0, 20],
-        vec![600, 40],
+        TextAlignment::AlignCenter,
     );
-    let text_widget_id1 = engine.add_widget(Box::new(text_widget), "sys_wid_name2".into());
+    let text_widget_id1 = engine.add_widget(SystemWidget::Text(Box::new(text_widget)));
 
-    let box1_config_id = 77;
-
-    let mut box_widget1 =
-        CheckboxWidget::new(vec![40, 40], vec![400, 100], "box1_name".into(), 40, false);
-    box_widget1.set_color(box1_config_id, Color::RGB(200, 0, 0));
-    let box_widget_id1 = engine.add_widget(Box::new(box_widget1), "box1_name2".into());
+    let mut box_widget1 = BoxWidget::new(Point::new(40, 40), Size::new(100, 100), Color::BLUE, 3);
+    box_widget1.set_color(Color::CYAN);
+    let box_widget_id1 = engine.add_widget(SystemWidget::Box(Box::new(box_widget1)));
 
     eprintln!("Added box widget ID: {}", box_widget_id1);
 
-    let box2_config_id = 99;
-
-    let mut box_widget2 =
-        CheckboxWidget::new(vec![40, 180], vec![400, 100], "box2_name".into(), 40, false);
-    box_widget2.set_color(box2_config_id, Color::RGB(20, 200, 0));
-    let box_widget_id2 = engine.add_widget(Box::new(box_widget2), "box2_name2".into());
+    let mut box_widget2 = BoxWidget::new(Point::new(180, 40), Size::new(100, 100), Color::GREEN, 5);
+    box_widget2.set_color(Color::GRAY);
+    let box_widget_id2 = engine.add_widget(SystemWidget::Box(Box::new(box_widget2)));
 
     eprintln!("Added box widget ID: {}", box_widget_id2);
 
-    let mut new_base_widget = BaseWidget::new(make_points(100, 100), make_size(600, 400));
+    let mut box_widget3 = BoxWidget::new(Point::new(320, 40), Size::new(100, 100), Color::RED, 10);
+    box_widget3.set_color(Color::MAGENTA);
+    let box_widget_id3 = engine.add_widget(SystemWidget::Box(Box::new(box_widget3)));
 
-    let CONFIG_COLOR_BORDER = 98;
-    let CONFIG_BORDER_WIDTH = 97;
+    eprintln!("Added box widget ID: {}", box_widget_id3);
 
-    new_base_widget
-        .get_config()
-        .set_color(box2_config_id, Color::RGB(0, 0, 230));
-    new_base_widget
-        .get_config()
-        .set_numeric(CONFIG_BORDER_WIDTH, 2);
+    let mut button_widget1 = ButtonWidget::new(Point::new(40, 160), Size::new(140, 60));
+    let button_widget_id1 = engine.add_widget(SystemWidget::Button(Box::new(button_widget1)));
+
+    eprintln!("Added button widget ID: {}", button_widget_id1);
+
+    // let mut new_base_widget = BaseWidget::new(make_points(100, 100), make_size(600, 400));
+    //
+    // new_base_widget
+    //     .get_config()
+    //     .set_color(CONFIG_COLOR_BORDER, Color::RGB(0, 0, 0));
+    // new_base_widget
+    //     .get_config()
+    //     .set_numeric(CONFIG_BORDER_WIDTH, 2);
     //
     // new_base_widget
     //     .get_callbacks()

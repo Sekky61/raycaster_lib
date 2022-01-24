@@ -24,4 +24,4 @@ harness = false
 #nom = "7.0.0"
 nalgebra = "0.29.0"
 parking_lot = "0.11.2"
-sdl2 = "0.33.0"
+sdl2 = "0.34.5"
