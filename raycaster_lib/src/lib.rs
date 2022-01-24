@@ -12,7 +12,7 @@ use crate::volumetric::LinearVolume;
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = TargetCamera::new(width, height);
-    let read_result = vol_reader::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("volumes/Skull.vol");
 
     let volume_b = match read_result {
         Ok(vol) => vol,

@@ -27,7 +27,7 @@ fn main() -> Result<(), String> {
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
 
-    let volume = raycaster_lib::vol_reader::from_file("Skull.vol")
+    let volume = raycaster_lib::vol_reader::from_file("volumes/Skull.vol")
         .expect("bad read of file")
         .build();
 

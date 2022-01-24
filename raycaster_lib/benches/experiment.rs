@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use nalgebra::{point, vector};
+use nalgebra::point;
 use raycaster_lib::{
     render::Renderer,
     volumetric::{vol_reader, LinearVolume},
@@ -9,7 +9,7 @@ use raycaster_lib::{
 
 fn get_ui_from_usize(c: &mut Criterion) {
     let camera = TargetCamera::new(512, 512);
-    let read_result = vol_reader::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("volumes/Skull.vol");
 
     let volume_b = match read_result {
         Ok(vol) => vol,
@@ -41,7 +41,7 @@ fn get_ui_from_usize(c: &mut Criterion) {
 
 fn get_ui_from_float(c: &mut Criterion) {
     let camera = TargetCamera::new(512, 512);
-    let read_result = vol_reader::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("volumes/Skull.vol");
 
     let volume_b = match read_result {
         Ok(vol) => vol,

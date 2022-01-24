@@ -1,5 +1,4 @@
 use nalgebra::{matrix, point, vector, Matrix4, Point3, Vector3};
-use sdl2::event::Event;
 
 use super::Camera;
 

@@ -32,7 +32,7 @@ mod test {
     where
         V: Volume + BuildVolume,
     {
-        let builder = vol_reader::from_file("Skull.vol").expect("skull error");
+        let builder = vol_reader::from_file("volumes/Skull.vol").expect("skull error");
         builder.build()
     }
 

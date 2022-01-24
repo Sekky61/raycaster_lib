@@ -6,11 +6,14 @@ use raycaster_lib::{
     RenderOptions, TargetCamera,
 };
 
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
+
 fn get_volume<V>() -> V
 where
     V: Volume + BuildVolume,
 {
-    let read_result = vol_reader::from_file("Skull.vol");
+    let read_result = vol_reader::from_file("volumes/Skull.vol");
 
     let volume_b = match read_result {
         Ok(vol) => vol,
@@ -23,7 +26,7 @@ where
 }
 
 fn render_linear(c: &mut Criterion) {
-    let camera = TargetCamera::new(512, 512);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
     let volume = get_volume();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
@@ -33,13 +36,15 @@ fn render_linear(c: &mut Criterion) {
         multi_thread: false,
     });
 
+    let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
+
     c.bench_function("render linear 512x512", |b| {
-        b.iter(|| renderer.render_to_buffer());
+        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
     });
 }
 
 fn render_linear_ei(c: &mut Criterion) {
-    let camera = TargetCamera::new(512, 512);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
     let volume = get_volume();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
@@ -49,13 +54,15 @@ fn render_linear_ei(c: &mut Criterion) {
         multi_thread: false,
     });
 
+    let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
+
     c.bench_function("render linear 512x512 empty index", |b| {
-        b.iter(|| renderer.render_to_buffer());
+        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
     });
 }
 
 fn render_block(c: &mut Criterion) {
-    let camera = TargetCamera::new(512, 512);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
     let volume = get_volume();
 
     let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
@@ -64,13 +71,16 @@ fn render_block(c: &mut Criterion) {
         empty_index: false,
         multi_thread: false,
     });
+
+    let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
+
     c.bench_function("render block 512x512", |b| {
-        b.iter(|| renderer.render_to_buffer());
+        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
     });
 }
 
 fn render_block_ei(c: &mut Criterion) {
-    let camera = TargetCamera::new(512, 512);
+    let camera = TargetCamera::new(WIDTH, HEIGHT);
     let volume = get_volume();
 
     let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
@@ -79,8 +89,11 @@ fn render_block_ei(c: &mut Criterion) {
         empty_index: true,
         multi_thread: false,
     });
+
+    let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
+
     c.bench_function("render block 512x512 empty index", |b| {
-        b.iter(|| renderer.render_to_buffer());
+        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
     });
 }
 
