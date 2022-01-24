@@ -1,49 +1,13 @@
-[package]
-name = "raycaster"
-version = "0.1.0"
-edition = "2018"
-resolver = "2"
+[workspace]
 
-[lib]
-name = "raycaster_lib"
-path = "src/lib.rs"
+members = [
+    "raycaster_lib",
+    "vol_app",
+]
 
 # firegraph
 [profile.release]
 debug = true
 
-[dev-dependencies]
-criterion = "0.3"
-
-[[bench]]
-name = "render"
-harness = false
-
-[[bench]]
-name = "experiment"
-harness = false
-
 [profile.bench]
 debug = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-#nom = "7.0.0"
-nalgebra = "0.29.0"
-parking_lot = "0.11.2"
-#sdl2 = { version = "0.33.0", features = ["bundled", "static-link", "use-pkgconfig", "ttf"] } # 0.34.5 for compatibility with egui, otherwise 0.35.1
-gl = "0.14.0"
-minifb = "0.20"
-rust-pushrod = "0.4.27"
-
-[dependencies.sdl2]
-version = "0.33.0"
-default-features = false
-features = ["ttf","image"]
-
-#conrod_core = "0.75.0"
-#conrod_glium = "0.75.0"
-#conrod_winit = "0.75.0"
-#glium = "0.28"
-#gtk = "0.14.3"

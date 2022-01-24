@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use pushrod::render::engine::Engine;
 use pushrod::render::widget::{BaseWidget, Widget};
-use pushrod::render::{Points, Size};
+use pushrod::render::{make_points, make_size, Points, Size};
 use pushrod::widgets::checkbox_widget::CheckboxWidget;
 use pushrod::widgets::text_widget::TextWidget;
 use sdl2::pixels::Color;
@@ -62,14 +62,17 @@ pub fn main() {
 
     eprintln!("Added box widget ID: {}", box_widget_id2);
 
-    // let mut new_base_widget = BaseWidget::new(make_points(100, 100), make_size(600, 400));
-    //
-    // new_base_widget
-    //     .get_config()
-    //     .set_color(CONFIG_COLOR_BORDER, Color::RGB(0, 0, 0));
-    // new_base_widget
-    //     .get_config()
-    //     .set_numeric(CONFIG_BORDER_WIDTH, 2);
+    let mut new_base_widget = BaseWidget::new(make_points(100, 100), make_size(600, 400));
+
+    let CONFIG_COLOR_BORDER = 98;
+    let CONFIG_BORDER_WIDTH = 97;
+
+    new_base_widget
+        .get_config()
+        .set_color(box2_config_id, Color::RGB(0, 0, 230));
+    new_base_widget
+        .get_config()
+        .set_numeric(CONFIG_BORDER_WIDTH, 2);
     //
     // new_base_widget
     //     .get_callbacks()
