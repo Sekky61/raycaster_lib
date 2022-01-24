@@ -38,13 +38,23 @@ impl TargetCamera {
 
     // get spherical coordinates, relative to target
     // return r, theta, phi
-    fn spherical(&self) -> (f32, f32, f32) {
+    fn get_spherical(&self) -> (f32, f32, f32) {
         let dif = self.position - self.target;
         let r = dif.magnitude() as f32;
         let theta = (dif.z / r).acos();
         let phi = dif.y.atan2(dif.x);
 
         (r, theta, phi)
+    }
+
+    fn set_spherical(&mut self, r: f32, theta: f32, phi: f32) {
+        let sphere_offset = vector![
+            r * theta.sin() * phi.cos(),
+            r * theta.sin() * phi.sin(),
+            r * theta.cos()
+        ];
+
+        self.set_pos(self.target + sphere_offset);
     }
 }
 
@@ -73,12 +83,6 @@ impl Camera for TargetCamera {
 
     fn get_user_input(&mut self, event: sdl2::event::Event) {
         match event {
-            Event::MouseButtonDown { .. } => {
-                self.mouse_down = true;
-            }
-            Event::MouseButtonUp { .. } => {
-                self.mouse_down = false;
-            }
             Event::MouseMotion { xrel, yrel, .. } => {
                 // When mouse button is down, drag camera around
                 if !self.mouse_down {
@@ -87,26 +91,41 @@ impl Camera for TargetCamera {
 
                 let drag_diff = (xrel as f32, yrel as f32);
 
-                let (r, mut theta, mut phi) = self.spherical();
+                let (r, mut theta, mut phi) = self.get_spherical();
 
                 println!("Current: > r {} theta {} phi {}", r, theta, phi);
 
                 let drag_speed = 0.05;
-                theta += drag_speed * drag_diff.1;
-                phi += drag_speed * drag_diff.0;
 
-                // convert back
-                let sphere_offset = vector![
-                    r * theta.sin() * phi.cos(),
-                    r * theta.sin() * phi.sin(),
-                    r * theta.cos()
-                ];
+                phi -= drag_speed * drag_diff.0; // drag to left (negative drag) increases phi (rotation clockwise)
 
-                self.set_pos(self.target + sphere_offset);
+                let theta_dif = drag_speed * drag_diff.1;
+
+                if theta_dif + theta < 0.0 {
+                    theta = theta_dif.abs() - theta;
+                    phi = -phi;
+                } else {
+                    theta += drag_speed * drag_diff.1;
+                }
+                println!("New T {}", theta);
+
+                self.set_spherical(r, theta, phi);
 
                 println!("New pos > {:?}", self.position);
             }
+            Event::MouseButtonDown { .. } => self.mouse_down = true,
+            Event::MouseButtonUp { .. } => self.mouse_down = false,
+            Event::MouseWheel { y, .. } => {
+                // y        ... vertical scroll
+                // +1 unit   ... 1 step of wheel down (negative -> scroll up)
 
+                let (mut r, theta, phi) = self.get_spherical();
+
+                let zoom_speed = 10.0;
+                r += zoom_speed * (-y as f32);
+
+                self.set_spherical(r, theta, phi);
+            }
             _ => {}
         }
     }
