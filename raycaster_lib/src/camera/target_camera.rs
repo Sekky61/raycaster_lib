@@ -81,7 +81,7 @@ impl Camera for TargetCamera {
         self.position
     }
 
-    fn get_user_input(&mut self, event: sdl2::event::Event) {
+    fn get_user_input(&mut self, event: &sdl2::event::Event) {
         match event {
             Event::MouseMotion { xrel, yrel, .. } => {
                 // When mouse button is down, drag camera around
@@ -89,7 +89,7 @@ impl Camera for TargetCamera {
                     return;
                 }
 
-                let drag_diff = (xrel as f32, yrel as f32);
+                let drag_diff = (*xrel as f32, *yrel as f32);
 
                 let (r, mut theta, mut phi) = self.get_spherical();
 

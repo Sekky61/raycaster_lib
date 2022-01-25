@@ -26,11 +26,11 @@ use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub struct Engine {
-    frame_rate: u32,
-    size: Size,
-    running: bool,
-    widget_cache: WidgetCache,
-    event_handler: Option<Box<dyn EventHandler>>,
+    pub frame_rate: u32,
+    pub size: Size,
+    pub running: bool,
+    pub widget_cache: WidgetCache,
+    pub event_handler: Option<Box<dyn EventHandler>>,
 }
 
 /// The main engine of Pushrod.  Runs the run loop after adding widgets to a management cache.

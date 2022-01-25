@@ -57,5 +57,5 @@ impl Camera for FreeCamera {
         self.position
     }
 
-    fn get_user_input(&mut self, event: sdl2::event::Event) {}
+    fn get_user_input(&mut self, event: &sdl2::event::Event) {}
 }

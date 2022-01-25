@@ -16,5 +16,5 @@ pub trait Camera {
     fn view_matrix(&self) -> Matrix4<f32>;
 
     // todo general
-    fn get_user_input(&mut self, event: sdl2::event::Event);
+    fn get_user_input(&mut self, event: &sdl2::event::Event);
 }
