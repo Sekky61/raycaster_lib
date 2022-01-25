@@ -127,8 +127,8 @@ impl Widget for TextWidget {
             self.texture.create_or_resize_texture(c, self.size);
 
             c.with_texture_canvas(self.texture.get_mut_ref(), |texture| {
-                texture.set_draw_color(Color::WHITE);
-                texture.clear();
+                texture.set_draw_color(Color::RGBA(0, 50, 0, 0));
+                texture.clear(); // Without clear, only text gets drawn
 
                 texture
                     .copy(&font_texture, None, Rect::new(texture_x, 0, width, height))
@@ -154,6 +154,15 @@ impl TextWidget {
         }
     }
 
+    pub fn set_text(&mut self, text: &str) {
+        self.text = text.to_owned();
+        self.invalidated = true;
+    }
+
+    pub fn get_text(&self) -> &str {
+        self.text.as_str()
+    }
+
     /// Renders text, given the font name, size, style, color, string, and max width.  Transfers
     /// ownership of the `Texture` to the calling function, returns the width and height of the
     /// texture after rendering.  By using the identical font name, size, and style, if SDL2 caches
@@ -161,19 +170,20 @@ impl TextWidget {
     pub fn render_text(&mut self, c: &mut Canvas<Window>) -> (Texture, u32, u32) {
         let ttf_context = &self.ttf_context;
         let texture_creator = c.texture_creator();
-        let font_name = "assets/OpenSans-Regular.ttf";
-        let text_color = Color::BLACK;
+        let font_name = "pushrod/assets/OpenSans-Regular.ttf";
+        let text_color = Color::RED;
         let font_size = 14;
         let font_style: FontStyle = FontStyle::NORMAL;
-        let text_message = "Hello World";
+        let text_message = self.text.as_str();
         let mut font = ttf_context
             .load_font(Path::new(&font_name), font_size as u16)
             .unwrap();
         let surface = font
-            .render(&text_message)
+            .render(text_message)
             .blended_wrapped(text_color, self.size.w)
             .map_err(|e| e.to_string())
             .unwrap();
+
         let font_texture = texture_creator
             .create_texture_from_surface(&surface)
             .map_err(|e| e.to_string())

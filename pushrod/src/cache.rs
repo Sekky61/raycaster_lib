@@ -57,6 +57,15 @@ impl WidgetCache {
         }
     }
 
+    /// Retrieves a `SystemWidget` from the cache by its ID.
+    pub fn get_mut(&mut self, widget: i32) -> Option<&mut SystemWidget> {
+        if widget > self.cache.len() as i32 {
+            None
+        } else {
+            Some(&mut self.cache[widget as usize])
+        }
+    }
+
     /// Retrieves the current widget ID
     pub fn get_current_widget(&self) -> u32 {
         self.current_widget_id
@@ -250,6 +259,13 @@ impl WidgetCache {
                     }
                 }
 
+                SystemWidget::Text(x) => {
+                    if x.is_invalidated() {
+                        invalidated = true;
+                        self.draw(i as u32, c);
+                    }
+                }
+
                 _unused => {
                     // Do nothing
                     eprintln!("[WidgetCache::draw_loop] I'm sent a widget that I can't draw yet!");
@@ -325,9 +341,32 @@ impl WidgetCache {
                 widget.set_invalidated(false);
             }
 
-            _default => {
+            SystemWidget::Text(ref mut widget) => {
+                let widget_origin = *widget.get_origin();
+                let widget_size = *widget.get_size();
+
+                eprintln!(
+                    "[WidgetCache::draw] Text: Drawing ID {} to x {} y {} w {} h {}",
+                    widget_id, widget_origin.x, widget_origin.y, widget_size.w, widget_size.h
+                );
+
+                match widget.draw(c) {
+                    Some(texture) => c
+                        .copy(texture, None, make_rect(widget_origin, widget_size))
+                        .unwrap(),
+
+                    None => eprintln!("[WidgetCache::draw] TEXT: No texture presented."),
+                };
+
+                widget.set_invalidated(false);
+            }
+
+            default => {
                 // Do nothing
-                eprintln!("[WidgetCache::draw] I'm sent a widget that I can't draw yet!");
+                eprintln!(
+                    "[WidgetCache::draw] I'm sent a widget that I can't draw yet! {:?}",
+                    default
+                );
             }
         }
     }
