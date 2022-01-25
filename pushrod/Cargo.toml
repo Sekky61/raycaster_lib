@@ -2,7 +2,7 @@
 name = "pushrod"
 version = "0.5.0"
 authors = ["Ken Suenobu <ksuenobu@fastmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Pushrod UI Library - Widgets"
 license = "Apache-2.0"
 readme = "README.md"
