@@ -1,17 +1,11 @@
+mod gui_builder;
+
 use std::time::Instant;
 
-use pushrod::{
-    base_widget::BaseWidget,
-    box_widget::BoxWidget,
-    engine::Engine,
-    geometry::{Point, Size},
-    text_widget::{TextAlignment, TextWidget},
-    widget::{SystemWidget, Widget},
-};
+use gui_builder::GuiBuilder;
+use pushrod::{engine::Engine, geometry::Size, widget::SystemWidget};
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::PixelFormatEnum;
-use sdl2::rect::Rect;
-use sdl2::{event::Event, pixels::Color};
+use sdl2::{event::Event, rect::Rect};
 
 use raycaster_lib::{
     vol_reader, volumetric::BlockVolume, Camera, RenderOptions, Renderer, TargetCamera,
@@ -40,7 +34,8 @@ fn main() -> Result<(), String> {
     // frame_rate has no effect now
     let mut engine = Engine::new(Size::new(WIN_W, WIN_H), 60);
 
-    let ms_counter_widget_id = build_gui(&mut engine);
+    let mut gui_builder = GuiBuilder::new(WIN_W, WIN_H);
+    gui_builder.build_gui(&mut engine);
 
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
@@ -58,10 +53,6 @@ fn main() -> Result<(), String> {
         empty_index: true,
         multi_thread: false,
     });
-
-    let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, RENDER_WIDTH, RENDER_HEIGHT)
-        .map_err(|e| e.to_string())?;
 
     let mut ren_tex = texture_creator
         .create_texture(
@@ -139,11 +130,11 @@ fn main() -> Result<(), String> {
         start_time = Instant::now();
 
         // TODO events?
-        if let Some(widget) = engine.widget_cache.get_mut(ms_counter_widget_id) {
-            if let SystemWidget::Text(ms_counter) = widget {
-                let ms_text = duration.as_millis().to_string();
-                ms_counter.set_text(ms_text.as_str());
-            }
+        if let Some(SystemWidget::Text(ms_counter)) =
+            engine.widget_cache.get_mut(gui_builder.ms_counter_id)
+        {
+            let ms_text = duration.as_millis().to_string();
+            ms_counter.set_text(ms_text.as_str());
         }
 
         println!("Draw {:?}", duration);
@@ -154,24 +145,4 @@ fn main() -> Result<(), String> {
 
 fn create_rendering_buffer(width: usize, height: usize) -> Vec<u8> {
     vec![0; 3 * width * height]
-}
-
-fn build_gui(engine: &mut Engine) -> i32 {
-    let mut base_widget = BaseWidget::new(Point::new(0, 0), Size::new(WIN_W as u32, WIN_H as u32));
-    base_widget.set_color(Color::RGBA(20, 20, 20, 255));
-    let _base_widget_id = engine.add_widget(SystemWidget::Base(Box::new(base_widget)));
-
-    let mut box_widget1 = BoxWidget::new(Point::new(10, 10), Size::new(250, 700), Color::BLUE, 3);
-    box_widget1.set_color(Color::CYAN);
-    let _box_widget_id1 = engine.add_widget(SystemWidget::Box(Box::new(box_widget1)));
-
-    let mut ms_counter = TextWidget::new(
-        Point::new(20, 20),
-        Size::new(200, 50),
-        "def ms".into(),
-        TextAlignment::AlignLeft,
-    );
-    ms_counter.set_invalidated(true);
-    let _ms_widget_id1 = engine.add_widget(SystemWidget::Text(Box::new(ms_counter)));
-    _ms_widget_id1
 }
