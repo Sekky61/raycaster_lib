@@ -72,30 +72,32 @@ impl WidgetCache {
     }
 
     fn send_and_receive_event_to_widget(
-        &self,
+        &mut self,
         widget_id: u32,
         event: PushrodEvent,
-    ) -> Option<&[PushrodEvent]> {
-        match &self.cache[widget_id as usize] {
-            SystemWidget::Base(x) => {
-                return x.handle_event(event);
-            }
+    ) -> Option<Vec<PushrodEvent>> {
+        if let Some(w) = self.cache.get_mut(widget_id as usize) {
+            match w {
+                SystemWidget::Base(x) => {
+                    return x.handle_event(event);
+                }
 
-            SystemWidget::Box(x) => {
-                return x.handle_event(event);
-            }
+                SystemWidget::Box(x) => {
+                    return x.handle_event(event);
+                }
 
-            SystemWidget::Button(x) => {
-                return x.handle_event(event);
-            }
+                SystemWidget::Button(x) => {
+                    return x.handle_event(event);
+                }
 
-            SystemWidget::Image(x) => {
-                return x.handle_event(event);
-            }
+                SystemWidget::Image(x) => {
+                    return x.handle_event(event);
+                }
 
-            _unused => {
-                // Do nothing
-                eprintln!("[WidgetCache::send_and_receive_event_to_widget] I am trying to handle an event with a widget that I can't handle yet!");
+                _unused => {
+                    // Do nothing
+                    eprintln!("[WidgetCache::send_and_receive_event_to_widget] I am trying to handle an event with a widget that I can't handle yet!");
+                }
             }
         }
 
@@ -105,8 +107,8 @@ impl WidgetCache {
     /// This handles the direct events from the `Engine` class.  Events are not handled by the
     /// `Engine` via indirection.  They are handled by the `Cache`, so that objects that are
     /// selected or have focus are handled by this class.
-    pub fn handle_event(&mut self, event: Event) -> Vec<&PushrodEvent> {
-        let mut return_vector: Vec<&PushrodEvent> = Vec::new();
+    pub fn handle_event(&mut self, event: Event) -> Vec<PushrodEvent> {
+        let mut return_vector: Vec<PushrodEvent> = Vec::new();
 
         match event {
             Event::MouseButtonDown {
@@ -162,7 +164,7 @@ impl WidgetCache {
                         self.send_and_receive_event_to_widget(previous_widget_id, exited_event)
                     {
                         for i in 0..x.len() {
-                            return_vector.push(&x[i]);
+                            return_vector.push(x[i].clone());
                         }
                     }
 
@@ -171,7 +173,7 @@ impl WidgetCache {
                         self.send_and_receive_event_to_widget(self.current_widget_id, entered_event)
                     {
                         for i in 0..x.len() {
-                            return_vector.push(&x[i]);
+                            return_vector.push(x[i].clone());
                         }
                     }
                 }
@@ -214,7 +216,7 @@ impl WidgetCache {
                     }),
                 ) {
                     for i in 0..x.len() {
-                        return_vector.push(&x[i]);
+                        return_vector.push(x[i].clone());
                     }
                 }
             }

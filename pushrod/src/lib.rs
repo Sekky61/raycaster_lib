@@ -20,6 +20,7 @@ pub mod engine;
 pub mod event;
 pub mod geometry;
 pub mod image_widget;
+pub mod radio_button_widget;
 pub mod text_widget;
 pub mod texture;
 pub mod widget;

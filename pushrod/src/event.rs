@@ -15,7 +15,7 @@
 
 use sdl2::event::Event;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PushrodEvent {
     /// Indicates a mouse entered the bounds of an object.  The ID of the object is returned.
     EnteredBounds(u32),
@@ -31,6 +31,8 @@ pub enum PushrodEvent {
     /// of clicks within the object.
     Clicked(u32, u32),
 
+    WidgetRadioSelected(u32, u32),
+
     /// Indicates an SDL-based Event occurred.
     SystemEvent(Event),
 }
@@ -41,5 +43,5 @@ pub enum PushrodEvent {
 pub trait EventHandler {
     /// Handles processing of events.  The `events` passed in are references to `PushrodEvent` objects.
     /// This function will only be called if the event list is non-empty.
-    fn process_event(&self, events: Vec<&PushrodEvent>);
+    fn process_event(&self, events: Vec<PushrodEvent>);
 }

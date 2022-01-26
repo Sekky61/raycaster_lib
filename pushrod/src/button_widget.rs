@@ -84,7 +84,7 @@ impl Widget for ButtonWidget {
         &mut self.texture
     }
 
-    fn handle_event(&self, event: PushrodEvent) -> Option<&[PushrodEvent]> {
+    fn handle_event(&mut self, event: PushrodEvent) -> Option<Vec<PushrodEvent>> {
         match event {
             PushrodEvent::SystemEvent(ev) => {
                 eprintln!("[ButtonWidget::handle_event] event: {:?}", ev);
