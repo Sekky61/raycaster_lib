@@ -1,18 +1,15 @@
-mod gui_builder;
+mod gui;
 
 use std::time::Instant;
 
-use gui_builder::GuiBuilder;
-use pushrod::{engine::Engine, geometry::Size, widget::SystemWidget};
+use gui::{Gui, WIN_H, WIN_W};
+use pushrod::widget::SystemWidget;
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
 
 use raycaster_lib::{
     vol_reader, volumetric::BlockVolume, Camera, RenderOptions, Renderer, TargetCamera,
 };
-
-const WIN_W: u32 = 980;
-const WIN_H: u32 = 720;
 
 const RENDER_WIDTH_U: usize = 700;
 const RENDER_HEIGHT_U: usize = 700;
@@ -21,6 +18,7 @@ const RENDER_WIDTH: u32 = RENDER_WIDTH_U as u32;
 const RENDER_HEIGHT: u32 = RENDER_HEIGHT_U as u32;
 
 fn main() -> Result<(), String> {
+    // create SDL
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
@@ -31,15 +29,27 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    // frame_rate has no effect now
-    let mut engine = Engine::new(Size::new(WIN_W, WIN_H), 60);
-
-    let mut gui_builder = GuiBuilder::new(WIN_W, WIN_H);
-    gui_builder.build_gui(&mut engine);
-
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
 
+    // Create texture to render into
+    let mut ren_tex = texture_creator
+        .create_texture(
+            sdl2::pixels::PixelFormatEnum::RGB24,
+            sdl2::render::TextureAccess::Streaming,
+            RENDER_WIDTH,
+            RENDER_HEIGHT,
+        )
+        .expect("Couldn't make render texture");
+
+    // Buffer to render into
+    let mut buf_vec = create_rendering_buffer(RENDER_WIDTH_U, RENDER_HEIGHT_U);
+
+    // Create GUI
+    let mut gui = Gui::new();
+    gui.build_gui();
+
+    // Build Renderer and Volume
     let volume = vol_reader::from_file("volumes/Skull.vol")
         .expect("bad read of file")
         .build();
@@ -54,19 +64,9 @@ fn main() -> Result<(), String> {
         multi_thread: false,
     });
 
-    let mut ren_tex = texture_creator
-        .create_texture(
-            sdl2::pixels::PixelFormatEnum::RGB24,
-            sdl2::render::TextureAccess::Streaming,
-            RENDER_WIDTH,
-            RENDER_HEIGHT,
-        )
-        .expect("Couldn't make render texture");
-
-    let mut buf_vec = create_rendering_buffer(RENDER_WIDTH_U, RENDER_HEIGHT_U);
+    // Main loop
 
     let mut event_pump = sdl_context.event_pump()?;
-
     let mut start_time = Instant::now();
 
     'running: loop {
@@ -80,16 +80,16 @@ fn main() -> Result<(), String> {
                 } => break 'running,
                 _ => {}
             }
+            // Camera control
             raycast_renderer.camera.get_user_input(&event);
 
             // GUI
-            // Temporary bypass, performance
             match event {
-                Event::MouseMotion { .. } => {}
+                Event::MouseMotion { .. } => {} // Temporary bypass, performance
                 _ => {
-                    let event_result = engine.widget_cache.handle_event(event);
+                    let event_result = gui.handle_event(event);
 
-                    if let Some(handler) = &engine.event_handler {
+                    if let Some(handler) = &gui.engine.event_handler {
                         // Needs to support handling of multiple events being generated
                         // here.
 
@@ -101,9 +101,8 @@ fn main() -> Result<(), String> {
             }
         }
 
+        // Render frame, update texture and copy to canvas
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
-
-        // Update texture
 
         ren_tex
             .update(
@@ -113,8 +112,6 @@ fn main() -> Result<(), String> {
             )
             .expect("Couldn't copy framebuffer to texture");
 
-        // Copy render result to frame buffer (draw to screen)
-
         canvas.copy(
             &ren_tex,
             None,
@@ -122,16 +119,18 @@ fn main() -> Result<(), String> {
         )?;
 
         // Draw GUI
-        engine.widget_cache.draw_loop(&mut canvas);
+        gui.engine.widget_cache.draw_loop(&mut canvas);
 
         canvas.present();
+
+        // Frame time counter
 
         let duration = start_time.elapsed();
         start_time = Instant::now();
 
         // TODO events?
         if let Some(SystemWidget::Text(ms_counter)) =
-            engine.widget_cache.get_mut(gui_builder.ms_counter_id)
+            gui.engine.widget_cache.get_mut(gui.ms_counter_id)
         {
             let ms_text = duration.as_millis().to_string();
             ms_counter.set_text(ms_text.as_str());
