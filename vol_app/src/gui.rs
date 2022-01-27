@@ -7,13 +7,14 @@ use pushrod::{
     text_widget::{TextAlignment, TextWidget},
     widget::{SystemWidget, Widget},
 };
-use sdl2::{event::Event, pixels::Color};
+use sdl2::{event::Event, pixels::Color, ttf::Sdl2TtfContext};
 
 pub const WIN_W: u32 = 980;
 pub const WIN_H: u32 = 720;
 
 const DEFAULT_PADDING: i32 = 10;
 const LEFT_MENU_SIZE: Size = Size::new(250, 700);
+const BG_COLOR: Color = Color::RGB(20, 20, 20);
 const LEFT_MENU_COLOR: Color = Color::RGB(50, 50, 50);
 
 pub struct Gui {
@@ -21,6 +22,7 @@ pub struct Gui {
     pub window_size: (u32, u32),
     pub base_widget_id: i32,
     pub left_menu_id: i32,
+    pub ms_counter_title_id: i32,
     pub ms_counter_id: i32,
 }
 
@@ -33,6 +35,7 @@ impl Gui {
             window_size: (WIN_W, WIN_H),
             base_widget_id: -1,
             left_menu_id: -1,
+            ms_counter_title_id: -1,
             ms_counter_id: -1,
         }
     }
@@ -47,7 +50,7 @@ impl Gui {
             Point::new(0, 0),
             Size::new(self.window_size.0, self.window_size.1),
         );
-        base_widget.set_color(Color::RGBA(20, 20, 20, 255));
+        base_widget.set_color(BG_COLOR);
         self.base_widget_id = self
             .engine
             .add_widget(SystemWidget::Base(Box::new(base_widget)));
@@ -64,10 +67,23 @@ impl Gui {
             .engine
             .add_widget(SystemWidget::Box(Box::new(box_widget1)));
 
+        // ms counter title
+        // todo ttfcontext issue -- maybe a wrapper, or Rc
+        // let mut ms_counter_title = TextWidget::new(
+        //     Point::new(2 * DEFAULT_PADDING, 2 * DEFAULT_PADDING),
+        //     Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
+        //     "Frame time".into(),
+        //     TextAlignment::AlignLeft,
+        // );
+        // ms_counter_title.set_invalidated(true);
+        // self.ms_counter_title_id = self
+        //     .engine
+        //     .add_widget(SystemWidget::Text(Box::new(ms_counter_title)));
+
         // ms counter
         let mut ms_counter = TextWidget::new(
-            Point::new(20, 20),
-            Size::new(200, 50),
+            Point::new(2 * DEFAULT_PADDING, 3 * DEFAULT_PADDING + 30),
+            Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
             "def ms".into(),
             TextAlignment::AlignLeft,
         );
@@ -76,4 +92,6 @@ impl Gui {
             .engine
             .add_widget(SystemWidget::Text(Box::new(ms_counter)));
     }
+
+    pub fn finish(&self) {}
 }

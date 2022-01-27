@@ -46,6 +46,8 @@ fn main() -> Result<(), String> {
     let mut buf_vec = create_rendering_buffer(RENDER_WIDTH_U, RENDER_HEIGHT_U);
 
     // Create GUI
+    //let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
+
     let mut gui = Gui::new();
     gui.build_gui();
 
@@ -138,6 +140,8 @@ fn main() -> Result<(), String> {
 
         println!("Draw {:?}", duration);
     }
+
+    drop(gui);
 
     Ok(())
 }
