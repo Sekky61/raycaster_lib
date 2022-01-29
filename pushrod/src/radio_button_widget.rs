@@ -1,5 +1,6 @@
 use sdl2::image::LoadTexture;
 use sdl2::render::{Canvas, Texture};
+use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 
 use crate::event::PushrodEvent;
@@ -65,6 +66,90 @@ impl RadioButtonWidget {
     /// Shortcut function to determine if the button is currently being hovered over.
     fn is_hovered(&self) -> bool {
         self.hovered
+    }
+
+    pub fn radio_draw(
+        &mut self,
+        c: &mut Canvas<Window>,
+        ttf_context: &Sdl2TtfContext,
+    ) -> Option<&Texture> {
+        // ONLY update the texture if the `BaseWidget` shows that it's been invalidated.
+        if self.is_invalidated() {
+            let text_color = Some(Color::BLACK);
+            let (font_texture, width, height) = self.text_widget.render_text(c, ttf_context);
+            let widget_w = self.size.w;
+
+            self.texture.create_or_resize_texture(c, self.size);
+
+            let display_image = if self.is_selected() {
+                if self.is_hovered() {
+                    String::from("assets/radio_unselected.png")
+                } else {
+                    String::from("assets/radio_selected.png")
+                }
+            } else if self.is_hovered() {
+                String::from("assets/radio_selected.png")
+            } else {
+                String::from("assets/radio_unselected.png")
+            };
+
+            let border_width = 3;
+            let LEFT = 89;
+            let text_justification = LEFT;
+
+            let checkbox_texture = c
+                .texture_creator()
+                .load_texture(display_image)
+                .expect("Cant load texture");
+
+            let image_size = min(self.size.h as u32, 32);
+
+            c.with_texture_canvas(self.texture.get_mut_ref(), |texture| {
+                //draw_base(texture, &cloned_properties, Some(back_color));
+
+                let start_font_y = if height > self.size.h {
+                    border_width as u32
+                } else {
+                    (self.size.h / 2) - (height / 2) - (border_width / 2) as u32
+                };
+
+                let start_font_x = if text_justification == LEFT {
+                    border_width + image_size as i32 + 6 // 6 pixels of padding
+                } else {
+                    (self.size.w - width - image_size - 6) as i32 // 6 pixels of padding
+                };
+
+                let checkbox_start_x = if text_justification == LEFT {
+                    border_width as u32
+                } else {
+                    self.size.w - (border_width * 2) as u32 - image_size
+                };
+
+                texture
+                    .copy(
+                        &font_texture,
+                        None,
+                        Rect::new(start_font_x, start_font_y as i32, width, height),
+                    )
+                    .unwrap();
+
+                texture
+                    .copy(
+                        &checkbox_texture,
+                        None,
+                        Rect::new(
+                            checkbox_start_x as i32,
+                            (self.size.h / 2 - image_size / 2) as i32,
+                            image_size,
+                            image_size,
+                        ),
+                    )
+                    .unwrap();
+            })
+            .unwrap();
+        }
+
+        self.texture.get_optional_ref()
     }
 }
 
@@ -144,82 +229,6 @@ impl Widget for RadioButtonWidget {
     }
 
     fn draw(&mut self, c: &mut Canvas<Window>) -> Option<&Texture> {
-        // ONLY update the texture if the `BaseWidget` shows that it's been invalidated.
-        if self.is_invalidated() {
-            let text_color = Some(Color::BLACK);
-            let (font_texture, width, height) = self.text_widget.render_text(c);
-            let widget_w = self.size.w;
-
-            self.texture.create_or_resize_texture(c, self.size);
-
-            let display_image = if self.is_selected() {
-                if self.is_hovered() {
-                    String::from("assets/radio_unselected.png")
-                } else {
-                    String::from("assets/radio_selected.png")
-                }
-            } else if self.is_hovered() {
-                String::from("assets/radio_selected.png")
-            } else {
-                String::from("assets/radio_unselected.png")
-            };
-
-            let border_width = 3;
-            let LEFT = 89;
-            let text_justification = LEFT;
-
-            let checkbox_texture = c
-                .texture_creator()
-                .load_texture(display_image)
-                .expect("Cant load texture");
-
-            let image_size = min(self.size.h as u32, 32);
-
-            c.with_texture_canvas(self.texture.get_mut_ref(), |texture| {
-                //draw_base(texture, &cloned_properties, Some(back_color));
-
-                let start_font_y = if height > self.size.h {
-                    border_width as u32
-                } else {
-                    (self.size.h / 2) - (height / 2) - (border_width / 2) as u32
-                };
-
-                let start_font_x = if text_justification == LEFT {
-                    border_width + image_size as i32 + 6 // 6 pixels of padding
-                } else {
-                    (self.size.w - width - image_size - 6) as i32 // 6 pixels of padding
-                };
-
-                let checkbox_start_x = if text_justification == LEFT {
-                    border_width as u32
-                } else {
-                    self.size.w - (border_width * 2) as u32 - image_size
-                };
-
-                texture
-                    .copy(
-                        &font_texture,
-                        None,
-                        Rect::new(start_font_x, start_font_y as i32, width, height),
-                    )
-                    .unwrap();
-
-                texture
-                    .copy(
-                        &checkbox_texture,
-                        None,
-                        Rect::new(
-                            checkbox_start_x as i32,
-                            (self.size.h / 2 - image_size / 2) as i32,
-                            image_size,
-                            image_size,
-                        ),
-                    )
-                    .unwrap();
-            })
-            .unwrap();
-        }
-
-        self.texture.get_optional_ref()
+        panic!("Use radio_draw!!!");
     }
 }

@@ -99,12 +99,12 @@ pub enum SystemWidget {
 impl std::fmt::Debug for SystemWidget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Base(arg0) => f.write_str("Base"),
-            Self::Box(arg0) => f.write_str("Box"),
-            Self::Button(arg0) => f.write_str("Button"),
-            Self::Image(arg0) => f.write_str("Image"),
-            Self::Text(arg0) => f.write_str("Text"),
-            Self::Custom(arg0) => f.write_str("Custom"),
+            Self::Base(_b) => f.write_str("Base"),
+            Self::Box(_b) => f.write_str("Box"),
+            Self::Button(_b) => f.write_str("Button"),
+            Self::Image(_b) => f.write_str("Image"),
+            Self::Text(_b) => f.write_str("Text"),
+            Self::Custom(_b) => f.write_str("Custom"),
         }
     }
 }

@@ -18,11 +18,13 @@ use crate::geometry::make_rect;
 use crate::widget::{SystemWidget, Widget};
 use sdl2::event::Event;
 use sdl2::render::Canvas;
+use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 
 pub struct WidgetCache {
     cache: Vec<SystemWidget>,
     current_widget_id: u32,
+    ttf_context: Sdl2TtfContext,
 }
 
 /// The `WidgetCache` is the store that stores all of the `Widget` objects for a Window.  It handles
@@ -36,9 +38,14 @@ pub struct WidgetCache {
 impl WidgetCache {
     /// Constructor.
     pub fn new() -> Self {
+        let ttf_context = match sdl2::ttf::has_been_initialized() {
+            true => panic!("WidgetCache TTF initialization panic"),
+            false => sdl2::ttf::init().unwrap(),
+        };
         Self {
             cache: Vec::new(),
             current_widget_id: 0,
+            ttf_context,
         }
     }
 
@@ -352,7 +359,7 @@ impl WidgetCache {
                     widget_id, widget_origin.x, widget_origin.y, widget_size.w, widget_size.h
                 );
 
-                match widget.draw(c) {
+                match widget.text_draw(c, &self.ttf_context) {
                     Some(texture) => c
                         .copy(texture, None, make_rect(widget_origin, widget_size))
                         .unwrap(),

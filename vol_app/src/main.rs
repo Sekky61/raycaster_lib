@@ -3,6 +3,7 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
+use nalgebra::point;
 use pushrod::widget::SystemWidget;
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
@@ -71,6 +72,8 @@ fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump()?;
     let mut start_time = Instant::now();
 
+    let mut cam_pos = point![0.0, 0.0, 0.0];
+
     'running: loop {
         // Handle events
         for event in event_pump.poll_iter() {
@@ -129,6 +132,19 @@ fn main() -> Result<(), String> {
 
         let duration = start_time.elapsed();
         start_time = Instant::now();
+
+        let new_cam_pos = raycast_renderer.camera.get_position();
+        if cam_pos != new_cam_pos {
+            cam_pos = new_cam_pos;
+            if let Some(SystemWidget::Text(cam_pos_widget)) =
+                gui.engine.widget_cache.get_mut(gui.cam_pos_id)
+            {
+                // TODO format
+                // TODO initial render
+                let ms_text = cam_pos.to_string();
+                cam_pos_widget.set_text(ms_text.as_str());
+            }
+        }
 
         // TODO events?
         if let Some(SystemWidget::Text(ms_counter)) =

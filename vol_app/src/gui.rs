@@ -7,7 +7,7 @@ use pushrod::{
     text_widget::{TextAlignment, TextWidget},
     widget::{SystemWidget, Widget},
 };
-use sdl2::{event::Event, pixels::Color, ttf::Sdl2TtfContext};
+use sdl2::{event::Event, pixels::Color};
 
 pub const WIN_W: u32 = 980;
 pub const WIN_H: u32 = 720;
@@ -24,6 +24,8 @@ pub struct Gui {
     pub left_menu_id: i32,
     pub ms_counter_title_id: i32,
     pub ms_counter_id: i32,
+    pub cam_pos_title_id: i32,
+    pub cam_pos_id: i32,
 }
 
 impl Gui {
@@ -37,6 +39,8 @@ impl Gui {
             left_menu_id: -1,
             ms_counter_title_id: -1,
             ms_counter_id: -1,
+            cam_pos_title_id: -1,
+            cam_pos_id: -1,
         }
     }
 
@@ -68,17 +72,16 @@ impl Gui {
             .add_widget(SystemWidget::Box(Box::new(box_widget1)));
 
         // ms counter title
-        // todo ttfcontext issue -- maybe a wrapper, or Rc
-        // let mut ms_counter_title = TextWidget::new(
-        //     Point::new(2 * DEFAULT_PADDING, 2 * DEFAULT_PADDING),
-        //     Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
-        //     "Frame time".into(),
-        //     TextAlignment::AlignLeft,
-        // );
-        // ms_counter_title.set_invalidated(true);
-        // self.ms_counter_title_id = self
-        //     .engine
-        //     .add_widget(SystemWidget::Text(Box::new(ms_counter_title)));
+        let mut ms_counter_title = TextWidget::new(
+            Point::new(2 * DEFAULT_PADDING, 2 * DEFAULT_PADDING),
+            Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
+            "Frame time".into(),
+            TextAlignment::AlignLeft,
+        );
+        ms_counter_title.set_invalidated(true);
+        self.ms_counter_title_id = self
+            .engine
+            .add_widget(SystemWidget::Text(Box::new(ms_counter_title)));
 
         // ms counter
         let mut ms_counter = TextWidget::new(
@@ -91,7 +94,29 @@ impl Gui {
         self.ms_counter_id = self
             .engine
             .add_widget(SystemWidget::Text(Box::new(ms_counter)));
-    }
 
-    pub fn finish(&self) {}
+        // camera position title
+        let mut cam_pos_title = TextWidget::new(
+            Point::new(2 * DEFAULT_PADDING, 4 * DEFAULT_PADDING + 2 * 30),
+            Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
+            "Camera position".into(),
+            TextAlignment::AlignLeft,
+        );
+        cam_pos_title.set_invalidated(true);
+        self.cam_pos_title_id = self
+            .engine
+            .add_widget(SystemWidget::Text(Box::new(cam_pos_title)));
+
+        // camera position
+        let mut cam_pos = TextWidget::new(
+            Point::new(2 * DEFAULT_PADDING, 5 * DEFAULT_PADDING + 3 * 30),
+            Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
+            "deez".into(),
+            TextAlignment::AlignLeft,
+        );
+        cam_pos.set_invalidated(true);
+        self.cam_pos_id = self
+            .engine
+            .add_widget(SystemWidget::Text(Box::new(cam_pos)));
+    }
 }

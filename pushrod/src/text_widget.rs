@@ -43,7 +43,6 @@ pub struct TextWidget {
     size: Size,
     invalidated: bool,
     texture: TextureStore,
-    ttf_context: Sdl2TtfContext,
     text: String,
     alignment: TextAlignment,
 }
@@ -102,26 +101,43 @@ impl Widget for TextWidget {
     }
 
     fn draw(&mut self, c: &mut Canvas<Window>) -> Option<&Texture> {
+        panic!("Use text_draw!!!")
+    }
+}
+
+impl TextWidget {
+    pub fn new(origin: Point, size: Size, text: String, align: TextAlignment) -> Self {
+        Self {
+            origin,
+            size,
+            invalidated: false,
+            texture: TextureStore::default(),
+            text,
+            alignment: align,
+        }
+    }
+
+    pub fn set_text(&mut self, text: &str) {
+        self.text = text.to_owned();
+        self.invalidated = true;
+    }
+
+    pub fn get_text(&self) -> &str {
+        self.text.as_str()
+    }
+
+    pub fn text_draw(
+        &mut self,
+        c: &mut Canvas<Window>,
+        ttf_context: &Sdl2TtfContext,
+    ) -> Option<&Texture> {
         if self.invalidated {
-            //     self.texture.create_or_resize_texture(c, self.size);
-            //
-            //     let base_color = self.base_color;
-            //     let size = self.size;
-            //
-            //     // Draw the background with only the base color.
-            //     c.with_texture_canvas(self.texture.get_mut_ref(), |texture| {
-            //         texture.set_draw_color(base_color);
-            //         texture.clear();
-            //     })
-            //         .unwrap();
-            // }
-            let (font_texture, width, height) = self.render_text(c);
+            let (font_texture, width, height) = self.render_text(c, ttf_context);
             let widget_w = self.size.w;
             let texture_x: i32 = match self.alignment {
                 TextAlignment::AlignLeft => 0,
                 TextAlignment::AlignCenter => (widget_w - width) as i32 / 2,
                 TextAlignment::AlignRight => (widget_w - width) as i32,
-                _ => 0,
             };
 
             self.texture.create_or_resize_texture(c, self.size);
@@ -139,40 +155,20 @@ impl Widget for TextWidget {
 
         self.texture.get_optional_ref()
     }
-}
-
-impl TextWidget {
-    pub fn new(origin: Point, size: Size, text: String, align: TextAlignment) -> Self {
-        Self {
-            origin,
-            size,
-            invalidated: false,
-            texture: TextureStore::default(),
-            ttf_context: sdl2::ttf::init().map_err(|e| e.to_string()).unwrap(),
-            text,
-            alignment: align,
-        }
-    }
-
-    pub fn set_text(&mut self, text: &str) {
-        self.text = text.to_owned();
-        self.invalidated = true;
-    }
-
-    pub fn get_text(&self) -> &str {
-        self.text.as_str()
-    }
 
     /// Renders text, given the font name, size, style, color, string, and max width.  Transfers
     /// ownership of the `Texture` to the calling function, returns the width and height of the
     /// texture after rendering.  By using the identical font name, size, and style, if SDL2 caches
     /// the font data, this will allow the font to be cached internally.
-    pub fn render_text(&mut self, c: &mut Canvas<Window>) -> (Texture, u32, u32) {
-        let ttf_context = &self.ttf_context;
+    pub fn render_text(
+        &mut self,
+        c: &mut Canvas<Window>,
+        ttf_context: &Sdl2TtfContext,
+    ) -> (Texture, u32, u32) {
         let texture_creator = c.texture_creator();
         let font_name = "pushrod/assets/OpenSans-Regular.ttf";
-        let text_color = Color::RED;
-        let font_size = 14;
+        let text_color = Color::WHITE;
+        let font_size = 16;
         let font_style: FontStyle = FontStyle::NORMAL;
         let text_message = self.text.as_str();
         let mut font = ttf_context
