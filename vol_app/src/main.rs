@@ -3,8 +3,6 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
-use nalgebra::point;
-use pushrod::widget::SystemWidget;
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
 
@@ -90,16 +88,7 @@ fn main() -> Result<(), String> {
             match event {
                 Event::MouseMotion { .. } => {} // Temporary bypass, performance
                 _ => {
-                    let event_result = gui.handle_event(event);
-
-                    if let Some(handler) = &gui.engine.event_handler {
-                        // Needs to support handling of multiple events being generated
-                        // here.
-
-                        if !event_result.is_empty() {
-                            handler.process_event(event_result);
-                        }
-                    }
+                    let _event_result = gui.handle_event(event);
                 }
             }
         }
@@ -134,7 +123,7 @@ fn main() -> Result<(), String> {
         )?;
 
         // Draw GUI
-        gui.engine.widget_cache.draw_loop(&mut canvas);
+        gui.cache.draw_loop(&mut canvas);
 
         canvas.present();
 

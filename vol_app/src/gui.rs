@@ -4,7 +4,7 @@ use nalgebra::Point3;
 use pushrod::{
     base_widget::BaseWidget,
     box_widget::BoxWidget,
-    engine::Engine,
+    cache::WidgetCache,
     event::PushrodEvent,
     geometry::{Point, Size},
     text_widget::{TextAlignment, TextWidget},
@@ -33,7 +33,7 @@ impl State {
 }
 
 pub struct Gui {
-    pub engine: Engine,
+    pub cache: WidgetCache,
     pub window_size: (u32, u32),
     pub base_widget_id: i32,
     pub left_menu_id: i32,
@@ -46,10 +46,8 @@ pub struct Gui {
 
 impl Gui {
     pub fn new() -> Gui {
-        // frame_rate has no effect now
-        let engine = Engine::new(Size::new(WIN_W, WIN_H), 60);
         Gui {
-            engine,
+            cache: WidgetCache::default(),
             window_size: (WIN_W, WIN_H),
             base_widget_id: -1,
             left_menu_id: -1,
@@ -66,9 +64,7 @@ impl Gui {
             return;
         }
 
-        if let Some(SystemWidget::Text(cam_pos_widget)) =
-            self.engine.widget_cache.get_mut(self.cam_pos_id)
-        {
+        if let Some(SystemWidget::Text(cam_pos_widget)) = self.cache.get_mut(self.cam_pos_id) {
             let coord_text = format!("[ {:>6.1} , {:>6.1} , {:>6.1} ]", pos.x, pos.y, pos.z);
             cam_pos_widget.set_text(coord_text.as_str());
         }
@@ -77,16 +73,14 @@ impl Gui {
     }
 
     pub fn send_frame_time(&mut self, time: Duration) {
-        if let Some(SystemWidget::Text(ms_counter)) =
-            self.engine.widget_cache.get_mut(self.ms_counter_id)
-        {
+        if let Some(SystemWidget::Text(ms_counter)) = self.cache.get_mut(self.ms_counter_id) {
             let ms_text = time.as_millis().to_string();
             ms_counter.set_text(ms_text.as_str());
         }
     }
 
     pub fn handle_event(&mut self, event: Event) -> Vec<PushrodEvent> {
-        self.engine.widget_cache.handle_event(event)
+        self.cache.handle_event(event)
     }
 
     pub fn build_gui(&mut self) {
@@ -96,9 +90,7 @@ impl Gui {
             Size::new(self.window_size.0, self.window_size.1),
         );
         base_widget.set_color(BG_COLOR);
-        self.base_widget_id = self
-            .engine
-            .add_widget(SystemWidget::Base(Box::new(base_widget)));
+        self.base_widget_id = self.cache.add(SystemWidget::Base(Box::new(base_widget)));
 
         // Left menu
         let mut box_widget1 = BoxWidget::new(
@@ -108,9 +100,7 @@ impl Gui {
             1,
         );
         box_widget1.set_color(LEFT_MENU_COLOR);
-        self.left_menu_id = self
-            .engine
-            .add_widget(SystemWidget::Box(Box::new(box_widget1)));
+        self.left_menu_id = self.cache.add(SystemWidget::Box(Box::new(box_widget1)));
 
         // ms counter title
         let mut ms_counter_title = TextWidget::new(
@@ -121,8 +111,8 @@ impl Gui {
         );
         ms_counter_title.set_bg_color(LEFT_MENU_COLOR);
         self.ms_counter_title_id = self
-            .engine
-            .add_widget(SystemWidget::Text(Box::new(ms_counter_title)));
+            .cache
+            .add(SystemWidget::Text(Box::new(ms_counter_title)));
 
         // ms counter
         let mut ms_counter = TextWidget::new(
@@ -132,9 +122,7 @@ impl Gui {
             TextAlignment::AlignLeft,
         );
         ms_counter.set_bg_color(LEFT_MENU_COLOR);
-        self.ms_counter_id = self
-            .engine
-            .add_widget(SystemWidget::Text(Box::new(ms_counter)));
+        self.ms_counter_id = self.cache.add(SystemWidget::Text(Box::new(ms_counter)));
 
         // camera position title
         let mut cam_pos_title = TextWidget::new(
@@ -144,9 +132,7 @@ impl Gui {
             TextAlignment::AlignLeft,
         );
         cam_pos_title.set_bg_color(LEFT_MENU_COLOR);
-        self.cam_pos_title_id = self
-            .engine
-            .add_widget(SystemWidget::Text(Box::new(cam_pos_title)));
+        self.cam_pos_title_id = self.cache.add(SystemWidget::Text(Box::new(cam_pos_title)));
 
         // camera position
         let mut cam_pos = TextWidget::new(
@@ -156,8 +142,6 @@ impl Gui {
             TextAlignment::AlignLeft,
         );
         cam_pos.set_bg_color(LEFT_MENU_COLOR);
-        self.cam_pos_id = self
-            .engine
-            .add_widget(SystemWidget::Text(Box::new(cam_pos)));
+        self.cam_pos_id = self.cache.add(SystemWidget::Text(Box::new(cam_pos)));
     }
 }
