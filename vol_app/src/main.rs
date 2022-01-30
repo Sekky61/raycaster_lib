@@ -72,8 +72,6 @@ fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump()?;
     let mut start_time = Instant::now();
 
-    let mut cam_pos = point![0.0, 0.0, 0.0];
-
     'running: loop {
         // Handle events
         for event in event_pump.poll_iter() {
@@ -106,6 +104,18 @@ fn main() -> Result<(), String> {
             }
         }
 
+        // Frame time counter
+
+        let duration = start_time.elapsed();
+        start_time = Instant::now();
+
+        // Update gui
+        // TODO events?
+
+        let new_cam_pos = raycast_renderer.camera.get_position();
+        gui.send_cam_pos(new_cam_pos);
+        gui.send_frame_time(duration);
+
         // Render frame, update texture and copy to canvas
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
 
@@ -128,39 +138,8 @@ fn main() -> Result<(), String> {
 
         canvas.present();
 
-        // Camera coords
-
-        let new_cam_pos = raycast_renderer.camera.get_position();
-        if cam_pos != new_cam_pos {
-            cam_pos = new_cam_pos;
-            if let Some(SystemWidget::Text(cam_pos_widget)) =
-                gui.engine.widget_cache.get_mut(gui.cam_pos_id)
-            {
-                let coord_text = format!(
-                    "[ {:>6.2} , {:>6.2} , {:>6.2} ]",
-                    cam_pos.x, cam_pos.y, cam_pos.z
-                );
-                cam_pos_widget.set_text(coord_text.as_str());
-            }
-        }
-
-        // Frame time counter
-
-        let duration = start_time.elapsed();
-        start_time = Instant::now();
-
-        // TODO events?
-        if let Some(SystemWidget::Text(ms_counter)) =
-            gui.engine.widget_cache.get_mut(gui.ms_counter_id)
-        {
-            let ms_text = duration.as_millis().to_string();
-            ms_counter.set_text(ms_text.as_str());
-        }
-
         println!("Draw {:?}", duration);
     }
-
-    drop(gui);
 
     Ok(())
 }

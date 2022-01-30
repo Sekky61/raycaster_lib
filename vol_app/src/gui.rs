@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use nalgebra::Point3;
 use pushrod::{
     base_widget::BaseWidget,
     box_widget::BoxWidget,
@@ -17,6 +20,18 @@ const LEFT_MENU_SIZE: Size = Size::new(250, 700);
 const BG_COLOR: Color = Color::RGB(20, 20, 20);
 const LEFT_MENU_COLOR: Color = Color::RGB(50, 50, 50);
 
+pub struct State {
+    cam_coords: Point3<f32>,
+}
+
+impl State {
+    pub fn new() -> Self {
+        Self {
+            cam_coords: Point3::origin(),
+        }
+    }
+}
+
 pub struct Gui {
     pub engine: Engine,
     pub window_size: (u32, u32),
@@ -26,6 +41,7 @@ pub struct Gui {
     pub ms_counter_id: i32,
     pub cam_pos_title_id: i32,
     pub cam_pos_id: i32,
+    pub state: State,
 }
 
 impl Gui {
@@ -41,6 +57,31 @@ impl Gui {
             ms_counter_id: -1,
             cam_pos_title_id: -1,
             cam_pos_id: -1,
+            state: State::new(),
+        }
+    }
+
+    pub fn send_cam_pos(&mut self, pos: Point3<f32>) {
+        if self.state.cam_coords == pos {
+            return;
+        }
+
+        if let Some(SystemWidget::Text(cam_pos_widget)) =
+            self.engine.widget_cache.get_mut(self.cam_pos_id)
+        {
+            let coord_text = format!("[ {:>6.1} , {:>6.1} , {:>6.1} ]", pos.x, pos.y, pos.z);
+            cam_pos_widget.set_text(coord_text.as_str());
+        }
+
+        self.state.cam_coords = pos;
+    }
+
+    pub fn send_frame_time(&mut self, time: Duration) {
+        if let Some(SystemWidget::Text(ms_counter)) =
+            self.engine.widget_cache.get_mut(self.ms_counter_id)
+        {
+            let ms_text = time.as_millis().to_string();
+            ms_counter.set_text(ms_text.as_str());
         }
     }
 
