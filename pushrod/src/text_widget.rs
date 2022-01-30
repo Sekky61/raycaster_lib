@@ -45,6 +45,10 @@ pub struct TextWidget {
     texture: TextureStore,
     text: String,
     alignment: TextAlignment,
+    font_name: String,
+    font_size: u16,
+    font_color: Color,
+    bg_color: Color,
 }
 
 /// `TextWidget` is a widget that renders text from a string within the bounds of the `Widget`.
@@ -114,7 +118,26 @@ impl TextWidget {
             texture: TextureStore::default(),
             text,
             alignment: align,
+            font_name: "pushrod/assets/OpenSans-Regular.ttf".into(),
+            font_size: 16,
+            font_color: Color::WHITE,
+            bg_color: Color::BLACK,
         }
+    }
+
+    pub fn set_bg_color(&mut self, color: Color) {
+        self.bg_color = color;
+        self.invalidated = true;
+    }
+
+    pub fn set_font_color(&mut self, color: Color) {
+        self.font_color = color;
+        self.invalidated = true;
+    }
+
+    pub fn set_font_size(&mut self, size: impl Into<u16>) {
+        self.font_size = size.into();
+        self.invalidated = true;
     }
 
     pub fn set_text(&mut self, text: &str) {
@@ -143,7 +166,7 @@ impl TextWidget {
             self.texture.create_or_resize_texture(c, self.size);
 
             c.with_texture_canvas(self.texture.get_mut_ref(), |texture| {
-                texture.set_draw_color(Color::RGBA(0, 50, 0, 0));
+                texture.set_draw_color(self.bg_color);
                 texture.clear(); // Without clear, only text gets drawn
 
                 texture
@@ -166,17 +189,15 @@ impl TextWidget {
         ttf_context: &Sdl2TtfContext,
     ) -> (Texture, u32, u32) {
         let texture_creator = c.texture_creator();
-        let font_name = "pushrod/assets/OpenSans-Regular.ttf";
-        let text_color = Color::WHITE;
-        let font_size = 16;
         let font_style: FontStyle = FontStyle::NORMAL;
         let text_message = self.text.as_str();
+
         let mut font = ttf_context
-            .load_font(Path::new(&font_name), font_size as u16)
+            .load_font(Path::new(self.font_name.as_str()), self.font_size)
             .unwrap();
         let surface = font
             .render(text_message)
-            .blended_wrapped(text_color, self.size.w)
+            .blended_wrapped(self.font_color, self.size.w)
             .map_err(|e| e.to_string())
             .unwrap();
 

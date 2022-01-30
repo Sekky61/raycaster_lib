@@ -78,7 +78,7 @@ impl Gui {
             "Frame time".into(),
             TextAlignment::AlignLeft,
         );
-        ms_counter_title.set_invalidated(true);
+        ms_counter_title.set_bg_color(LEFT_MENU_COLOR);
         self.ms_counter_title_id = self
             .engine
             .add_widget(SystemWidget::Text(Box::new(ms_counter_title)));
@@ -90,7 +90,7 @@ impl Gui {
             "def ms".into(),
             TextAlignment::AlignLeft,
         );
-        ms_counter.set_invalidated(true);
+        ms_counter.set_bg_color(LEFT_MENU_COLOR);
         self.ms_counter_id = self
             .engine
             .add_widget(SystemWidget::Text(Box::new(ms_counter)));
@@ -102,7 +102,7 @@ impl Gui {
             "Camera position".into(),
             TextAlignment::AlignLeft,
         );
-        cam_pos_title.set_invalidated(true);
+        cam_pos_title.set_bg_color(LEFT_MENU_COLOR);
         self.cam_pos_title_id = self
             .engine
             .add_widget(SystemWidget::Text(Box::new(cam_pos_title)));
@@ -114,7 +114,7 @@ impl Gui {
             "deez".into(),
             TextAlignment::AlignLeft,
         );
-        cam_pos.set_invalidated(true);
+        cam_pos.set_bg_color(LEFT_MENU_COLOR);
         self.cam_pos_id = self
             .engine
             .add_widget(SystemWidget::Text(Box::new(cam_pos)));

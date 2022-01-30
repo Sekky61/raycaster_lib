@@ -128,10 +128,7 @@ fn main() -> Result<(), String> {
 
         canvas.present();
 
-        // Frame time counter
-
-        let duration = start_time.elapsed();
-        start_time = Instant::now();
+        // Camera coords
 
         let new_cam_pos = raycast_renderer.camera.get_position();
         if cam_pos != new_cam_pos {
@@ -139,12 +136,18 @@ fn main() -> Result<(), String> {
             if let Some(SystemWidget::Text(cam_pos_widget)) =
                 gui.engine.widget_cache.get_mut(gui.cam_pos_id)
             {
-                // TODO format
-                // TODO initial render
-                let ms_text = cam_pos.to_string();
-                cam_pos_widget.set_text(ms_text.as_str());
+                let coord_text = format!(
+                    "[ {:>6.2} , {:>6.2} , {:>6.2} ]",
+                    cam_pos.x, cam_pos.y, cam_pos.z
+                );
+                cam_pos_widget.set_text(coord_text.as_str());
             }
         }
+
+        // Frame time counter
+
+        let duration = start_time.elapsed();
+        start_time = Instant::now();
 
         // TODO events?
         if let Some(SystemWidget::Text(ms_counter)) =
