@@ -6,30 +6,37 @@ use super::Camera;
 pub struct TargetCamera {
     position: Point3<f32>,
     target: Point3<f32>,
+    spherical: (f32, f32, f32),
     resolution: (usize, usize),
     mouse_down: bool,
 }
 
 impl TargetCamera {
     pub fn new(width: usize, height: usize) -> TargetCamera {
-        TargetCamera {
+        let mut t = TargetCamera {
             position: point![300.0, 300.0, 300.0],
             target: point![34.0, 128.0, 128.0],
+            spherical: (0.0, 0.0, 0.0),
             resolution: (width, height),
             mouse_down: false,
-        }
+        };
+        t.recalc_spherical();
+        t
     }
 
     pub fn change_pos(&mut self, delta: Vector3<f32>) {
         self.position += delta;
+        self.recalc_spherical();
     }
 
     pub fn set_pos(&mut self, pos: Point3<f32>) {
         self.position = pos;
+        self.recalc_spherical();
     }
 
     pub fn set_target(&mut self, target: Point3<f32>) {
         self.target = target;
+        self.recalc_spherical();
     }
 
     pub fn get_resolution(&self) -> (usize, usize) {
@@ -38,23 +45,33 @@ impl TargetCamera {
 
     // get spherical coordinates, relative to target
     // return r, theta, phi
-    fn get_spherical(&self) -> (f32, f32, f32) {
+    pub fn get_spherical(&self) -> (f32, f32, f32) {
+        self.spherical
+    }
+
+    fn set_spherical(&mut self, r: f32, theta: f32, phi: f32) {
+        self.spherical = (r, theta, phi);
+        self.recalc_carthesian();
+    }
+
+    fn recalc_spherical(&mut self) {
         let dif = self.position - self.target;
         let r = dif.magnitude() as f32;
         let theta = (dif.z / r).acos();
         let phi = dif.y.atan2(dif.x);
 
-        (r, theta, phi)
+        self.spherical = (r, theta, phi);
     }
 
-    fn set_spherical(&mut self, r: f32, theta: f32, phi: f32) {
+    fn recalc_carthesian(&mut self) {
+        let (r, theta, phi) = self.spherical;
         let sphere_offset = vector![
             r * theta.sin() * phi.cos(),
             r * theta.sin() * phi.sin(),
             r * theta.cos()
         ];
 
-        self.set_pos(self.target + sphere_offset);
+        self.position = self.target + sphere_offset;
     }
 }
 
@@ -91,22 +108,16 @@ impl Camera for TargetCamera {
 
                 let drag_diff = (*xrel as f32, *yrel as f32);
 
-                let (r, mut theta, mut phi) = self.get_spherical();
+                let (r, mut theta, mut phi) = self.spherical;
 
                 println!("Current: > r {} theta {} phi {}", r, theta, phi);
 
-                let drag_speed = 0.05;
+                let drag_speed = 0.04;
 
-                phi -= drag_speed * drag_diff.0; // drag to left (negative drag) increases phi (rotation clockwise)
+                phi += drag_speed * drag_diff.1; // drag to left (negative drag) increases phi (rotation clockwise)
 
-                let theta_dif = drag_speed * drag_diff.1;
+                theta -= drag_speed * drag_diff.0;
 
-                if theta_dif + theta < 0.0 {
-                    theta = theta_dif.abs() - theta;
-                    phi = -phi;
-                } else {
-                    theta += drag_speed * drag_diff.1;
-                }
                 println!("New T {}", theta);
 
                 self.set_spherical(r, theta, phi);

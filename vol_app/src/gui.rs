@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use nalgebra::Point3;
+use nalgebra::{Point3, Vector3};
 use pushrod::{
     base_widget::BaseWidget,
     box_widget::BoxWidget,
@@ -41,6 +41,7 @@ pub struct Gui {
     pub ms_counter_id: i32,
     pub cam_pos_title_id: i32,
     pub cam_pos_id: i32,
+    pub sphere_pos_id: i32,
     pub state: State,
 }
 
@@ -56,6 +57,7 @@ impl Gui {
             cam_pos_title_id: -1,
             cam_pos_id: -1,
             state: State::new(),
+            sphere_pos_id: -1,
         }
     }
 
@@ -76,6 +78,17 @@ impl Gui {
         if let Some(SystemWidget::Text(ms_counter)) = self.cache.get_mut(self.ms_counter_id) {
             let ms_text = time.as_millis().to_string();
             ms_counter.set_text(ms_text.as_str());
+        }
+    }
+
+    pub fn send_spherical_pos(&mut self, coords: (f32, f32, f32)) {
+        if let Some(SystemWidget::Text(sphere_pos_widget)) = self.cache.get_mut(self.sphere_pos_id)
+        {
+            let coord_text = format!(
+                "[ {:>6.1} , {:>6.1} , {:>6.1} ]",
+                coords.0, coords.1, coords.2
+            );
+            sphere_pos_widget.set_text(coord_text.as_str());
         }
     }
 
@@ -143,5 +156,15 @@ impl Gui {
         );
         cam_pos.set_bg_color(LEFT_MENU_COLOR);
         self.cam_pos_id = self.cache.add(SystemWidget::Text(Box::new(cam_pos)));
+
+        // camera position spherical
+        let mut sphere_pos = TextWidget::new(
+            Point::new(2 * DEFAULT_PADDING, 6 * DEFAULT_PADDING + 4 * 30),
+            Size::new(LEFT_MENU_SIZE.w - 2 * (DEFAULT_PADDING as u32), 30),
+            "kuuma".into(),
+            TextAlignment::AlignLeft,
+        );
+        sphere_pos.set_bg_color(LEFT_MENU_COLOR);
+        self.sphere_pos_id = self.cache.add(SystemWidget::Text(Box::new(sphere_pos)));
     }
 }

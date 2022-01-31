@@ -104,6 +104,7 @@ fn main() -> Result<(), String> {
         let new_cam_pos = raycast_renderer.camera.get_position();
         gui.send_cam_pos(new_cam_pos);
         gui.send_frame_time(duration);
+        gui.send_spherical_pos(raycast_renderer.camera.get_spherical());
 
         // Render frame, update texture and copy to canvas
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());
