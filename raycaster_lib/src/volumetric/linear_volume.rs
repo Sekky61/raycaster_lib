@@ -113,6 +113,7 @@ impl Volume for LinearVolume {
 
 impl BuildVolume for LinearVolume {
     fn build(builder: VolumeBuilder) -> Self {
+        println!("Build started");
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&builder.scale);

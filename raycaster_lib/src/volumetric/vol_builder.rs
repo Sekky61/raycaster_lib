@@ -83,11 +83,12 @@ impl VolumeBuilder {
         self
     }
 
-    pub fn set_data<T>(mut self, data: Vec<T>, tf: impl Fn(f32) -> RGBA) -> VolumeBuilder
+    pub fn set_data<T>(mut self, data: Vec<T>, tf: impl Fn(T) -> RGBA) -> VolumeBuilder
     where
         T: Into<f32> + Copy,
     {
-        let data = data.iter().map(|&t_val| tf(t_val.into())).collect();
+        println!("setting data");
+        let data = data.iter().map(|&t_val| tf(t_val)).collect();
         self.data = data;
         self
     }

@@ -128,7 +128,7 @@ impl Camera for TargetCamera {
             Event::MouseButtonUp { .. } => self.mouse_down = false,
             Event::MouseWheel { y, .. } => {
                 // y        ... vertical scroll
-                // +1 unit   ... 1 step of wheel down (negative -> scroll up)
+                // +1 unit  ... 1 step of wheel down (negative -> scroll up)
 
                 let (mut r, theta, phi) = self.get_spherical();
 

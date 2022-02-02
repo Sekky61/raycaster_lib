@@ -3,6 +3,7 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
+use raycaster_lib::volumetric::LinearVolume;
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
 
