@@ -178,7 +178,7 @@ impl EmptyIndex {
             volume.get_data(x + 1, y + 1, z + 1),
         ];
 
-        let any_nonzero = samples.iter().any(|&val| val.w != 0.0);
+        let any_nonzero = samples.iter().any(|&val| val != 0.0);
         match any_nonzero {
             true => BlockType::NonEmpty,
             false => BlockType::Empty,
@@ -235,7 +235,7 @@ impl EmptyIndex {
 #[cfg(test)]
 mod test {
 
-    use crate::volumetric::{vol_builder::color, LinearVolume, VolumeBuilder};
+    use crate::volumetric::{LinearVolume, VolumeBuilder};
     use nalgebra::vector;
 
     use super::*;
@@ -243,16 +243,16 @@ mod test {
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         VolumeBuilder::new()
             .set_size(vector![x, y, z])
-            .set_data(vec![0.0; x * y * z], color::mono)
+            .set_data(vec![0; x * y * z])
             .build()
     }
 
     fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
-        let mut data = vec![0.0; x * y * z];
-        data[2] = 17.0;
+        let mut data = vec![0; x * y * z];
+        data[2] = 17;
         VolumeBuilder::new()
             .set_size(vector![x, y, z])
-            .set_data(data, color::mono)
+            .set_data(data)
             .build()
     }
 

@@ -6,11 +6,12 @@ use super::{
 };
 
 pub struct LinearVolume {
+    position: Vector3<f32>,
     size: Vector3<usize>,
     border: u32,
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
-    data: Vec<RGBA>,
+    data: Vec<f32>,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -30,16 +31,16 @@ impl LinearVolume {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
         //println!("Getting {} {} {}", x, y, z);
         let val = self.data.get(self.get_3d_index(x, y, z));
         match val {
             Some(&v) => v,
-            None => color::zero(),
+            None => 0.0,
         }
     }
 
-    fn get_block_data_half(&self, base: usize) -> [RGBA; 4] {
+    fn get_block_data_half(&self, base: usize) -> [f32; 4] {
         [
             self.data[base],
             self.data[base + 1],
@@ -54,7 +55,7 @@ impl Volume for LinearVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: Point3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Point3<f32>) -> f32 {
         // todo taky zkusit rozseknout
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
@@ -102,27 +103,38 @@ impl Volume for LinearVolume {
             && pos.z > 0.0
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
     }
 
     fn get_size(&self) -> Vector3<usize> {
         self.size
     }
+
+    fn get_pos(&self) -> Vector3<f32> {
+        self.position
+    }
 }
 
 impl BuildVolume for LinearVolume {
     fn build(builder: VolumeBuilder) -> Self {
         println!("Build started");
+
+        let data = if let Some(mmap) = builder.mmap {
+            mmap.iter().map(|&i| i as f32).collect()
+        } else {
+            builder.data.iter().map(|&i| i as f32).collect()
+        };
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&builder.scale);
         LinearVolume {
+            position: Vector3::zeros(),
             size: builder.size,
             border: builder.border,
             scale: builder.scale,
             vol_dims,
-            data: builder.data,
+            data,
         }
     }
 }
@@ -137,7 +149,7 @@ mod test {
     use super::*;
 
     fn cube_volume() -> LinearVolume {
-        VolumeBuilder::white_vol().build()
+        crate::volumetric::white_vol().build()
     }
 
     #[test]

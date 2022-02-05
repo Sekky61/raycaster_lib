@@ -10,6 +10,7 @@ const BLOCK_OVERLAP: usize = 1;
 const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
 pub struct BlockVolume {
+    position: Vector3<f32>,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>,
     border: u32,
@@ -48,22 +49,22 @@ impl BlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> RGBA {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
         self.data[block_index].data[block_offset]
     }
 }
 
 pub struct Block {
-    data: [RGBA; BLOCK_DATA_LEN],
+    data: [u8; BLOCK_DATA_LEN],
 }
 
 impl Block {
-    pub fn from_data(data: [RGBA; BLOCK_DATA_LEN]) -> Block {
+    pub fn from_data(data: [u8; BLOCK_DATA_LEN]) -> Block {
         Block { data }
     }
 
-    fn get_block_data_half(&self, start_index: usize) -> [RGBA; 4] {
+    fn get_block_data_half(&self, start_index: usize) -> [u8; 4] {
         [
             self.data[start_index],
             self.data[start_index + 1],
@@ -82,7 +83,7 @@ impl Volume for BlockVolume {
         self.vol_dims
     }
 
-    fn sample_at(&self, pos: Point3<f32>) -> RGBA {
+    fn sample_at(&self, pos: Point3<f32>) -> f32 {
         //let data = self.get_block_data(pos);
 
         let x = pos.x as usize;
@@ -135,10 +136,14 @@ impl Volume for BlockVolume {
     fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
         self.get_3d_data(x, y, z)
     }
+
+    fn get_pos(&self) -> Vector3<f32> {
+        self.position
+    }
 }
 
 pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block {
-    let mut v = [color::zero(); BLOCK_DATA_LEN]; // todo push
+    let mut v = [0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
@@ -147,7 +152,7 @@ pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block
                     || y + off_y >= builder.size.y
                     || z + off_z >= builder.size.z
                 {
-                    v[ptr] = color::zero(); // todo inefficient
+                    v[ptr] = 0; // todo inefficient
                 } else {
                     let value = builder.get_data(x + off_x, y + off_y, z + off_z);
                     v[ptr] = value;
@@ -192,6 +197,7 @@ impl BuildVolume for BlockVolume {
         );
 
         BlockVolume {
+            position: Vector3::zeros(),
             data_size: builder.size,
             block_size,
             border: builder.border,

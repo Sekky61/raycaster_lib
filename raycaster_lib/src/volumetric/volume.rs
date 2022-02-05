@@ -1,23 +1,26 @@
 use crate::ray::Ray;
 use nalgebra::{Point3, Vector3};
 
-use super::vol_builder::RGBA;
-
 // Volume assumes f32 data
+// Volume is axis aligned
 pub trait Volume {
     // get data dimensions
     fn get_size(&self) -> Vector3<usize>;
+
+    // get volume position
+    // axis aligned, lowest corner
+    fn get_pos(&self) -> Vector3<f32>;
 
     // get scaled size
     fn get_dims(&self) -> Vector3<f32>;
 
     // trilinear interpolation sample, zero if outside
-    fn sample_at(&self, pos: Point3<f32>) -> RGBA;
+    fn sample_at(&self, pos: Point3<f32>) -> f32;
 
     // position is inside volume
     fn is_in(&self, pos: &Point3<f32>) -> bool;
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA;
+    fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
         let dims = self.get_dims();

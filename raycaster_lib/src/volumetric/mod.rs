@@ -5,12 +5,28 @@ pub mod volume;
 mod block_volume;
 mod empty_index;
 mod linear_volume;
+mod stream_volume;
 
 pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
 pub use linear_volume::LinearVolume;
 pub use vol_builder::VolumeBuilder;
 pub use volume::Volume;
+
+use nalgebra::vector;
+
+pub fn white_vol() -> VolumeBuilder {
+    let mut vb = VolumeBuilder {
+        size: vector![2, 2, 2],
+        border: 0,
+        scale: vector![100.0, 100.0, 100.0], // shape of voxels
+        data: Default::default(),
+        mmap: None,
+    };
+
+    vb = vb.set_data(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]);
+    vb
+}
 
 #[cfg(test)]
 mod test {
@@ -25,14 +41,14 @@ mod test {
     where
         V: Volume + BuildVolume,
     {
-        VolumeBuilder::white_vol().build()
+        crate::volumetric::white_vol().build()
     }
 
     fn skull_volume<V>() -> V
     where
         V: Volume + BuildVolume,
     {
-        let builder = vol_reader::from_file("volumes/Skull.vol").expect("skull error");
+        let builder = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
         builder.build()
     }
 
@@ -52,7 +68,7 @@ mod test {
                     let bl_data = block.get_data(x, y, z);
                     let dif = (lin_data - bl_data).abs();
 
-                    assert!(dif.iter().all(|&f| f < f32::EPSILON));
+                    assert!(dif < f32::EPSILON);
                 }
             }
         }
@@ -74,7 +90,7 @@ mod test {
                     let bl_data = block.get_data(x, y, z);
                     let dif = (lin_data - bl_data).abs();
 
-                    assert!(dif.iter().all(|&f| f < f32::EPSILON));
+                    assert!(dif < f32::EPSILON);
                 }
             }
         }
@@ -94,7 +110,7 @@ mod test {
             let block_sample = block.sample_at(spot);
             let dif = (lin_sample - block_sample).abs();
 
-            assert!(dif.iter().all(|&f| f < f32::EPSILON));
+            assert!(dif < f32::EPSILON);
         }
     }
 
@@ -116,7 +132,7 @@ mod test {
                     let bl_data = block.sample_at(pos);
                     let dif = (lin_data - bl_data).abs();
 
-                    assert!(dif.iter().all(|&f| f < f32::EPSILON));
+                    assert!(dif < f32::EPSILON);
                 }
             }
         }

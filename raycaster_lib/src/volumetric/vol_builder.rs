@@ -1,3 +1,6 @@
+use std::{fs::File, path::Path};
+
+use memmap::{Mmap, MmapOptions};
 use nalgebra::{vector, Vector3};
 
 use super::Volume;
@@ -27,7 +30,8 @@ pub struct VolumeBuilder {
     pub(super) size: Vector3<usize>,
     pub(super) border: u32,
     pub(super) scale: Vector3<f32>, // shape of voxels
-    pub(super) data: Vec<RGBA>,
+    pub(super) data: Vec<u8>,
+    pub(super) mmap: Option<Mmap>,
 }
 
 pub trait BuildVolume {
@@ -41,35 +45,54 @@ impl VolumeBuilder {
             border: 0,
             scale: vector![1.0, 1.0, 1.0],
             data: vec![],
+            mmap: None,
         }
     }
 
-    pub fn white_vol() -> VolumeBuilder {
-        let mut vb = VolumeBuilder {
-            size: vector![2, 2, 2],
-            border: 0,
-            scale: vector![100.0, 100.0, 100.0], // shape of voxels
-            data: Default::default(),
+    pub fn from_file<P>(path: P) -> Result<VolumeBuilder, &'static str>
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+
+        if !path.is_file() {
+            return Err("Path does not lead to a file");
+        }
+
+        let extension = match path.extension() {
+            Some(ext) => ext,
+            None => return Err("File has no extension"),
         };
 
-        vb = vb.set_data(
-            vec![
-                0.0,
-                32.0,
-                64.0,
-                64.0 + 32.0,
-                128.0,
-                128.0 + 32.0,
-                128.0 + 64.0,
-                255.0,
-            ],
-            |f| RGBA::new(f, f, f, f),
-        );
-        vb
+        let extension = extension.to_str().expect("error converting extension");
+
+        let file = File::open(path);
+
+        let file = match file {
+            Ok(f) => f,
+            Err(_) => return Err("Cannot open file"),
+        };
+
+        let mmap = unsafe { MmapOptions::new().map(&file) };
+        let mmap = match mmap {
+            Ok(mmap) => mmap,
+            Err(_) => return Err("Cannot create memory map"),
+        };
+
+        match extension {
+            "vol" => vol_parser(mmap),
+            "dat" => dat_parser(mmap),
+            _ => Err("Unknown extension"),
+        }
     }
 
     pub fn set_size(mut self, size: Vector3<usize>) -> VolumeBuilder {
         self.size = size;
+        self
+    }
+
+    pub fn set_mmap(mut self, mmap: Mmap) -> VolumeBuilder {
+        self.mmap = Some(mmap);
         self
     }
 
@@ -83,12 +106,7 @@ impl VolumeBuilder {
         self
     }
 
-    pub fn set_data<T>(mut self, data: Vec<T>, tf: impl Fn(T) -> RGBA) -> VolumeBuilder
-    where
-        T: Into<f32> + Copy,
-    {
-        println!("setting data");
-        let data = data.iter().map(|&t_val| tf(t_val)).collect();
+    pub fn set_data(mut self, data: Vec<u8>) -> VolumeBuilder {
         self.data = data;
         self
     }
@@ -108,18 +126,18 @@ impl VolumeBuilder {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    pub fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
+    pub fn get_data(&self, x: usize, y: usize, z: usize) -> u8 {
         if x > self.size.x || y > self.size.y || z > self.size.z {
-            return color::zero();
+            return Default::default();
         }
         let index = self.get_3d_index(x, y, z);
         match self.data.get(index) {
             Some(&v) => v,
-            None => color::zero(),
+            None => Default::default(),
         }
     }
 
-    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [RGBA; 8] {
+    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [u8; 8] {
         [
             self.get_data(x, y, z),
             self.get_data(x, y, z + 1),
@@ -133,8 +151,83 @@ impl VolumeBuilder {
     }
 }
 
-impl Default for VolumeBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
+fn dat_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
+    let slice = &map[..];
+
+    let x_bytes: [u8; 2] = slice[0..2].try_into().map_err(|_| "Metadata error")?;
+    let x = u16::from_le_bytes(x_bytes) as usize;
+
+    let y_bytes: [u8; 2] = slice[2..4].try_into().map_err(|_| "Metadata error")?;
+    let y = u16::from_le_bytes(y_bytes) as usize;
+
+    let z_bytes: [u8; 2] = slice[4..6].try_into().map_err(|_| "Metadata error")?;
+    let z = u16::from_le_bytes(z_bytes) as usize;
+
+    let mapped: Vec<u16> = slice[6..]
+        .chunks(2)
+        .map(|x| {
+            let arr = x.try_into().unwrap_or([0; 2]);
+            let mut v = u16::from_le_bytes(arr);
+            v &= 0b0000111111111111;
+            v
+        })
+        .collect();
+
+    println!(
+        "Parsed .dat file. voxels: {} | planes: {} | plane: {}x{} ZxY",
+        mapped.len(),
+        x,
+        z,
+        y
+    );
+
+    let volume_builder = VolumeBuilder::new()
+        .set_size(vector![x, y, z])
+        .set_mmap(map)
+        .set_border(0);
+
+    Ok(volume_builder)
+}
+
+fn vol_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
+    let slice = &map[..];
+
+    let x_bytes: [u8; 4] = slice[0..4].try_into().map_err(|_| "Metadata error")?;
+    let x = u32::from_le_bytes(x_bytes) as usize;
+
+    let y_bytes: [u8; 4] = slice[4..8].try_into().map_err(|_| "Metadata error")?;
+    let y = u32::from_le_bytes(y_bytes) as usize;
+
+    let z_bytes: [u8; 4] = slice[8..12].try_into().map_err(|_| "Metadata error")?;
+    let z = u32::from_le_bytes(z_bytes) as usize;
+
+    // skip 4 bytes
+
+    let xs_bytes: [u8; 4] = slice[16..20].try_into().map_err(|_| "Metadata error")?;
+    let scale_x = u32::from_le_bytes(xs_bytes) as f32;
+
+    let ys_bytes: [u8; 4] = slice[20..24].try_into().map_err(|_| "Metadata error")?;
+    let scale_y = u32::from_le_bytes(ys_bytes) as f32;
+
+    let zs_bytes: [u8; 4] = slice[24..28].try_into().map_err(|_| "Metadata error")?;
+    let scale_z = u32::from_le_bytes(zs_bytes) as f32;
+
+    println!(
+        "Parsed .vol file. voxels: {} | planes: {} | plane: {}x{} ZxY | scale: {} {} {}",
+        map.len(),
+        x,
+        z,
+        y,
+        scale_x,
+        scale_y,
+        scale_z
+    );
+
+    let volume_builder = VolumeBuilder::new()
+        .set_size(vector![x, y, z])
+        .set_scale(vector![scale_x, scale_y, scale_z])
+        .set_mmap(map)
+        .set_border(0);
+
+    Ok(volume_builder)
 }
