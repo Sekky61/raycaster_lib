@@ -65,7 +65,7 @@ fn main() -> Result<(), String> {
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
-        empty_index: true,
+        empty_index: false,
         multi_thread: false,
     });
 

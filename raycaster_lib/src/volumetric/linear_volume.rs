@@ -70,7 +70,13 @@ impl Volume for LinearVolume {
         let first_index = base;
         let second_index = base + self.size.z * self.size.y;
 
-        let first_data = self.get_block_data_half(first_index);
+        let first_data = if second_index > self.data.len() {
+            [0.0; 4]
+        } else {
+            self.get_block_data_half(first_index)
+        };
+
+        //let first_data = self.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
 
         let inv_z_t = 1.0 - z_t;
@@ -84,7 +90,13 @@ impl Volume for LinearVolume {
 
         // second plane
 
-        let second_data = self.get_block_data_half(second_index);
+        let second_data = if second_index > self.data.len() {
+            [0.0; 4]
+        } else {
+            self.get_block_data_half(first_index)
+        };
+
+        //let second_data = self.get_block_data_half(second_index);
         let [c100, c101, c110, c111] = second_data;
 
         let c10 = c100 * inv_z_t + c101 * z_t; // z low
