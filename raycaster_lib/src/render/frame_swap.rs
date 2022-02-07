@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Default)]
 pub struct BufferStatus(pub bool, pub bool);
 
 impl BufferStatus {

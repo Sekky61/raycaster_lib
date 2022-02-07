@@ -1,12 +1,11 @@
-use nalgebra::{point, Point3, Vector4};
+use nalgebra::{point, vector, Point3, Vector3, Vector4};
 
 use crate::{
+    camera::Camera,
+    ray::Ray,
     transfer_functions::skull_tf,
-    volumetric::{BlockType, EmptyIndex},
-    EmptyIndexes,
+    volumetric::{BlockType, EmptyIndex, EmptyIndexes, Volume},
 };
-
-use super::*;
 
 #[derive(Default)]
 pub struct RenderOptions {

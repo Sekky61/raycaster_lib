@@ -1,16 +1,8 @@
-mod camera;
+pub mod camera;
 mod ray;
 pub mod render;
 mod transfer_functions;
 pub mod volumetric;
-
-pub use camera::{Camera, TargetCamera};
-pub use render::{RenderOptions, Renderer};
-use volumetric::vol_builder::vol_parser;
-use volumetric::vol_builder::BuildVolume;
-pub use volumetric::EmptyIndexes;
-
-use crate::volumetric::LinearVolume;
 
 pub mod color {
     use nalgebra::{vector, Vector4};
@@ -31,6 +23,11 @@ pub mod color {
 }
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
+    use crate::render::{RenderOptions, Renderer};
+    use camera::TargetCamera;
+    use volumetric::parse::vol_parser;
+    use volumetric::{BuildVolume, LinearVolume};
+
     let camera = TargetCamera::new(width, height);
     let read_result = volumetric::VolumeBuilder::from_file("volumes/Skull.vol");
 

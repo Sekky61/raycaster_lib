@@ -1,20 +1,19 @@
-pub mod vol_builder;
-pub mod volume;
-
 mod block_volume;
 mod empty_index;
 mod linear_volume;
+pub mod parse;
 mod stream_volume;
+mod vol_builder;
+mod volume;
 
 pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
 pub use linear_volume::LinearVolume;
-pub use vol_builder::VolumeBuilder;
+pub use stream_volume::StreamVolume;
+pub use vol_builder::{BuildVolume, ParsedVolumeBuilder, VolumeBuilder};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
-
-use self::vol_builder::ParsedVolumeBuilder;
 
 pub fn white_vol() -> ParsedVolumeBuilder<u8> {
     ParsedVolumeBuilder {
@@ -58,7 +57,7 @@ mod test {
         V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
     {
         let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
-        let parsed_vb = match vol_builder::vol_parser(vb) {
+        let parsed_vb = match parse::vol_parser(vb) {
             Ok(res) => res,
             Err(err_msg) => panic!("{}", err_msg),
         };

@@ -1,9 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use raycaster_lib::{
-    render::Renderer,
-    volumetric::{vol_builder::BuildVolume, vol_reader, BlockVolume, LinearVolume, Volume},
-    RenderOptions, TargetCamera,
+    camera::TargetCamera,
+    render::{RenderOptions, Renderer},
+    volumetric::{
+        parse::vol_parser, BlockVolume, BuildVolume, LinearVolume, ParsedVolumeBuilder, Volume,
+        VolumeBuilder,
+    },
 };
 
 const WIDTH: usize = 512;
@@ -11,18 +14,13 @@ const HEIGHT: usize = 512;
 
 fn get_volume<V>() -> V
 where
-    V: Volume + BuildVolume,
+    V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
 {
-    let read_result = vol_reader::from_file("volumes/Skull.vol");
+    // Build Renderer and Volume
+    let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("bad read of file");
 
-    let volume_b = match read_result {
-        Ok(vol) => vol,
-        Err(message) => {
-            panic!("{}", message);
-        }
-    };
-
-    volume_b.build()
+    let parsed_vb = vol_parser(vb).unwrap();
+    V::build(parsed_vb)
 }
 
 fn render_linear(c: &mut Criterion) {

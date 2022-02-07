@@ -2,24 +2,27 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use nalgebra::point;
 use raycaster_lib::{
-    render::Renderer,
-    volumetric::{vol_reader, LinearVolume},
-    RenderOptions, TargetCamera,
+    camera::TargetCamera,
+    render::{RenderOptions, Renderer},
+    volumetric::{
+        parse::vol_parser, BuildVolume, LinearVolume, ParsedVolumeBuilder, Volume, VolumeBuilder,
+    },
 };
 
+fn get_volume<V>() -> V
+where
+    V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
+{
+    // Build Renderer and Volume
+    let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("bad read of file");
+
+    let parsed_vb = vol_parser(vb).unwrap();
+    V::build(parsed_vb)
+}
+
 fn get_ui_from_usize(c: &mut Criterion) {
+    let volume = get_volume();
     let camera = TargetCamera::new(512, 512);
-    let read_result = vol_reader::from_file("volumes/Skull.vol");
-
-    let volume_b = match read_result {
-        Ok(vol) => vol,
-        Err(message) => {
-            eprint!("{}", message);
-            std::process::exit(1);
-        }
-    };
-
-    let volume = volume_b.build();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
@@ -41,17 +44,7 @@ fn get_ui_from_usize(c: &mut Criterion) {
 
 fn get_ui_from_float(c: &mut Criterion) {
     let camera = TargetCamera::new(512, 512);
-    let read_result = vol_reader::from_file("volumes/Skull.vol");
-
-    let volume_b = match read_result {
-        Ok(vol) => vol,
-        Err(message) => {
-            eprint!("{}", message);
-            std::process::exit(1);
-        }
-    };
-
-    let volume = volume_b.build();
+    let volume = get_volume();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
