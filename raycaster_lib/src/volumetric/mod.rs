@@ -13,21 +13,28 @@ pub use linear_volume::LinearVolume;
 pub use vol_builder::VolumeBuilder;
 pub use volume::Volume;
 
-use nalgebra::vector;
+use nalgebra::{vector, Vector3};
 
 use self::vol_builder::ParsedVolumeBuilder;
 
 pub fn white_vol() -> ParsedVolumeBuilder<u8> {
-    let mut vb = ParsedVolumeBuilder {
+    ParsedVolumeBuilder {
         size: vector![2, 2, 2],
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data: Default::default(),
+        data: Some(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]),
         mmap: None,
-    };
+    }
+}
 
-    vb.data = Some(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]);
-    vb
+pub fn empty_vol(dims: Vector3<usize>) -> ParsedVolumeBuilder<u8> {
+    ParsedVolumeBuilder {
+        size: dims,
+        border: 0,
+        scale: vector![100.0, 100.0, 100.0], // shape of voxels
+        data: Some(vec![0; dims.x * dims.y * dims.z]),
+        mmap: None,
+    }
 }
 
 #[cfg(test)]

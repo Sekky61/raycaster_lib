@@ -142,7 +142,7 @@ impl Volume for BlockVolume {
     }
 }
 
-pub fn get_block(builder: &ParsedVolumeBuilder<f32>, x: usize, y: usize, z: usize) -> Block {
+pub fn get_block(builder: &ParsedVolumeBuilder<u8>, x: usize, y: usize, z: usize) -> Block {
     let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
@@ -155,7 +155,7 @@ pub fn get_block(builder: &ParsedVolumeBuilder<f32>, x: usize, y: usize, z: usiz
                     v[ptr] = 0.0; // todo inefficient
                 } else {
                     let value = builder.get_data(x + off_x, y + off_y, z + off_z);
-                    v[ptr] = value;
+                    v[ptr] = value as f32;
                 }
                 ptr += 1;
             }
@@ -164,8 +164,8 @@ pub fn get_block(builder: &ParsedVolumeBuilder<f32>, x: usize, y: usize, z: usiz
     Block::from_data(v)
 }
 
-impl BuildVolume<ParsedVolumeBuilder<f32>> for BlockVolume {
-    fn build(builder: ParsedVolumeBuilder<f32>) -> Self {
+impl BuildVolume<ParsedVolumeBuilder<u8>> for BlockVolume {
+    fn build(builder: ParsedVolumeBuilder<u8>) -> Self {
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&builder.scale); // todo workaround

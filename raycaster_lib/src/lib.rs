@@ -5,6 +5,8 @@ pub mod volumetric;
 
 pub use camera::{Camera, TargetCamera};
 pub use render::{RenderOptions, Renderer};
+use volumetric::vol_builder::vol_parser;
+use volumetric::vol_builder::BuildVolume;
 pub use volumetric::vol_reader;
 pub use volumetric::EmptyIndexes;
 
@@ -21,8 +23,8 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
             std::process::exit(1);
         }
     };
-
-    let volume = volume_b.build();
+    let parsed_vb = vol_parser(volume_b).unwrap();
+    let volume = BuildVolume::build(parsed_vb);
 
     let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {

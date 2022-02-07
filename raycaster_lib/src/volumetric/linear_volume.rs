@@ -152,7 +152,8 @@ mod test {
     use super::*;
 
     fn cube_volume() -> LinearVolume {
-        crate::volumetric::white_vol().build()
+        let parsed_vb = crate::volumetric::white_vol();
+        BuildVolume::build(parsed_vb)
     }
 
     #[test]

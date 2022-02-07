@@ -3,7 +3,8 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
-use raycaster_lib::volumetric::LinearVolume;
+use raycaster_lib::volumetric::vol_builder::{dat_parser, vol_parser, BuildVolume};
+use raycaster_lib::volumetric::{LinearVolume, VolumeBuilder};
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
 
@@ -52,13 +53,15 @@ fn main() -> Result<(), String> {
     gui.build_gui();
 
     // Build Renderer and Volume
-    let volume = vol_reader::from_file("volumes/Skull.vol")
-        .expect("bad read of file")
-        .build();
+    let vb = raycaster_lib::volumetric::VolumeBuilder::from_file("volumes/Skull.vol")
+        .expect("bad read of file");
+
+    let parsed_vb = vol_parser(vb).unwrap();
+    let volume = BuildVolume::build(parsed_vb);
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
 
-    let mut raycast_renderer = Renderer::<BlockVolume, _>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<LinearVolume, _>::new(volume, camera);
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,

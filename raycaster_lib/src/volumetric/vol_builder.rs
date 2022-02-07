@@ -116,7 +116,7 @@ where
             return Default::default();
         }
         let index = self.get_3d_index(x, y, z);
-        match self.data {
+        match &self.data {
             Some(vec) => vec.get(index).cloned().unwrap_or(Default::default()),
             None => Default::default(),
         }
@@ -138,9 +138,9 @@ where
 
 // todo move parsers - maybe to user space
 pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'static str> {
-    let slice = if let Some(mmap) = vb.mmap {
+    let slice = if let Some(ref mmap) = vb.mmap {
         &mmap[..]
-    } else if let Some(vec) = vb.data {
+    } else if let Some(ref vec) = vb.data {
         &vec[..]
     } else {
         return Err("No data in VolumeBuilder");
@@ -185,33 +185,35 @@ pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'stati
 }
 
 pub fn vol_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static str> {
-    let slice = if let Some(mmap) = vb.mmap {
+    let slice = if let Some(ref mmap) = vb.mmap {
         &mmap[..]
-    } else if let Some(vec) = vb.data {
+    } else if let Some(ref vec) = vb.data {
         &vec[..]
     } else {
         return Err("No data in VolumeBuilder");
     };
 
     let x_bytes: [u8; 4] = slice[0..4].try_into().map_err(|_| "Metadata error")?;
-    let x = u32::from_le_bytes(x_bytes) as usize;
+    let x = u32::from_be_bytes(x_bytes) as usize;
 
     let y_bytes: [u8; 4] = slice[4..8].try_into().map_err(|_| "Metadata error")?;
-    let y = u32::from_le_bytes(y_bytes) as usize;
+    let y = u32::from_be_bytes(y_bytes) as usize;
 
     let z_bytes: [u8; 4] = slice[8..12].try_into().map_err(|_| "Metadata error")?;
-    let z = u32::from_le_bytes(z_bytes) as usize;
+    let z = u32::from_be_bytes(z_bytes) as usize;
 
     // skip 4 bytes
 
     let xs_bytes: [u8; 4] = slice[16..20].try_into().map_err(|_| "Metadata error")?;
-    let scale_x = u32::from_le_bytes(xs_bytes) as f32;
+    let scale_x = f32::from_be_bytes(xs_bytes);
 
     let ys_bytes: [u8; 4] = slice[20..24].try_into().map_err(|_| "Metadata error")?;
-    let scale_y = u32::from_le_bytes(ys_bytes) as f32;
+    let scale_y = f32::from_be_bytes(ys_bytes);
 
     let zs_bytes: [u8; 4] = slice[24..28].try_into().map_err(|_| "Metadata error")?;
-    let scale_z = u32::from_le_bytes(zs_bytes) as f32;
+    let scale_z = f32::from_be_bytes(zs_bytes);
+
+    println!("zs bytes {:?}", zs_bytes);
 
     println!(
         "Parsed .vol file. voxels: {} | planes: {} | plane: {}x{} ZxY | scale: {} {} {}",
