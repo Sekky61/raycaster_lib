@@ -1,7 +1,7 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{color, BuildVolume, RGBA},
+    vol_builder::{color, BuildVolume, ParsedVolumeBuilder, RGBA},
     Volume, VolumeBuilder,
 };
 
@@ -116,14 +116,17 @@ impl Volume for LinearVolume {
     }
 }
 
-impl BuildVolume for LinearVolume {
-    fn build(builder: VolumeBuilder) -> Self {
+impl BuildVolume<ParsedVolumeBuilder<u8>> for LinearVolume {
+    fn build(builder: ParsedVolumeBuilder<u8>) -> Self {
         println!("Build started");
 
         let data = if let Some(mmap) = builder.mmap {
             mmap.iter().map(|&i| i as f32).collect()
+        } else if let Some(vec) = builder.data {
+            vec.iter().map(|&i| i as f32).collect()
         } else {
-            builder.data.iter().map(|&i| i as f32).collect()
+            // todo error
+            vec![0.0]
         };
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()

@@ -15,6 +15,7 @@ pub trait Volume {
     fn get_dims(&self) -> Vector3<f32>;
 
     // trilinear interpolation sample, zero if outside
+    // pos in volume coordinates
     fn sample_at(&self, pos: Point3<f32>) -> f32;
 
     // position is inside volume

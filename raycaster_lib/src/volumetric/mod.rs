@@ -15,8 +15,10 @@ pub use volume::Volume;
 
 use nalgebra::vector;
 
-pub fn white_vol() -> VolumeBuilder {
-    let mut vb = VolumeBuilder {
+use self::vol_builder::ParsedVolumeBuilder;
+
+pub fn white_vol() -> ParsedVolumeBuilder<u8> {
+    let mut vb = ParsedVolumeBuilder {
         size: vector![2, 2, 2],
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
@@ -24,7 +26,7 @@ pub fn white_vol() -> VolumeBuilder {
         mmap: None,
     };
 
-    vb = vb.set_data(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]);
+    vb.data = Some(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]);
     vb
 }
 
@@ -33,23 +35,28 @@ mod test {
 
     use super::*;
 
-    use crate::{vol_reader, volumetric::LinearVolume};
+    use crate::volumetric::LinearVolume;
     use nalgebra::{point, vector};
     use vol_builder::BuildVolume;
 
     fn cube_volume<V>() -> V
     where
-        V: Volume + BuildVolume,
+        V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
     {
-        crate::volumetric::white_vol().build()
+        let parsed_vb = white_vol();
+        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb)
     }
 
     fn skull_volume<V>() -> V
     where
-        V: Volume + BuildVolume,
+        V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
     {
-        let builder = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
-        builder.build()
+        let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
+        let parsed_vb = match vol_builder::vol_parser(vb) {
+            Ok(res) => res,
+            Err(err_msg) => panic!("{}", err_msg),
+        };
+        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb)
     }
 
     #[test]

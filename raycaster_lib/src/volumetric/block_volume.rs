@@ -1,7 +1,7 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{color, BuildVolume, RGBA},
+    vol_builder::{BuildVolume, ParsedVolumeBuilder, RGBA},
     Volume, VolumeBuilder,
 };
 
@@ -49,22 +49,22 @@ impl BlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
         self.data[block_index].data[block_offset]
     }
 }
 
 pub struct Block {
-    data: [u8; BLOCK_DATA_LEN],
+    data: [f32; BLOCK_DATA_LEN],
 }
 
 impl Block {
-    pub fn from_data(data: [u8; BLOCK_DATA_LEN]) -> Block {
+    pub fn from_data(data: [f32; BLOCK_DATA_LEN]) -> Block {
         Block { data }
     }
 
-    fn get_block_data_half(&self, start_index: usize) -> [u8; 4] {
+    fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
         [
             self.data[start_index],
             self.data[start_index + 1],
@@ -133,7 +133,7 @@ impl Volume for BlockVolume {
             && pos.z > 0.0
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> RGBA {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
     }
 
@@ -142,8 +142,8 @@ impl Volume for BlockVolume {
     }
 }
 
-pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block {
-    let mut v = [0; BLOCK_DATA_LEN]; // todo push
+pub fn get_block(builder: &ParsedVolumeBuilder<f32>, x: usize, y: usize, z: usize) -> Block {
+    let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
@@ -152,7 +152,7 @@ pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block
                     || y + off_y >= builder.size.y
                     || z + off_z >= builder.size.z
                 {
-                    v[ptr] = 0; // todo inefficient
+                    v[ptr] = 0.0; // todo inefficient
                 } else {
                     let value = builder.get_data(x + off_x, y + off_y, z + off_z);
                     v[ptr] = value;
@@ -164,8 +164,8 @@ pub fn get_block(builder: &VolumeBuilder, x: usize, y: usize, z: usize) -> Block
     Block::from_data(v)
 }
 
-impl BuildVolume for BlockVolume {
-    fn build(builder: VolumeBuilder) -> Self {
+impl BuildVolume<ParsedVolumeBuilder<f32>> for BlockVolume {
+    fn build(builder: ParsedVolumeBuilder<f32>) -> Self {
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&builder.scale); // todo workaround

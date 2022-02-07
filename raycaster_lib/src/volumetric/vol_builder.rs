@@ -3,8 +3,6 @@ use std::{fs::File, path::Path};
 use memmap::{Mmap, MmapOptions};
 use nalgebra::{vector, Vector3};
 
-use super::Volume;
-
 use nalgebra::Vector4;
 
 pub type RGBA = Vector4<f32>;
@@ -26,25 +24,22 @@ pub mod color {
 }
 
 // pub(super) -- fields visible in parent module
+// todo merge mmap and data to enum storage
 pub struct VolumeBuilder {
-    pub(super) size: Vector3<usize>,
-    pub(super) border: u32,
-    pub(super) scale: Vector3<f32>, // shape of voxels
-    pub(super) data: Vec<u8>,
+    pub(super) data: Option<Vec<u8>>,
+    pub(super) file_ext: Option<String>,
     pub(super) mmap: Option<Mmap>,
 }
 
-pub trait BuildVolume {
-    fn build(builder: VolumeBuilder) -> Self;
+pub trait BuildVolume<T> {
+    fn build(builder: T) -> Self;
 }
 
 impl VolumeBuilder {
     pub fn new() -> VolumeBuilder {
         VolumeBuilder {
-            size: vector![0, 0, 0],
-            border: 0,
-            scale: vector![1.0, 1.0, 1.0],
-            data: vec![],
+            data: None,
+            file_ext: None,
             mmap: None,
         }
     }
@@ -79,16 +74,8 @@ impl VolumeBuilder {
             Err(_) => return Err("Cannot create memory map"),
         };
 
-        match extension {
-            "vol" => vol_parser(mmap),
-            "dat" => dat_parser(mmap),
-            _ => Err("Unknown extension"),
-        }
-    }
-
-    pub fn set_size(mut self, size: Vector3<usize>) -> VolumeBuilder {
-        self.size = size;
-        self
+        let vb = VolumeBuilder::new().set_extension(extension).set_mmap(mmap);
+        Ok(vb)
     }
 
     pub fn set_mmap(mut self, mmap: Mmap) -> VolumeBuilder {
@@ -96,48 +83,46 @@ impl VolumeBuilder {
         self
     }
 
-    pub fn set_border(mut self, border: u32) -> VolumeBuilder {
-        self.border = border;
-        self
-    }
-
-    pub fn set_scale(mut self, scale: Vector3<f32>) -> VolumeBuilder {
-        self.scale = scale;
-        self
-    }
-
     pub fn set_data(mut self, data: Vec<u8>) -> VolumeBuilder {
-        self.data = data;
+        self.data = Some(data);
         self
     }
 
-    pub fn build<V>(self) -> V
-    where
-        V: Volume + BuildVolume,
-    {
-        assert!(self.size.iter().all(|&dim| dim != 0));
-        assert!(self.scale.iter().all(|&dim| dim != 0.0));
-        assert_eq!(self.data.len(), self.size.fold(1, |acc, side| acc * side));
-
-        V::build(self)
+    pub fn set_extension(mut self, ext: &str) -> VolumeBuilder {
+        self.file_ext = Some(ext.into());
+        self
     }
+}
 
+pub struct ParsedVolumeBuilder<T> {
+    pub(super) size: Vector3<usize>,
+    pub(super) border: u32,
+    pub(super) scale: Vector3<f32>, // shape of voxels
+    pub(super) data: Option<Vec<T>>,
+    pub(super) mmap: Option<Mmap>,
+}
+
+impl<T> ParsedVolumeBuilder<T>
+where
+    T: Default + Clone,
+{
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    pub fn get_data(&self, x: usize, y: usize, z: usize) -> u8 {
+    // from data vector only
+    pub fn get_data(&self, x: usize, y: usize, z: usize) -> T {
         if x > self.size.x || y > self.size.y || z > self.size.z {
             return Default::default();
         }
         let index = self.get_3d_index(x, y, z);
-        match self.data.get(index) {
-            Some(&v) => v,
+        match self.data {
+            Some(vec) => vec.get(index).cloned().unwrap_or(Default::default()),
             None => Default::default(),
         }
     }
 
-    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [u8; 8] {
+    pub fn get_surrounding_data(&self, x: usize, y: usize, z: usize) -> [T; 8] {
         [
             self.get_data(x, y, z),
             self.get_data(x, y, z + 1),
@@ -151,8 +136,15 @@ impl VolumeBuilder {
     }
 }
 
-fn dat_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
-    let slice = &map[..];
+// todo move parsers - maybe to user space
+pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'static str> {
+    let slice = if let Some(mmap) = vb.mmap {
+        &mmap[..]
+    } else if let Some(vec) = vb.data {
+        &vec[..]
+    } else {
+        return Err("No data in VolumeBuilder");
+    };
 
     let x_bytes: [u8; 2] = slice[0..2].try_into().map_err(|_| "Metadata error")?;
     let x = u16::from_le_bytes(x_bytes) as usize;
@@ -181,16 +173,25 @@ fn dat_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
         y
     );
 
-    let volume_builder = VolumeBuilder::new()
-        .set_size(vector![x, y, z])
-        .set_mmap(map)
-        .set_border(0);
+    let parsed_vb = ParsedVolumeBuilder {
+        size: vector![x, y, z],
+        border: 0,
+        scale: vector![1.0, 1.0, 1.0],
+        data: Some(mapped),
+        mmap: None,
+    };
 
-    Ok(volume_builder)
+    Ok(parsed_vb)
 }
 
-fn vol_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
-    let slice = &map[..];
+pub fn vol_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static str> {
+    let slice = if let Some(mmap) = vb.mmap {
+        &mmap[..]
+    } else if let Some(vec) = vb.data {
+        &vec[..]
+    } else {
+        return Err("No data in VolumeBuilder");
+    };
 
     let x_bytes: [u8; 4] = slice[0..4].try_into().map_err(|_| "Metadata error")?;
     let x = u32::from_le_bytes(x_bytes) as usize;
@@ -214,7 +215,7 @@ fn vol_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
 
     println!(
         "Parsed .vol file. voxels: {} | planes: {} | plane: {}x{} ZxY | scale: {} {} {}",
-        map.len(),
+        slice.len(),
         x,
         z,
         y,
@@ -223,11 +224,13 @@ fn vol_parser(map: Mmap) -> Result<VolumeBuilder, &'static str> {
         scale_z
     );
 
-    let volume_builder = VolumeBuilder::new()
-        .set_size(vector![x, y, z])
-        .set_scale(vector![scale_x, scale_y, scale_z])
-        .set_mmap(map)
-        .set_border(0);
+    let parsed_vb = ParsedVolumeBuilder {
+        size: vector![x, y, z],
+        border: 0,
+        scale: vector![scale_x, scale_y, scale_z],
+        data: None,
+        mmap: vb.mmap,
+    };
 
-    Ok(volume_builder)
+    Ok(parsed_vb)
 }
