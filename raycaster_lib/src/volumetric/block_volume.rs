@@ -1,8 +1,8 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{BuildVolume, ParsedVolumeBuilder, RGBA},
-    Volume, VolumeBuilder,
+    vol_builder::{BuildVolume, ParsedVolumeBuilder},
+    Volume,
 };
 
 const BLOCK_SIDE: usize = 3;

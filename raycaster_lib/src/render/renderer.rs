@@ -1,7 +1,7 @@
 use nalgebra::{point, Point3, Vector4};
 
 use crate::{
-    vol_reader::skull_transfer_function,
+    transfer_functions::skull_tf,
     volumetric::{BlockType, EmptyIndex},
     EmptyIndexes,
 };
@@ -179,7 +179,7 @@ where
         loop {
             let sample = self.volume.sample_at(pos);
 
-            let color = skull_transfer_function(sample as u8);
+            let color = skull_tf(sample as u8);
 
             pos += step;
 
@@ -262,7 +262,7 @@ where
                     // sample
                     let sample = self.volume.sample_at(position.pos);
 
-                    let color = skull_transfer_function(sample as u8);
+                    let color = skull_tf(sample as u8);
 
                     accum += (1.0 - accum.w) * color;
 

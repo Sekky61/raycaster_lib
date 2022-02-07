@@ -1,12 +1,7 @@
 use std::fs::File;
 
 use memmap::{Mmap, MmapOptions};
-use nalgebra::{vector, Point3, Vector3};
-
-use super::{
-    vol_builder::{color, BuildVolume, RGBA},
-    Volume, VolumeBuilder,
-};
+use nalgebra::{vector, Vector3};
 
 pub struct StreamVolume {
     size: Vector3<usize>,

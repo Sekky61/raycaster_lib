@@ -5,24 +5,6 @@ use nalgebra::{vector, Vector3};
 
 use nalgebra::Vector4;
 
-pub type RGBA = Vector4<f32>;
-
-pub mod color {
-    use super::*;
-
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> RGBA {
-        vector![r, g, b, a]
-    }
-
-    pub fn zero() -> RGBA {
-        vector![0.0, 0.0, 0.0, 0.0]
-    }
-
-    pub fn mono(v: f32) -> RGBA {
-        vector![v, v, v, v]
-    }
-}
-
 // pub(super) -- fields visible in parent module
 // todo merge mmap and data to enum storage
 pub struct VolumeBuilder {

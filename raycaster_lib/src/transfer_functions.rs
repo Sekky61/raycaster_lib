@@ -1,7 +1,7 @@
-use super::vol_builder::{color, RGBA};
+use crate::color::{self, RGBA};
 
 // R G B A -- A <0;1>
-pub fn skull_transfer_function(sample: u8) -> RGBA {
+pub fn skull_tf(sample: u8) -> RGBA {
     if sample > 170 {
         RGBA::new(220.0, 0.0, 20.0, 0.1)
     } else if sample > 130 {
@@ -12,7 +12,7 @@ pub fn skull_transfer_function(sample: u8) -> RGBA {
 }
 
 // R G B A -- A <0;1>
-pub fn c60large_transfer_function(sample: u8) -> RGBA {
+pub fn c60large_tf(sample: u8) -> RGBA {
     if sample > 230 && sample < 255 {
         RGBA::new(200.0, 0.0, 0.0, 0.5)
     } else if sample > 200 && sample < 230 {
@@ -26,7 +26,7 @@ pub fn c60large_transfer_function(sample: u8) -> RGBA {
 
 // R G B A -- A <0;1>
 // uses just 12 bits
-pub fn beetle_transfer_function(sample: u16) -> RGBA {
+pub fn beetle_tf(sample: u16) -> RGBA {
     if sample > 10000 {
         RGBA::new(255.0, 0.0, 0.0, 0.01)
     } else if sample > 5000 {

@@ -3,14 +3,12 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
-use raycaster_lib::volumetric::vol_builder::{dat_parser, vol_parser, BuildVolume};
-use raycaster_lib::volumetric::{LinearVolume, VolumeBuilder};
+use raycaster_lib::volumetric::vol_builder::{vol_parser, BuildVolume};
+use raycaster_lib::volumetric::LinearVolume;
 use sdl2::keyboard::Keycode;
 use sdl2::{event::Event, rect::Rect};
 
-use raycaster_lib::{
-    vol_reader, volumetric::BlockVolume, Camera, RenderOptions, Renderer, TargetCamera,
-};
+use raycaster_lib::{Camera, RenderOptions, Renderer, TargetCamera};
 
 const RENDER_WIDTH_U: usize = 700;
 const RENDER_HEIGHT_U: usize = 700;

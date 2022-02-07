@@ -1,5 +1,4 @@
 pub mod vol_builder;
-pub mod vol_reader;
 pub mod volume;
 
 mod block_volume;
