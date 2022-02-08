@@ -25,7 +25,7 @@ pub mod color {
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use crate::render::{RenderOptions, Renderer};
     use camera::TargetCamera;
-    use volumetric::parse::vol_parser;
+    use volumetric::parse::skull_parser;
     use volumetric::{BuildVolume, LinearVolume};
 
     let camera = TargetCamera::new(width, height);
@@ -38,7 +38,7 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
             std::process::exit(1);
         }
     };
-    let parsed_vb = vol_parser(volume_b).unwrap();
+    let parsed_vb = skull_parser(volume_b).unwrap();
     let volume = BuildVolume::build(parsed_vb);
 
     let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);

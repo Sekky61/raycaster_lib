@@ -8,7 +8,7 @@ use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 use raycaster_lib::{
     camera::{Camera, TargetCamera},
     render::{RenderOptions, Renderer},
-    volumetric::{parse::vol_parser, BuildVolume, LinearVolume, StreamVolume},
+    volumetric::{parse::skull_parser, BuildVolume, LinearVolume, StreamVolume},
 };
 
 const RENDER_WIDTH_U: usize = 700;
@@ -55,7 +55,7 @@ fn main() -> Result<(), String> {
     let vb = raycaster_lib::volumetric::VolumeBuilder::from_file("volumes/Skull.vol")
         .expect("bad read of file");
 
-    let parsed_vb = vol_parser(vb).unwrap();
+    let parsed_vb = skull_parser(vb).unwrap();
     let volume = BuildVolume::build(parsed_vb);
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);

@@ -1,5 +1,11 @@
 use super::{ParsedVolumeBuilder, VolumeBuilder};
-use nalgebra::vector;
+use nalgebra::{vector, Vector3};
+use nom::{
+    bytes::complete::take,
+    number::complete::{be_f32, be_u32},
+    sequence::tuple,
+    IResult,
+};
 
 // todo move parsers - maybe to user space
 pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'static str> {
@@ -41,7 +47,7 @@ pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'stati
     let parsed_vb = ParsedVolumeBuilder {
         size: vector![x, y, z],
         border: 0,
-        scale: vector![1.0, 1.0, 1.0],
+        scale: vector![1.0 * 0.99, 1.0 * 0.99, 1.0 * 0.99],
         data: Some(mapped),
         mmap: None,
     };
@@ -49,7 +55,7 @@ pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'stati
     Ok(parsed_vb)
 }
 
-pub fn vol_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static str> {
+pub fn skull_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static str> {
     let slice = if let Some(ref mmap) = vb.mmap {
         &mmap[..]
     } else if let Some(ref vec) = vb.data {
@@ -58,46 +64,34 @@ pub fn vol_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static
         return Err("No data in VolumeBuilder");
     };
 
-    let x_bytes: [u8; 4] = slice[0..4].try_into().map_err(|_| "Metadata error")?;
-    let x = u32::from_be_bytes(x_bytes) as usize;
+    let parse_res = skull_inner(slice);
 
-    let y_bytes: [u8; 4] = slice[4..8].try_into().map_err(|_| "Metadata error")?;
-    let y = u32::from_be_bytes(y_bytes) as usize;
+    match parse_res {
+        Ok((_sl, (size, scale))) => {
+            let result = ParsedVolumeBuilder::<u8> {
+                size,
+                border: 0,
+                scale,
+                data: vb.data,
+                mmap: vb.mmap,
+            };
+            Ok(result)
+        }
+        Err(_) => Err("Parse error"),
+    }
+}
 
-    let z_bytes: [u8; 4] = slice[8..12].try_into().map_err(|_| "Metadata error")?;
-    let z = u32::from_be_bytes(z_bytes) as usize;
+fn skull_inner(s: &[u8]) -> IResult<&[u8], (Vector3<usize>, Vector3<f32>)> {
+    let mut skull_header = tuple((
+        tuple((be_u32, be_u32, be_u32)),
+        take(4_u8),
+        tuple((be_f32, be_f32, be_f32)),
+    ));
 
-    // skip 4 bytes
+    let (s, (size, _, scale)) = skull_header(s)?;
 
-    let xs_bytes: [u8; 4] = slice[16..20].try_into().map_err(|_| "Metadata error")?;
-    let scale_x = f32::from_be_bytes(xs_bytes);
+    let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
+    let scale = vector![scale.0 * 0.999, scale.1 * 0.999, scale.2 * 0.999];
 
-    let ys_bytes: [u8; 4] = slice[20..24].try_into().map_err(|_| "Metadata error")?;
-    let scale_y = f32::from_be_bytes(ys_bytes);
-
-    let zs_bytes: [u8; 4] = slice[24..28].try_into().map_err(|_| "Metadata error")?;
-    let scale_z = f32::from_be_bytes(zs_bytes);
-
-    println!("zs bytes {:?}", zs_bytes);
-
-    println!(
-        "Parsed .vol file. voxels: {} | planes: {} | plane: {}x{} ZxY | scale: {} {} {}",
-        slice.len(),
-        x,
-        z,
-        y,
-        scale_x,
-        scale_y,
-        scale_z
-    );
-
-    let parsed_vb = ParsedVolumeBuilder {
-        size: vector![x, y, z],
-        border: 0,
-        scale: vector![scale_x, scale_y, scale_z],
-        data: None,
-        mmap: vb.mmap,
-    };
-
-    Ok(parsed_vb)
+    Ok((s, (size, scale)))
 }

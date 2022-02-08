@@ -5,7 +5,7 @@ use raycaster_lib::{
     camera::TargetCamera,
     render::{RenderOptions, Renderer},
     volumetric::{
-        parse::vol_parser, BuildVolume, LinearVolume, ParsedVolumeBuilder, Volume, VolumeBuilder,
+        parse::skull_parser, BuildVolume, LinearVolume, ParsedVolumeBuilder, Volume, VolumeBuilder,
     },
 };
 
@@ -16,7 +16,7 @@ where
     // Build Renderer and Volume
     let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("bad read of file");
 
-    let parsed_vb = vol_parser(vb).unwrap();
+    let parsed_vb = skull_parser(vb).unwrap();
     V::build(parsed_vb)
 }
 

@@ -57,7 +57,7 @@ mod test {
         V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
     {
         let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
-        let parsed_vb = match parse::vol_parser(vb) {
+        let parsed_vb = match parse::skull_parser(vb) {
             Ok(res) => res,
             Err(err_msg) => panic!("{}", err_msg),
         };

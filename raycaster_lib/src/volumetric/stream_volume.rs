@@ -114,40 +114,24 @@ impl Volume for StreamVolume {
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let base = self.get_3d_index(x_low, y_low, z_low);
+        let base = self.get_3d_index(x_low, y_low, z_low) + 28;
 
         let first_index = base;
         let second_index = base + self.size.z * self.size.y;
 
-        let size = self.file_map.len() - 28;
-
-        let first_data = if second_index > size {
-            [0.0; 4]
-        } else {
-            self.get_block_data_half(first_index)
-        };
-
-        //let first_data = self.get_block_data_half(first_index);
+        // first plane
+        let first_data = self.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
 
         let inv_z_t = 1.0 - z_t;
         let inv_y_t = 1.0 - y_t;
-
-        // first plane
 
         let c00 = c000 * inv_z_t + c001 * z_t; // z low
         let c01 = c010 * inv_z_t + c011 * z_t; // z high
         let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
 
         // second plane
-
-        let second_data = if second_index > size {
-            [0.0; 4]
-        } else {
-            self.get_block_data_half(first_index)
-        };
-
-        //let second_data = self.get_block_data_half(second_index);
+        let second_data = self.get_block_data_half(second_index);
         let [c100, c101, c110, c111] = second_data;
 
         let c10 = c100 * inv_z_t + c101 * z_t; // z low
