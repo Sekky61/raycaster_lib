@@ -19,7 +19,15 @@ pub trait Volume {
     fn sample_at(&self, pos: Point3<f32>) -> f32;
 
     // position is inside volume
-    fn is_in(&self, pos: &Point3<f32>) -> bool;
+    fn is_in(&self, pos: &Point3<f32>) -> bool {
+        let dims = self.get_dims();
+        dims.x > pos.x
+            && dims.y > pos.y
+            && dims.z > pos.z
+            && pos.x > 0.0
+            && pos.y > 0.0
+            && pos.z > 0.0
+    }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
 

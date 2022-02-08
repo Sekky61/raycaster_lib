@@ -8,7 +8,7 @@ use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 use raycaster_lib::{
     camera::{Camera, TargetCamera},
     render::{RenderOptions, Renderer},
-    volumetric::{parse::vol_parser, BuildVolume, LinearVolume},
+    volumetric::{parse::vol_parser, BuildVolume, LinearVolume, StreamVolume},
 };
 
 const RENDER_WIDTH_U: usize = 700;
@@ -60,7 +60,7 @@ fn main() -> Result<(), String> {
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
 
-    let mut raycast_renderer = Renderer::<LinearVolume, _>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<StreamVolume, _>::new(volume, camera);
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
