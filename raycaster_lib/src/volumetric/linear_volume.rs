@@ -1,4 +1,8 @@
+use std::mem::size_of;
+
 use nalgebra::{vector, Point3, Vector3};
+
+use crate::volumetric::vol_builder::DataSource;
 
 use super::{
     vol_builder::{BuildVolume, ParsedVolumeBuilder},
@@ -128,18 +132,19 @@ impl Volume for LinearVolume {
     }
 }
 
-impl BuildVolume<ParsedVolumeBuilder<u8>> for LinearVolume {
-    fn build(builder: ParsedVolumeBuilder<u8>) -> Self {
+impl<T> BuildVolume<ParsedVolumeBuilder<T>> for LinearVolume
+where
+    T: Into<f32> + Clone + Copy,
+{
+    fn build(builder: ParsedVolumeBuilder<T>) -> Self {
         println!("Build started");
 
-        let data = if let Some(mmap) = builder.mmap {
-            mmap.iter().map(|&i| i as f32).collect()
-        } else if let Some(vec) = builder.data {
-            vec.iter().map(|&i| i as f32).collect()
-        } else {
-            // todo error
-            vec![0.0]
+        let data = match builder.data {
+            DataSource::Vec(ref v) => v.iter().map(|&val| val.into()).collect(),
+            DataSource::Mmap(ref m) => m.get_all().iter().map(|&i| i.into()).collect(),
+            DataSource::None => vec![0.0], // todo error
         };
+
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&builder.scale);

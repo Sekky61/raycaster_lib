@@ -235,7 +235,10 @@ impl EmptyIndex {
 #[cfg(test)]
 mod test {
 
-    use crate::volumetric::{vol_builder::BuildVolume, LinearVolume};
+    use crate::volumetric::{
+        vol_builder::{BuildVolume, DataSource},
+        LinearVolume,
+    };
     use nalgebra::vector;
 
     use super::*;
@@ -247,7 +250,7 @@ mod test {
 
     fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
         let mut parsed_vb = crate::volumetric::empty_vol(vector![x, y, z]);
-        if let Some(ref mut vec) = parsed_vb.data {
+        if let DataSource::Vec(ref mut vec) = parsed_vb.data {
             vec[2] = 17;
         } else {
             panic!("Should not happen");

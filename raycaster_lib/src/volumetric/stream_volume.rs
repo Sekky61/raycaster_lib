@@ -3,6 +3,8 @@ use std::fs::File;
 use memmap::{Mmap, MmapOptions};
 use nalgebra::{vector, Vector3};
 
+use crate::volumetric::vol_builder::DataSource;
+
 use super::{BuildVolume, ParsedVolumeBuilder, Volume};
 
 pub struct StreamVolume {
@@ -70,8 +72,8 @@ impl BuildVolume<ParsedVolumeBuilder<u8>> for StreamVolume {
     fn build(builder: ParsedVolumeBuilder<u8>) -> StreamVolume {
         println!("Build started");
 
-        let data = if let Some(mmap) = builder.mmap {
-            mmap
+        let mmap = if let DataSource::Mmap(tm) = builder.data {
+            tm.into_inner()
         } else {
             // todo error
             panic!("No file map in builder");
@@ -86,7 +88,7 @@ impl BuildVolume<ParsedVolumeBuilder<u8>> for StreamVolume {
             border: 0,
             scale: builder.scale,
             vol_dims,
-            file_map: data,
+            file_map: mmap,
         }
     }
 }

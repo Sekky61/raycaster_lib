@@ -1,11 +1,53 @@
-use super::{ParsedVolumeBuilder, VolumeBuilder};
+use super::{
+    vol_builder::{DataSource, TypedMmap},
+    ParsedVolumeBuilder, VolumeBuilder,
+};
 use nalgebra::{vector, Vector3};
 use nom::{
     bytes::complete::take,
-    number::complete::{be_f32, be_u32},
+    number::complete::{be_f32, be_u32, le_u16},
     sequence::tuple,
     IResult,
 };
+
+pub fn beetle_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'static str> {
+    let slice = if let Some(ref mmap) = vb.mmap {
+        &mmap[..]
+    } else if let Some(ref vec) = vb.data {
+        &vec[..]
+    } else {
+        return Err("No data in VolumeBuilder");
+    };
+
+    let mut beetle_header = tuple((le_u16, le_u16, le_u16));
+    let parse_res: IResult<_, _> = beetle_header(slice);
+
+    let (rest, size) = match parse_res {
+        Ok(r) => r,
+        Err(_) => return Err("Parse error"),
+    };
+
+    let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
+
+    let mapped: Vec<u16> = rest
+        .chunks(2)
+        .map(|x| {
+            let arr = x.try_into().unwrap_or([0; 2]);
+            let mut v = u16::from_le_bytes(arr);
+            v &= 0b0000111111111111;
+            v
+        })
+        .collect();
+
+    let parsed_vb = ParsedVolumeBuilder {
+        size,
+        border: 0,
+        scale: vector![1.0 * 0.99, 1.0 * 0.99, 1.0 * 0.99],
+        data: DataSource::Vec(mapped),
+    };
+
+    Ok(parsed_vb)
+}
 
 // todo move parsers - maybe to user space
 pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'static str> {
@@ -48,20 +90,26 @@ pub fn dat_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u16>, &'stati
         size: vector![x, y, z],
         border: 0,
         scale: vector![1.0 * 0.99, 1.0 * 0.99, 1.0 * 0.99],
-        data: Some(mapped),
-        mmap: None,
+        data: DataSource::Vec(mapped),
     };
 
     Ok(parsed_vb)
 }
 
 pub fn skull_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'static str> {
-    let slice = if let Some(ref mmap) = vb.mmap {
-        &mmap[..]
-    } else if let Some(ref vec) = vb.data {
-        &vec[..]
+    let storage = if let Some(mmap) = vb.mmap {
+        let tm: TypedMmap<u8> = TypedMmap::from_map(mmap);
+        DataSource::Mmap(tm)
+    } else if let Some(vec) = vb.data {
+        DataSource::Vec(vec)
     } else {
         return Err("No data in VolumeBuilder");
+    };
+
+    let slice = match storage {
+        DataSource::Vec(ref v) => &v[..],
+        DataSource::Mmap(ref tm) => tm.get_all(),
+        DataSource::None => return Err("No data in VolumeBuilder"),
     };
 
     let parse_res = skull_inner(slice);
@@ -72,8 +120,7 @@ pub fn skull_parser(vb: VolumeBuilder) -> Result<ParsedVolumeBuilder<u8>, &'stat
                 size,
                 border: 0,
                 scale,
-                data: vb.data,
-                mmap: vb.mmap,
+                data: storage,
             };
             Ok(result)
         }

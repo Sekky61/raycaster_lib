@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path};
+use std::{fs::File, marker::PhantomData, mem::size_of, path::Path};
 
 use memmap::{Mmap, MmapOptions};
 use nalgebra::Vector3;
@@ -75,17 +75,65 @@ impl VolumeBuilder {
     }
 }
 
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+pub struct TypedMmap<T> {
+    mmap: Mmap,
+    endianness: Endianness,
+    t: PhantomData<T>,
+}
+
+impl<T> TypedMmap<T>
+where
+    T: Copy,
+{
+    pub fn from_map(mmap: Mmap) -> TypedMmap<T> {
+        TypedMmap::<T> {
+            mmap,
+            endianness: Endianness::Little,
+            t: Default::default(),
+        }
+    }
+
+    pub fn into_inner(self) -> Mmap {
+        self.mmap
+    }
+
+    pub fn get_all(&self) -> &[T] {
+        let s = &self.mmap[..];
+        let slice =
+            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
+        slice
+    }
+
+    pub fn get(&self, index: usize) -> T {
+        let s = &self.mmap[..];
+        let index = index * size_of::<T>();
+        let slice =
+            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
+        slice[index]
+    }
+}
+
+pub enum DataSource<T> {
+    Vec(Vec<T>),
+    Mmap(TypedMmap<T>),
+    None,
+}
+
 pub struct ParsedVolumeBuilder<T> {
     pub(super) size: Vector3<usize>,
     pub(super) border: u32,
     pub(super) scale: Vector3<f32>, // shape of voxels
-    pub(super) data: Option<Vec<T>>,
-    pub(super) mmap: Option<Mmap>,
+    pub(super) data: DataSource<T>,
 }
 
 impl<T> ParsedVolumeBuilder<T>
 where
-    T: Default + Clone,
+    T: Default + Clone + Copy,
 {
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
@@ -98,8 +146,9 @@ where
         }
         let index = self.get_3d_index(x, y, z);
         match &self.data {
-            Some(vec) => vec.get(index).cloned().unwrap_or_default(),
-            None => Default::default(),
+            DataSource::Vec(v) => v.get(index).cloned().unwrap_or_default(),
+            DataSource::Mmap(m) => m.get(index),
+            DataSource::None => Default::default(),
         }
     }
 

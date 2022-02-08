@@ -14,14 +14,14 @@ pub use vol_builder::{BuildVolume, ParsedVolumeBuilder, VolumeBuilder};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
+use vol_builder::DataSource;
 
 pub fn white_vol() -> ParsedVolumeBuilder<u8> {
     ParsedVolumeBuilder {
         size: vector![2, 2, 2],
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data: Some(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]),
-        mmap: None,
+        data: DataSource::Vec(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]),
     }
 }
 
@@ -30,8 +30,7 @@ pub fn empty_vol(dims: Vector3<usize>) -> ParsedVolumeBuilder<u8> {
         size: dims,
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data: Some(vec![0; dims.x * dims.y * dims.z]),
-        mmap: None,
+        data: DataSource::Vec(vec![0; dims.x * dims.y * dims.z]),
     }
 }
 
