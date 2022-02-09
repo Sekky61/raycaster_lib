@@ -165,7 +165,7 @@ pub fn get_block(builder: &ParsedVolumeBuilder<u8>, x: usize, y: usize, z: usize
 }
 
 impl BuildVolume<ParsedVolumeBuilder<u8>> for BlockVolume {
-    fn build(builder: ParsedVolumeBuilder<u8>) -> Self {
+    fn build(builder: ParsedVolumeBuilder<u8>) -> Result<BlockVolume, &'static str> {
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&builder.scale); // todo workaround
@@ -196,7 +196,7 @@ impl BuildVolume<ParsedVolumeBuilder<u8>> for BlockVolume {
             BLOCK_DATA_LEN
         );
 
-        BlockVolume {
+        Ok(BlockVolume {
             position: Vector3::zeros(),
             data_size: builder.size,
             block_size,
@@ -204,6 +204,6 @@ impl BuildVolume<ParsedVolumeBuilder<u8>> for BlockVolume {
             scale: builder.scale,
             vol_dims,
             data,
-        }
+        })
     }
 }

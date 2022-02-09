@@ -52,11 +52,13 @@ fn main() -> Result<(), String> {
     gui.build_gui();
 
     // Build Renderer and Volume
-    let vb = raycaster_lib::volumetric::VolumeBuilder::from_file("volumes/Skull.vol")
-        .expect("bad read of file");
+    // let vb = raycaster_lib::volumetric::VolumeBuilder::from_file("volumes/Skull.vol")
+    //     .expect("bad read of file");
 
-    let parsed_vb = skull_parser(vb).unwrap();
-    let volume = BuildVolume::build(parsed_vb);
+    // let parsed_vb = skull_parser(vb).unwrap();
+    // let volume = BuildVolume::build(parsed_vb);
+
+    let volume = raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
 

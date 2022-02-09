@@ -20,7 +20,7 @@ where
     let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("bad read of file");
 
     let parsed_vb = skull_parser(vb).unwrap();
-    V::build(parsed_vb)
+    V::build(parsed_vb).unwrap()
 }
 
 fn render_linear(c: &mut Criterion) {

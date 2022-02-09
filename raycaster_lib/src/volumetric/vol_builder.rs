@@ -12,8 +12,24 @@ pub struct VolumeBuilder {
     pub(super) mmap: Option<Mmap>,
 }
 
-pub trait BuildVolume<T> {
-    fn build(builder: T) -> Self;
+pub trait BuildVolume<T>
+where
+    Self: Sized,
+{
+    fn build(builder: T) -> Result<Self, &'static str>;
+}
+
+pub fn from_file<P, T, U>(
+    path: P,
+    parser: fn(VolumeBuilder) -> Result<U, &'static str>,
+) -> Result<T, &'static str>
+where
+    P: AsRef<Path>,
+    T: BuildVolume<U>,
+{
+    let vb = VolumeBuilder::from_file(path)?;
+    let parse_res = parser(vb)?;
+    BuildVolume::<U>::build(parse_res)
 }
 
 impl VolumeBuilder {

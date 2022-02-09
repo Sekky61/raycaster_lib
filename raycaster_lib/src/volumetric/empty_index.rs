@@ -245,7 +245,7 @@ mod test {
 
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         let parsed_vb = crate::volumetric::empty_vol(vector![x, y, z]);
-        BuildVolume::build(parsed_vb)
+        BuildVolume::build(parsed_vb).unwrap()
     }
 
     fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
@@ -255,7 +255,7 @@ mod test {
         } else {
             panic!("Should not happen");
         }
-        BuildVolume::build(parsed_vb)
+        BuildVolume::build(parsed_vb).unwrap()
     }
 
     mod from_data {

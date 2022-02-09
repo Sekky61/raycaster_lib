@@ -39,7 +39,7 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
         }
     };
     let parsed_vb = skull_parser(volume_b).unwrap();
-    let volume = BuildVolume::build(parsed_vb);
+    let volume = BuildVolume::build(parsed_vb).unwrap();
 
     let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {

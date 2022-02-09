@@ -10,7 +10,7 @@ pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
-pub use vol_builder::{BuildVolume, ParsedVolumeBuilder, VolumeBuilder};
+pub use vol_builder::{from_file, BuildVolume, ParsedVolumeBuilder, VolumeBuilder};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
@@ -48,7 +48,7 @@ mod test {
         V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
     {
         let parsed_vb = white_vol();
-        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb)
+        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb).unwrap()
     }
 
     fn skull_volume<V>() -> V
@@ -60,7 +60,7 @@ mod test {
             Ok(res) => res,
             Err(err_msg) => panic!("{}", err_msg),
         };
-        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb)
+        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb).unwrap()
     }
 
     #[test]

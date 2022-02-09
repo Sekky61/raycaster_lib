@@ -69,27 +69,26 @@ impl StreamVolume {
 }
 
 impl BuildVolume<ParsedVolumeBuilder<u8>> for StreamVolume {
-    fn build(builder: ParsedVolumeBuilder<u8>) -> StreamVolume {
+    fn build(builder: ParsedVolumeBuilder<u8>) -> Result<StreamVolume, &'static str> {
         println!("Build started");
 
         let mmap = if let DataSource::Mmap(tm) = builder.data {
             tm.into_inner()
         } else {
-            // todo error
-            panic!("No file map in builder");
+            return Err("No file mapped");
         };
 
         let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&builder.scale);
-        StreamVolume {
+        Ok(StreamVolume {
             position: vector![0.0, 0.0, 0.0],
             size: builder.size,
             border: 0,
             scale: builder.scale,
             vol_dims,
             file_map: mmap,
-        }
+        })
     }
 }
 
