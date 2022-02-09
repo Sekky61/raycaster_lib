@@ -3,45 +3,106 @@ use std::{fs::File, marker::PhantomData, mem::size_of, path::Path};
 use memmap::{Mmap, MmapOptions};
 use nalgebra::Vector3;
 
-// pub(super) -- fields visible in parent module
-// todo merge mmap and data to enum storage
-#[derive(Default)]
-pub struct VolumeBuilder {
-    pub(super) data: Option<Vec<u8>>,
-    pub(super) file_ext: Option<String>,
-    pub(super) mmap: Option<Mmap>,
-}
+use super::Volume;
 
-pub trait BuildVolume<T>
+pub trait BuildVolume<M>
 where
     Self: Sized,
 {
-    fn build(builder: T) -> Result<Self, &'static str>;
+    fn build(metadata: M, data: DataSource<u8>) -> Result<Self, &'static str>;
 }
 
-pub fn from_file<P, T, U>(
+pub fn from_file<P, T, M>(
     path: P,
-    parser: fn(VolumeBuilder) -> Result<U, &'static str>,
+    parser: fn(&[u8]) -> Result<M, &'static str>,
 ) -> Result<T, &'static str>
 where
     P: AsRef<Path>,
-    T: BuildVolume<U>,
+    T: BuildVolume<M> + Volume,
 {
-    let vb = VolumeBuilder::from_file(path)?;
-    let parse_res = parser(vb)?;
-    BuildVolume::<U>::build(parse_res)
+    let ds: DataSource<u8> = DataSource::from_file(path)?;
+    let slice = ds.get_slice().ok_or("Cannot get data")?;
+    let metadata = parser(slice)?;
+    BuildVolume::<M>::build(metadata, ds)
 }
 
-impl VolumeBuilder {
-    pub fn new() -> VolumeBuilder {
-        VolumeBuilder {
-            data: None,
-            file_ext: None,
-            mmap: None,
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+pub struct TypedMmap<T> {
+    mmap: Mmap,
+    endianness: Endianness,
+    offset: usize,
+    t: PhantomData<T>,
+}
+
+impl<T> TypedMmap<T>
+where
+    T: Copy,
+{
+    pub fn from_map(mmap: Mmap) -> TypedMmap<T> {
+        TypedMmap::<T> {
+            mmap,
+            endianness: Endianness::Little,
+            t: Default::default(),
+            offset: 0,
         }
     }
 
-    pub fn from_file<P>(path: P) -> Result<VolumeBuilder, &'static str>
+    pub fn into_inner(self) -> (Mmap, usize) {
+        (self.mmap, self.offset)
+    }
+
+    pub fn set_offset(&mut self, offset: usize) {
+        self.offset = offset;
+    }
+
+    pub fn get_all(&self) -> &[T] {
+        let s = &self.mmap[self.offset..];
+        let slice =
+            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
+        slice
+    }
+
+    pub fn get(&self, index: usize) -> T {
+        let s = &self.mmap[self.offset..];
+        let index = index * size_of::<T>();
+        let slice =
+            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
+        slice[index]
+    }
+}
+
+pub enum DataSource<T> {
+    Vec(Vec<T>),
+    Mmap(TypedMmap<T>),
+    None,
+}
+
+impl<T> DataSource<T>
+where
+    T: Copy,
+{
+    pub fn get_slice(&self) -> Option<&[T]> {
+        match self {
+            DataSource::Vec(v) => Some(v.as_slice()),
+            DataSource::Mmap(m) => Some(m.get_all()),
+            DataSource::None => None,
+        }
+    }
+
+    pub fn from_mmap(mmap: Mmap) -> DataSource<T> {
+        let typed_map = TypedMmap::from_map(mmap);
+        DataSource::Mmap(typed_map)
+    }
+
+    pub fn from_vec(vec: Vec<T>) -> DataSource<T> {
+        DataSource::Vec(vec)
+    }
+
+    pub fn from_file<P>(path: P) -> Result<DataSource<T>, &'static str>
     where
         P: AsRef<Path>,
     {
@@ -50,13 +111,6 @@ impl VolumeBuilder {
         if !path.is_file() {
             return Err("Path does not lead to a file");
         }
-
-        let extension = match path.extension() {
-            Some(ext) => ext,
-            None => return Err("File has no extension"),
-        };
-
-        let extension = extension.to_str().expect("error converting extension");
 
         let file = File::open(path);
 
@@ -71,73 +125,16 @@ impl VolumeBuilder {
             Err(_) => return Err("Cannot create memory map"),
         };
 
-        let vb = VolumeBuilder::new().set_extension(extension).set_mmap(mmap);
-        Ok(vb)
-    }
-
-    pub fn set_mmap(mut self, mmap: Mmap) -> VolumeBuilder {
-        self.mmap = Some(mmap);
-        self
-    }
-
-    pub fn set_data(mut self, data: Vec<u8>) -> VolumeBuilder {
-        self.data = Some(data);
-        self
-    }
-
-    pub fn set_extension(mut self, ext: &str) -> VolumeBuilder {
-        self.file_ext = Some(ext.into());
-        self
+        let data_source = DataSource::from_mmap(mmap);
+        Ok(data_source)
     }
 }
 
-pub enum Endianness {
-    Big,
-    Little,
-}
-
-pub struct TypedMmap<T> {
-    mmap: Mmap,
-    endianness: Endianness,
-    t: PhantomData<T>,
-}
-
-impl<T> TypedMmap<T>
-where
-    T: Copy,
-{
-    pub fn from_map(mmap: Mmap) -> TypedMmap<T> {
-        TypedMmap::<T> {
-            mmap,
-            endianness: Endianness::Little,
-            t: Default::default(),
-        }
-    }
-
-    pub fn into_inner(self) -> Mmap {
-        self.mmap
-    }
-
-    pub fn get_all(&self) -> &[T] {
-        let s = &self.mmap[..];
-        let slice =
-            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
-        slice
-    }
-
-    pub fn get(&self, index: usize) -> T {
-        let s = &self.mmap[..];
-        let index = index * size_of::<T>();
-        let slice =
-            unsafe { std::slice::from_raw_parts(s.as_ptr() as *const T, s.len() / size_of::<T>()) };
-        slice[index]
-    }
-}
-
-pub enum DataSource<T> {
-    Vec(Vec<T>),
-    Mmap(TypedMmap<T>),
-    None,
+pub struct VolumeMetadata {
+    pub size: Vector3<usize>,
+    pub border: u32,
+    pub scale: Vector3<f32>, // shape of voxels
+    pub data_offset: usize,
 }
 
 pub struct ParsedVolumeBuilder<T> {

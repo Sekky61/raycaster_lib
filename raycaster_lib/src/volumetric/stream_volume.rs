@@ -5,7 +5,7 @@ use nalgebra::{vector, Vector3};
 
 use crate::volumetric::vol_builder::DataSource;
 
-use super::{BuildVolume, ParsedVolumeBuilder, Volume};
+use super::{vol_builder::VolumeMetadata, BuildVolume, ParsedVolumeBuilder, Volume};
 
 pub struct StreamVolume {
     position: Vector3<f32>,
@@ -14,6 +14,7 @@ pub struct StreamVolume {
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     file_map: Mmap,
+    map_offset: usize,
 }
 
 impl std::fmt::Debug for StreamVolume {
@@ -29,23 +30,6 @@ impl std::fmt::Debug for StreamVolume {
 }
 
 impl StreamVolume {
-    pub fn new() -> Result<StreamVolume, std::io::Error> {
-        let file = File::open("testfile")?;
-        let mmap = unsafe { MmapOptions::new().map(&file)? };
-
-        println!("{:?}", mmap);
-        println!("{:?}", &mmap[..]);
-        let vol = StreamVolume {
-            position: vector![0.0, 0.0, 0.0],
-            size: vector![1, 1, 1],
-            border: 0,
-            scale: vector![1.0, 1.0, 1.0],
-            vol_dims: vector![1.0, 1.0, 1.0],
-            file_map: mmap,
-        };
-        Ok(vol)
-    }
-
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
@@ -68,26 +52,27 @@ impl StreamVolume {
     }
 }
 
-impl BuildVolume<ParsedVolumeBuilder<u8>> for StreamVolume {
-    fn build(builder: ParsedVolumeBuilder<u8>) -> Result<StreamVolume, &'static str> {
+impl BuildVolume<VolumeMetadata> for StreamVolume {
+    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<StreamVolume, &'static str> {
         println!("Build started");
 
-        let mmap = if let DataSource::Mmap(tm) = builder.data {
+        let (mmap, map_offset) = if let DataSource::Mmap(tm) = data {
             tm.into_inner()
         } else {
             return Err("No file mapped");
         };
 
-        let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
+        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
-            .component_mul(&builder.scale);
+            .component_mul(&metadata.scale);
         Ok(StreamVolume {
             position: vector![0.0, 0.0, 0.0],
-            size: builder.size,
+            size: metadata.size,
             border: 0,
-            scale: builder.scale,
+            scale: metadata.scale,
             vol_dims,
             file_map: mmap,
+            map_offset,
         })
     }
 }
@@ -159,7 +144,5 @@ mod test {
     #[test]
     fn t1() {
         println!("{:?}", std::env::current_dir());
-        let vol = StreamVolume::new();
-        println!("{:?}", vol);
     }
 }

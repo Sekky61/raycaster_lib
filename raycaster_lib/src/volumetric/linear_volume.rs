@@ -5,7 +5,7 @@ use nalgebra::{vector, Point3, Vector3};
 use crate::volumetric::vol_builder::DataSource;
 
 use super::{
-    vol_builder::{BuildVolume, ParsedVolumeBuilder},
+    vol_builder::{BuildVolume, ParsedVolumeBuilder, VolumeMetadata},
     Volume,
 };
 
@@ -132,27 +132,24 @@ impl Volume for LinearVolume {
     }
 }
 
-impl<T> BuildVolume<ParsedVolumeBuilder<T>> for LinearVolume
-where
-    T: Into<f32> + Clone + Copy,
-{
-    fn build(builder: ParsedVolumeBuilder<T>) -> Result<LinearVolume, &'static str> {
+impl BuildVolume<VolumeMetadata> for LinearVolume {
+    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<LinearVolume, &'static str> {
         println!("Build started");
 
-        let data = match builder.data {
-            DataSource::Vec(ref v) => v.iter().map(|&val| val.into()).collect(),
-            DataSource::Mmap(ref m) => m.get_all().iter().map(|&i| i.into()).collect(),
-            DataSource::None => return Err("No data source"),
-        };
+        let data = data.get_slice().ok_or("No data")?[metadata.data_offset..]
+            .iter()
+            .map(|&val| val.into())
+            .collect();
 
-        let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
+        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
-            .component_mul(&builder.scale);
+            .component_mul(&metadata.scale);
+
         Ok(LinearVolume {
             position: Vector3::zeros(),
-            size: builder.size,
-            border: builder.border,
-            scale: builder.scale,
+            size: metadata.size,
+            border: metadata.border,
+            scale: metadata.scale,
             vol_dims,
             data,
         })
@@ -169,8 +166,8 @@ mod test {
     use super::*;
 
     fn cube_volume() -> LinearVolume {
-        let parsed_vb = crate::volumetric::white_vol();
-        BuildVolume::build(parsed_vb).unwrap()
+        let (metadata, vec) = crate::volumetric::white_vol();
+        BuildVolume::build(metadata, DataSource::Vec(vec)).unwrap()
     }
 
     #[test]

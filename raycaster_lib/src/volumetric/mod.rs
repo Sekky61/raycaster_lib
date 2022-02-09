@@ -10,28 +10,37 @@ pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
-pub use vol_builder::{from_file, BuildVolume, ParsedVolumeBuilder, VolumeBuilder};
+pub use vol_builder::{from_file, BuildVolume, ParsedVolumeBuilder};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
-use vol_builder::DataSource;
 
-pub fn white_vol() -> ParsedVolumeBuilder<u8> {
-    ParsedVolumeBuilder {
+use self::vol_builder::DataSource;
+use self::vol_builder::VolumeMetadata;
+
+pub fn white_vol() -> (VolumeMetadata, Vec<u8>) {
+    let meta = VolumeMetadata {
         size: vector![2, 2, 2],
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data: DataSource::Vec(vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255]),
-    }
+        data_offset: 0,
+    };
+    let data = vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255];
+
+    (meta, data)
 }
 
-pub fn empty_vol(dims: Vector3<usize>) -> ParsedVolumeBuilder<u8> {
-    ParsedVolumeBuilder {
+// todo return datasource, not vec
+pub fn empty_vol(dims: Vector3<usize>) -> (VolumeMetadata, Vec<u8>) {
+    let meta = VolumeMetadata {
         size: dims,
         border: 0,
         scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data: DataSource::Vec(vec![0; dims.x * dims.y * dims.z]),
-    }
+        data_offset: 0,
+    };
+    let data = vec![0; dims.x * dims.y * dims.z];
+
+    (meta, data)
 }
 
 #[cfg(test)]
@@ -45,22 +54,17 @@ mod test {
 
     fn cube_volume<V>() -> V
     where
-        V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
+        V: Volume + BuildVolume<VolumeMetadata>,
     {
-        let parsed_vb = white_vol();
-        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb).unwrap()
+        let (meta, vec) = white_vol();
+        <V as BuildVolume<VolumeMetadata>>::build(meta, DataSource::Vec(vec)).unwrap()
     }
 
     fn skull_volume<V>() -> V
     where
-        V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
+        V: Volume + BuildVolume<VolumeMetadata>,
     {
-        let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("skull error");
-        let parsed_vb = match parse::skull_parser(vb) {
-            Ok(res) => res,
-            Err(err_msg) => panic!("{}", err_msg),
-        };
-        <V as BuildVolume<ParsedVolumeBuilder<u8>>>::build(parsed_vb).unwrap()
+        from_file("volumes/Skull.vol", parse::skull_parser).expect("skull error")
     }
 
     #[test]

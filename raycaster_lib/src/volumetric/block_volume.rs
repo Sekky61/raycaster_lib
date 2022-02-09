@@ -1,7 +1,7 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{BuildVolume, ParsedVolumeBuilder},
+    vol_builder::{BuildVolume, DataSource, ParsedVolumeBuilder, VolumeMetadata},
     Volume,
 };
 
@@ -142,19 +142,74 @@ impl Volume for BlockVolume {
     }
 }
 
-pub fn get_block(builder: &ParsedVolumeBuilder<u8>, x: usize, y: usize, z: usize) -> Block {
+impl BuildVolume<VolumeMetadata> for BlockVolume {
+    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<BlockVolume, &'static str> {
+        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
+            .cast::<f32>();
+        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&metadata.scale); // todo workaround
+
+        let mapped: Vec<u16> = data.get_slice().ok_or("No data")?[metadata.data_offset..]
+            .chunks(2)
+            .map(|x| {
+                let arr = x.try_into().unwrap_or([0; 2]);
+                let mut v = u16::from_le_bytes(arr);
+                v &= 0b0000111111111111;
+                v
+            })
+            .collect();
+
+        let mut blocks = vec![];
+
+        let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
+
+        let size = metadata.size;
+
+        for x in (0..size.x).step_by(step_size) {
+            for y in (0..size.y).step_by(step_size) {
+                for z in (0..size.z).step_by(step_size) {
+                    let block = get_block(&mapped[..], size, x, y, z);
+                    blocks.push(block);
+                }
+            }
+        }
+
+        let block_size = vector![
+            (size.x / step_size) as usize,
+            (size.y / step_size) as usize,
+            (size.z / step_size) as usize
+        ];
+
+        println!(
+            "Built {} blocks of dims {} {}",
+            blocks.len(),
+            BLOCK_SIDE,
+            BLOCK_DATA_LEN
+        );
+
+        Ok(BlockVolume {
+            position: Vector3::zeros(),
+            data_size: metadata.size,
+            block_size,
+            border: metadata.border,
+            scale: metadata.scale,
+            vol_dims,
+            data: blocks,
+        })
+    }
+}
+
+// todo redo
+pub fn get_block(data: &[u16], size: Vector3<usize>, x: usize, y: usize, z: usize) -> Block {
     let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
             for off_z in 0..BLOCK_SIDE {
-                if x + off_x >= builder.size.x
-                    || y + off_y >= builder.size.y
-                    || z + off_z >= builder.size.z
-                {
+                if x + off_x >= size.x || y + off_y >= size.y || z + off_z >= size.z {
                     v[ptr] = 0.0; // todo inefficient
                 } else {
-                    let value = builder.get_data(x + off_x, y + off_y, z + off_z);
+                    let index = get_3d_index(size, x + off_x, y + off_y, z + off_z);
+                    let value = data[index];
                     v[ptr] = value as f32;
                 }
                 ptr += 1;
@@ -164,46 +219,6 @@ pub fn get_block(builder: &ParsedVolumeBuilder<u8>, x: usize, y: usize, z: usize
     Block::from_data(v)
 }
 
-impl BuildVolume<ParsedVolumeBuilder<u8>> for BlockVolume {
-    fn build(builder: ParsedVolumeBuilder<u8>) -> Result<BlockVolume, &'static str> {
-        let vol_dims = (builder.size - vector![1, 1, 1]) // side length is n-1 times the point
-            .cast::<f32>();
-        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&builder.scale); // todo workaround
-
-        let mut data = vec![];
-
-        let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
-
-        for x in (0..builder.size.x).step_by(step_size) {
-            for y in (0..builder.size.y).step_by(step_size) {
-                for z in (0..builder.size.z).step_by(step_size) {
-                    let block = get_block(&builder, x, y, z);
-                    data.push(block);
-                }
-            }
-        }
-
-        let block_size = vector![
-            (builder.size.x / step_size) as usize,
-            (builder.size.y / step_size) as usize,
-            (builder.size.z / step_size) as usize
-        ];
-
-        println!(
-            "Built {} blocks of dims {} {}",
-            data.len(),
-            BLOCK_SIDE,
-            BLOCK_DATA_LEN
-        );
-
-        Ok(BlockVolume {
-            position: Vector3::zeros(),
-            data_size: builder.size,
-            block_size,
-            border: builder.border,
-            scale: builder.scale,
-            vol_dims,
-            data,
-        })
-    }
+fn get_3d_index(size: Vector3<usize>, x: usize, y: usize, z: usize) -> usize {
+    z + y * size.z + x * size.y * size.z
 }

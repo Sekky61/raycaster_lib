@@ -244,18 +244,14 @@ mod test {
     use super::*;
 
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
-        let parsed_vb = crate::volumetric::empty_vol(vector![x, y, z]);
-        BuildVolume::build(parsed_vb).unwrap()
+        let (meta, vec) = crate::volumetric::empty_vol(vector![x, y, z]);
+        BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
     }
 
     fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
-        let mut parsed_vb = crate::volumetric::empty_vol(vector![x, y, z]);
-        if let DataSource::Vec(ref mut vec) = parsed_vb.data {
-            vec[2] = 17;
-        } else {
-            panic!("Should not happen");
-        }
-        BuildVolume::build(parsed_vb).unwrap()
+        let (meta, mut vec) = crate::volumetric::empty_vol(vector![x, y, z]);
+        vec[2] = 17;
+        BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
     }
 
     mod from_data {

@@ -29,17 +29,7 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use volumetric::{BuildVolume, LinearVolume};
 
     let camera = TargetCamera::new(width, height);
-    let read_result = volumetric::VolumeBuilder::from_file("volumes/Skull.vol");
-
-    let volume_b = match read_result {
-        Ok(vol) => vol,
-        Err(message) => {
-            eprint!("{}", message);
-            std::process::exit(1);
-        }
-    };
-    let parsed_vb = skull_parser(volume_b).unwrap();
-    let volume = BuildVolume::build(parsed_vb).unwrap();
+    let volume = volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
 
     let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
