@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use nalgebra::{Point3, Vector3};
+use nalgebra::Point3;
 use pushrod::{
     base_widget::BaseWidget,
     box_widget::BoxWidget,

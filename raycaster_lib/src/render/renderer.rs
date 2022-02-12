@@ -4,7 +4,7 @@ use crate::{
     camera::Camera,
     ray::Ray,
     transfer_functions::skull_tf,
-    volumetric::{BlockType, EmptyIndex, EmptyIndexes, Volume},
+    volumetric::{BlockType, EmptyIndex, Volume},
 };
 
 #[derive(Default)]
@@ -24,48 +24,6 @@ impl RenderOptions {
     }
 }
 
-pub struct Position<'a> {
-    pos: Point3<f32>,
-    pos_int: Point3<usize>,
-    level: usize,
-    index_pos: Point3<usize>,
-    index: &'a EmptyIndex,
-}
-
-impl<'a> Position<'a> {
-    pub fn new(pos: Point3<f32>, level: usize, index: &'a EmptyIndex) -> Self {
-        let mut position = Position {
-            pos,
-            pos_int: point![0, 0, 0],
-            level,
-            index_pos: point![0, 0, 0],
-            index,
-        };
-        position.sync_pos();
-        position
-    }
-
-    pub fn sync_pos(&mut self) {
-        self.pos_int = self.pos.map(|f| f as usize);
-        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
-    }
-
-    pub fn lower_level(&mut self, index_ref: &'a EmptyIndexes) {
-        self.level -= 1;
-        self.index = index_ref.get_index_ref(self.level);
-        self.index_pos = EmptyIndexes::get_block_coords_int(self.level, &self.pos_int);
-    }
-
-    pub fn get_block_type(&self) -> BlockType {
-        self.index.get_block_vec(&self.index_pos)
-    }
-
-    pub fn change_pos(&mut self, delta: &Vector3<f32>) {
-        self.pos += delta;
-        self.sync_pos();
-    }
-}
-
 pub struct Renderer<V, C>
 where
     V: Volume,
@@ -73,7 +31,7 @@ where
 {
     pub volume: V,
     pub camera: C,
-    pub empty_index: EmptyIndexes,
+    pub empty_index: EmptyIndex,
     render_options: RenderOptions,
 }
 
@@ -83,7 +41,7 @@ where
     C: Camera,
 {
     pub fn new(volume: V, camera: C) -> Renderer<V, C> {
-        let empty_index = EmptyIndexes::from_volume(&volume);
+        let empty_index = EmptyIndex::from_volume(&volume);
         Renderer {
             volume,
             camera,
@@ -105,10 +63,6 @@ where
     }
 
     fn render(&mut self, buffer: &mut [u8]) {
-        // println!("THE RENDER");
-        // println!("Vol: {:?}", self.volume.get_dims());
-        // println!("Index: {:?}", self.empty_index);
-
         let (img_w, img_h) = self.camera.get_resolution();
 
         let (image_width, image_height) = (img_w as f32, img_h as f32);
@@ -224,118 +178,49 @@ where
         let step_size = 1.0;
 
         let step = direction * step_size; // normalized
-        let ray_dirs = step.map(|v| if v.is_sign_positive() { 1usize } else { 0 });
 
-        let m_max = self.empty_index.len() - 1;
-        let starting_m = m_max - 1;
-
-        let begin_index = self.empty_index.get_index_ref(starting_m);
-
-        let mut position = Position::new(begin, starting_m, begin_index);
-
-        let mut index = position.index.get_block_vec(&position.index_pos);
-
-        // index edge
-        let mut index_edge = EmptyIndexes::get_index_size(position.level);
-        let mut index_edge_fl = index_edge as f32;
+        let mut pos = begin;
 
         loop {
-            //println!("> m {} index {:?}", m, index);
+            if self.empty_index.sample(pos) == BlockType::Empty {
+                pos += step;
 
-            if index == BlockType::NonEmpty {
-                if position.level > 0 {
-                    // go down a level
-                    position.lower_level(&self.empty_index);
-                    index = position.get_block_type();
-
-                    index_edge = EmptyIndexes::get_index_size(position.level);
-                    index_edge_fl = index_edge as f32;
-
-                    //println!("#5 pos set level {} us {}", m, index_coords);
-                } else {
-                    // m == 0
-                    // sample
-                    let sample = self.volume.sample_at(position.pos);
-
-                    let color = skull_tf(sample as u8);
-
-                    accum += (1.0 - accum.w) * color;
-
-                    if self.render_options.ray_termination {
-                        // early ray termination
-                        if (color.w - 0.99) > 0.0 {
-                            break;
-                        }
-                    }
-
-                    position.change_pos(&step);
-
-                    if !self.volume.is_in(&position.pos) {
-                        break;
-                    }
-
-                    index = position.get_block_type();
+                if !self.volume.is_in(&pos) {
+                    break;
                 }
                 continue;
             }
 
-            // empty
+            let sample = self.volume.sample_at(pos);
 
-            // step to next on same level
+            let color = skull_tf(sample as u8);
 
-            let index_edge = EmptyIndexes::get_index_size(position.level); // todo recalculate only on level change
-            let index_low_coords = position.index_pos * index_edge;
-            let index_low_coords = index_low_coords.map(|v| v as f32);
+            pos += step;
 
-            let delta_i = ray_dirs.map(|d| if d != 0 { index_edge_fl } else { 0.0 });
-
-            let delta_i = (index_low_coords + delta_i - position.pos).component_div(&step);
-
-            let delta_i = delta_i.map(|f| f.ceil());
-
-            let n_of_steps = delta_i.min().max(1.0);
-            let change = step * n_of_steps;
-
-            position.change_pos(&change);
-
-            if !self.volume.is_in(&position.pos) {
-                break;
+            if color.w == 0.0 {
+                if !self.volume.is_in(&pos) {
+                    break;
+                }
+                continue;
             }
 
-            index = position.get_block_type();
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            /*let new_pos = position.pos + step * (n_of_steps as f32);
-            let new_index_coords = EmptyIndexes::get_block_coords(m, &new_pos);
-            // println!("#2 new pos level {} us {}", m, new_index_coords);
+            accum += (1.0 - accum.w) * color;
 
-            if !self.volume.is_in(new_pos) {
-                break;
-            }
-            //println!("{} is in", new_pos);
-
-            // parents
-            if m < m_max - 1 {
-                let parent_index = self.empty_index.get_parent_index(m, &new_index_coords);
-                if parent_index == BlockType::Empty {
-                    m += 1;
-
-                    pos = new_pos;
-                    index = parent_index;
-                    index_coords = EmptyIndexes::get_block_coords(m, &pos);
-                    // println!("#3 pos set level {} us {}", m, index_coords);
-                    continue;
+            // relying on branch predictor to "eliminate" branch
+            if self.render_options.ray_termination {
+                // early ray termination
+                if (color.w - 0.99) > 0.0 {
+                    break;
                 }
             }
 
-            pos = new_pos;
-            //println!("#4 pos set level {} us {}", m, new_index_coords);
-            index_coords = new_index_coords;
-            index = self.empty_index.get_index_from_usize(m, &index_coords);*/
+            if !self.volume.is_in(&pos) {
+                break;
+            }
         }
-
-        // let accum_i_x = accum.x as u8;
-        // let accum_i_y = accum.y as u8;
-        // let accum_i_z = accum.z as u8;
 
         accum
     }

@@ -62,4 +62,49 @@ pub trait Volume {
 
         Some((tmin, tmax))
     }
+
+    fn get_block(&self, side: usize, base: Point3<usize>) -> VolumeBlockIter<Self> {
+        VolumeBlockIter {
+            volume: &self,
+            base,
+            side,
+            iter_progress: 0,
+        }
+    }
+}
+
+pub struct VolumeBlockIter<'a, V>
+where
+    V: 'a + Volume + ?Sized,
+{
+    volume: &'a V,
+    base: Point3<usize>,
+    side: usize,
+    iter_progress: usize,
+}
+
+impl<'a, V: Volume> Iterator for VolumeBlockIter<'a, V> {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let block_len = self.side * self.side * self.side;
+
+        if self.iter_progress < block_len {
+            let offset_x = self.iter_progress / self.side / self.side;
+            let offset_y = self.iter_progress / self.side;
+            let offset_z = self.iter_progress % self.side;
+
+            let sample = self.volume.get_data(
+                self.base.x + offset_x,
+                self.base.y + offset_y,
+                self.base.z + offset_z,
+            );
+
+            self.iter_progress += 1;
+
+            Some(sample)
+        } else {
+            None
+        }
+    }
 }

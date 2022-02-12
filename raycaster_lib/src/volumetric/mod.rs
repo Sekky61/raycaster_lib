@@ -7,7 +7,7 @@ mod vol_builder;
 mod volume;
 
 pub use block_volume::BlockVolume;
-pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
+pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
 pub use vol_builder::{from_file, BuildVolume, VolumeMetadata};

@@ -31,9 +31,7 @@ fn get_ui_from_usize(c: &mut Criterion) {
 
     c.bench_function("get blocktype from usize position", |b| {
         b.iter(|| {
-            renderer
-                .empty_index
-                .get_index_from_usize(black_box(3), black_box(&pos))
+            // unused test
         });
     });
 }
@@ -53,9 +51,7 @@ fn get_ui_from_float(c: &mut Criterion) {
 
     c.bench_function("get blocktype from float position", |b| {
         b.iter(|| {
-            renderer
-                .empty_index
-                .get_index_from_float(black_box(3), black_box(&pos))
+            // unused test
         });
     });
 }
