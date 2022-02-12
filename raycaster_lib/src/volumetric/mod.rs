@@ -10,13 +10,10 @@ pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex, EmptyIndexes};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
-pub use vol_builder::{from_file, BuildVolume, ParsedVolumeBuilder};
+pub use vol_builder::{from_file, BuildVolume, VolumeMetadata};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
-
-use self::vol_builder::DataSource;
-use self::vol_builder::VolumeMetadata;
 
 pub fn white_vol() -> (VolumeMetadata, Vec<u8>) {
     let meta = VolumeMetadata {
@@ -46,8 +43,8 @@ pub fn empty_vol(dims: Vector3<usize>) -> (VolumeMetadata, Vec<u8>) {
 #[cfg(test)]
 mod test {
 
+    use super::vol_builder::DataSource;
     use super::*;
-
     use crate::volumetric::LinearVolume;
     use nalgebra::{point, vector};
     use vol_builder::BuildVolume;

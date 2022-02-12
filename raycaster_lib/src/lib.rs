@@ -26,7 +26,7 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use crate::render::{RenderOptions, Renderer};
     use camera::TargetCamera;
     use volumetric::parse::skull_parser;
-    use volumetric::{BuildVolume, LinearVolume};
+    use volumetric::LinearVolume;
 
     let camera = TargetCamera::new(width, height);
     let volume = volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();

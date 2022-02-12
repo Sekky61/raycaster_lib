@@ -1,6 +1,7 @@
 use crate::color::{self, RGBA};
 
 // R G B A -- A <0;1>
+#[allow(dead_code)]
 pub fn skull_tf(sample: u8) -> RGBA {
     if sample > 170 {
         RGBA::new(220.0, 0.0, 20.0, 0.1)
@@ -12,6 +13,7 @@ pub fn skull_tf(sample: u8) -> RGBA {
 }
 
 // R G B A -- A <0;1>
+#[allow(dead_code)]
 pub fn c60large_tf(sample: u8) -> RGBA {
     if sample > 230 && sample < 255 {
         RGBA::new(200.0, 0.0, 0.0, 0.5)
@@ -26,6 +28,7 @@ pub fn c60large_tf(sample: u8) -> RGBA {
 
 // R G B A -- A <0;1>
 // uses just 12 bits
+#[allow(dead_code)]
 pub fn beetle_tf(sample: u16) -> RGBA {
     if sample > 10000 {
         RGBA::new(255.0, 0.0, 0.0, 0.01)

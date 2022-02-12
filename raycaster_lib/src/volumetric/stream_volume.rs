@@ -1,11 +1,9 @@
-use std::fs::File;
-
-use memmap::{Mmap, MmapOptions};
+use memmap::Mmap;
 use nalgebra::{vector, Vector3};
 
 use crate::volumetric::vol_builder::DataSource;
 
-use super::{vol_builder::VolumeMetadata, BuildVolume, ParsedVolumeBuilder, Volume};
+use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 pub struct StreamVolume {
     position: Vector3<f32>,
@@ -36,9 +34,9 @@ impl StreamVolume {
 
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
         //println!("Getting {} {} {}", x, y, z);
-        let index = self.get_3d_index(x, y, z);
+        let index = self.map_offset + self.get_3d_index(x, y, z);
         let buf: &[u8] = self.file_map.as_ref();
-        buf[28 + index] as f32
+        buf[index] as f32
     }
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {
@@ -100,7 +98,7 @@ impl Volume for StreamVolume {
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let base = self.get_3d_index(x_low, y_low, z_low) + 28;
+        let base = self.get_3d_index(x_low, y_low, z_low) + self.map_offset;
 
         let first_index = base;
         let second_index = base + self.size.z * self.size.y;

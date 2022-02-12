@@ -4,8 +4,8 @@ use raycaster_lib::{
     camera::TargetCamera,
     render::{RenderOptions, Renderer},
     volumetric::{
-        parse::skull_parser, BlockVolume, BuildVolume, LinearVolume, ParsedVolumeBuilder, Volume,
-        VolumeBuilder,
+        from_file, parse::skull_parser, BlockVolume, BuildVolume, LinearVolume, Volume,
+        VolumeMetadata,
     },
 };
 
@@ -14,13 +14,9 @@ const HEIGHT: usize = 512;
 
 fn get_volume<V>() -> V
 where
-    V: Volume + BuildVolume<ParsedVolumeBuilder<u8>>,
+    V: Volume + BuildVolume<VolumeMetadata>,
 {
-    // Build Renderer and Volume
-    let vb = VolumeBuilder::from_file("volumes/Skull.vol").expect("bad read of file");
-
-    let parsed_vb = skull_parser(vb).unwrap();
-    V::build(parsed_vb).unwrap()
+    from_file("volumes/Skull.vol", skull_parser).unwrap()
 }
 
 fn render_linear(c: &mut Criterion) {

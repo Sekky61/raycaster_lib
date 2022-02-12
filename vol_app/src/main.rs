@@ -58,15 +58,16 @@ fn main() -> Result<(), String> {
     // let parsed_vb = skull_parser(vb).unwrap();
     // let volume = BuildVolume::build(parsed_vb);
 
-    let volume = raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
+    let volume: StreamVolume =
+        raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
 
-    let mut raycast_renderer = Renderer::<LinearVolume, _>::new(volume, camera);
+    let mut raycast_renderer = Renderer::<_, _>::new(volume, camera);
 
     raycast_renderer.set_render_options(RenderOptions {
         ray_termination: true,
-        empty_index: false,
+        empty_index: true,
         multi_thread: false,
     });
 

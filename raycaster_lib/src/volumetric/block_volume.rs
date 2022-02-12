@@ -1,7 +1,7 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{BuildVolume, DataSource, ParsedVolumeBuilder, VolumeMetadata},
+    vol_builder::{BuildVolume, DataSource, VolumeMetadata},
     Volume,
 };
 

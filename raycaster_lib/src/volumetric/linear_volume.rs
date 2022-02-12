@@ -1,11 +1,9 @@
-use std::mem::size_of;
-
 use nalgebra::{vector, Point3, Vector3};
 
 use crate::volumetric::vol_builder::DataSource;
 
 use super::{
-    vol_builder::{BuildVolume, ParsedVolumeBuilder, VolumeMetadata},
+    vol_builder::{BuildVolume, VolumeMetadata},
     Volume,
 };
 

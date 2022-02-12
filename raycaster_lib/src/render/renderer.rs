@@ -207,10 +207,6 @@ where
             }
         }
 
-        // let accum_i_x = accum.x as u8;
-        // let accum_i_y = accum.y as u8;
-        // let accum_i_z = accum.z as u8;
-
         accum
     }
 
