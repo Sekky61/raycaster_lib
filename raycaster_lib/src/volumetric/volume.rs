@@ -65,7 +65,7 @@ pub trait Volume {
 
     fn get_block(&self, side: usize, base: Point3<usize>) -> VolumeBlockIter<Self> {
         VolumeBlockIter {
-            volume: &self,
+            volume: self,
             base,
             side,
             iter_progress: 0,

@@ -1,4 +1,4 @@
-use nalgebra::{point, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
 
 use super::Volume;
 
@@ -9,8 +9,8 @@ pub enum BlockType {
 }
 
 impl BlockType {
-    pub fn from_volume(volume: &impl Volume, base: Point3<usize>) -> BlockType {
-        let mut block_iter = volume.get_block(BLOCK_SIDE, base);
+    pub fn from_volume(volume: &impl Volume, base: Point3<usize>, side: usize) -> BlockType {
+        let mut block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
         let is_empty = block_iter.all(|f| f == 0.0);
         match is_empty {
             true => BlockType::Empty,
@@ -19,21 +19,20 @@ impl BlockType {
     }
 }
 
-const BLOCK_SIDE: usize = 2;
-
 #[derive(Debug)]
-pub struct EmptyIndex {
+pub struct EmptyIndex<const S: usize> {
     size: Vector3<usize>,
     blocks: Vec<BlockType>,
 }
 
-impl EmptyIndex {
+impl<const S: usize> EmptyIndex<S> {
     // todo take transfer function into account
-    pub fn from_volume(volume: &impl Volume) -> EmptyIndex {
-        let index_size = (volume.get_size()) / BLOCK_SIDE;
+    pub fn from_volume(volume: &impl Volume) -> EmptyIndex<S> {
+        let vol_size = volume.get_size();
+        let index_size = (vol_size + vector![S - 2, S - 2, S - 2]) / S;
         println!(
-            "Generating index, size [{},{},{}]",
-            index_size.x, index_size.y, index_size.z
+            "Generating index, vol [{},{},{}] size [{},{},{}]",
+            vol_size.x, vol_size.y, vol_size.z, index_size.x, index_size.y, index_size.z
         );
 
         let cell_count = index_size.iter().product();
@@ -42,7 +41,7 @@ impl EmptyIndex {
         for x in 0..index_size.x {
             for y in 0..index_size.y {
                 for z in 0..index_size.z {
-                    let block_type = BlockType::from_volume(volume, point![x, y, z]);
+                    let block_type = BlockType::from_volume(volume, S * point![x, y, z], S);
                     blocks.push(block_type);
                 }
             }
@@ -59,9 +58,9 @@ impl EmptyIndex {
     }
 
     fn pos_to_index(&self, pos: Point3<f32>) -> usize {
-        let x = pos.x as usize / BLOCK_SIDE;
-        let y = pos.y as usize / BLOCK_SIDE;
-        let z = pos.z as usize / BLOCK_SIDE;
+        let x = pos.x as usize / S;
+        let y = pos.y as usize / S;
+        let z = pos.z as usize / S;
 
         self.index_3d(x, y, z)
     }
@@ -75,6 +74,7 @@ impl EmptyIndex {
 #[cfg(test)]
 mod test {
 
+    use super::*;
     use nalgebra::vector;
 
     use crate::volumetric::{
@@ -82,16 +82,21 @@ mod test {
         LinearVolume,
     };
 
-    use super::*;
-
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         let (meta, vec) = crate::volumetric::empty_vol(vector![x, y, z]);
         BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
     }
 
-    fn volume_dims_nonempty(x: usize, y: usize, z: usize) -> LinearVolume {
+    fn volume_dims_nonempty(
+        x: usize,
+        y: usize,
+        z: usize,
+        non_empty_indexes: &[usize],
+    ) -> LinearVolume {
         let (meta, mut vec) = crate::volumetric::empty_vol(vector![x, y, z]);
-        vec[2] = 17;
+        for &i in non_empty_indexes {
+            vec[i] = 1;
+        }
         BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
     }
 
@@ -102,32 +107,52 @@ mod test {
         #[test]
         fn empty() {
             let volume = volume_dims_empty(2, 2, 2);
-            let empty_index = EmptyIndex::from_volume(&volume);
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
+            assert_eq!(volume.get_size().iter().product::<usize>(), 8);
             assert_eq!(empty_index.blocks.len(), 1);
             assert_eq!(empty_index.blocks[0], BlockType::Empty);
             assert_eq!(empty_index.size, vector![1, 1, 1]);
         }
 
         #[test]
-        fn empty_uneven() {
-            let volume = volume_dims_empty(2, 3, 2);
-            let empty_index = EmptyIndex::from_volume(&volume);
+        fn empty_bigger() {
+            let volume = volume_dims_empty(24, 24, 10);
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
-            assert_eq!(empty_index.blocks.len(), 2);
+            assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
             assert_eq!(empty_index.blocks[0], BlockType::Empty);
-            assert_eq!(empty_index.blocks[1], BlockType::Empty);
-            assert_eq!(empty_index.size, vector![1, 2, 1]);
+            assert_eq!(empty_index.size, vector![12, 12, 5]);
         }
 
         #[test]
         fn non_empty() {
-            let volume = volume_dims_nonempty(2, 2, 2);
-            let empty_index = EmptyIndex::from_volume(&volume);
+            let volume = volume_dims_nonempty(2, 2, 2, &[2]);
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 1);
             assert_eq!(empty_index.blocks[0], BlockType::NonEmpty);
             assert_eq!(empty_index.size, vector![1, 1, 1]);
+        }
+
+        #[test]
+        fn empty_side3() {
+            let volume = volume_dims_empty(10, 5, 18);
+            let empty_index = EmptyIndex::<3>::from_volume(&volume);
+
+            assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
+            assert_eq!(empty_index.blocks[4], BlockType::Empty);
+            assert_eq!(empty_index.size, vector![3, 2, 6]);
+        }
+
+        #[test]
+        fn empty_side6() {
+            let volume = volume_dims_empty(23, 15, 8);
+            let empty_index = EmptyIndex::<6>::from_volume(&volume);
+
+            assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
+            assert_eq!(empty_index.blocks[2], BlockType::Empty);
+            assert_eq!(empty_index.size, vector![4, 3, 2]);
         }
     }
 
@@ -136,14 +161,44 @@ mod test {
 
         #[test]
         fn base() {
-            let volume = volume_dims_nonempty(4, 4, 4);
-            let empty_index = EmptyIndex::from_volume(&volume);
+            let volume = volume_dims_nonempty(5, 5, 5, &[1]);
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
-            assert_eq!(empty_index.sample(point![0.0, 0.0, 0.0]), BlockType::Empty);
+            assert_eq!(empty_index.blocks.len(), 8);
             assert_eq!(
-                empty_index.sample(point![0.78, 0.55, 1.4]),
+                empty_index.sample(point![0.0, 0.0, 0.0]),
                 BlockType::NonEmpty
             );
+            assert_eq!(
+                empty_index.sample(point![1.7, 1.5, 1.4]),
+                BlockType::NonEmpty
+            );
+            assert_eq!(empty_index.sample(point![2.1, 1.55, 1.4]), BlockType::Empty);
+            assert_eq!(empty_index.sample(point![0.1, 2.2, 1.4]), BlockType::Empty);
+            assert_eq!(empty_index.sample(point![0.1, 1.5, 2.4]), BlockType::Empty);
+        }
+
+        #[test]
+        fn border_nonempty() {
+            let volume = volume_dims_nonempty(5, 5, 5, &[2]);
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
+
+            println!("blocks: {:?}", &empty_index.blocks[..]);
+
+            assert_eq!(empty_index.blocks.len(), 8);
+            assert_eq!(
+                empty_index.sample(point![0.0, 0.0, 0.0]),
+                BlockType::NonEmpty
+            );
+            assert_eq!(
+                empty_index.sample(point![1.7, 1.5, 1.4]),
+                BlockType::NonEmpty
+            );
+            assert_eq!(
+                empty_index.sample(point![0.1, 0.5, 2.4]),
+                BlockType::NonEmpty
+            );
+            assert_eq!(empty_index.sample(point![2.1, 1.55, 1.4]), BlockType::Empty);
         }
     }
 }

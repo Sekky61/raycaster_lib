@@ -31,7 +31,7 @@ where
 {
     pub volume: V,
     pub camera: C,
-    pub empty_index: EmptyIndex,
+    pub empty_index: EmptyIndex<3>,
     render_options: RenderOptions,
 }
 
