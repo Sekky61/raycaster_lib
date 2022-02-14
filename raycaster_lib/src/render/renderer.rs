@@ -31,7 +31,7 @@ where
 {
     pub volume: V,
     pub camera: C,
-    pub empty_index: EmptyIndex<3>,
+    pub empty_index: EmptyIndex<2>,
     render_options: RenderOptions,
 }
 
@@ -129,10 +129,12 @@ where
 
         let mut pos = begin;
 
+        let tf = self.volume.get_tf();
+
         loop {
             let sample = self.volume.sample_at(pos);
 
-            let color = skull_tf(sample as u8);
+            let color = tf(sample);
 
             pos += step;
 
@@ -181,6 +183,8 @@ where
 
         let mut pos = begin;
 
+        let tf = self.volume.get_tf();
+
         loop {
             if self.empty_index.sample(pos) == BlockType::Empty {
                 pos += step;
@@ -193,7 +197,7 @@ where
 
             let sample = self.volume.sample_at(pos);
 
-            let color = skull_tf(sample as u8);
+            let color = tf(sample);
 
             pos += step;
 

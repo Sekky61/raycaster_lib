@@ -3,7 +3,7 @@ use nalgebra::{vector, Vector3};
 
 use crate::volumetric::vol_builder::DataSource;
 
-use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
+use super::{vol_builder::VolumeMetadata, BuildVolume, Volume, TF};
 
 pub struct StreamVolume {
     position: Vector3<f32>,
@@ -13,6 +13,7 @@ pub struct StreamVolume {
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     file_map: Mmap,
     map_offset: usize,
+    tf: TF,
 }
 
 impl std::fmt::Debug for StreamVolume {
@@ -51,7 +52,11 @@ impl StreamVolume {
 }
 
 impl BuildVolume<VolumeMetadata> for StreamVolume {
-    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<StreamVolume, &'static str> {
+    fn build(
+        metadata: VolumeMetadata,
+        data: DataSource<u8>,
+        tf: TF,
+    ) -> Result<StreamVolume, &'static str> {
         println!("Build started");
 
         let (mmap, map_offset) = if let DataSource::Mmap(tm) = data {
@@ -71,6 +76,7 @@ impl BuildVolume<VolumeMetadata> for StreamVolume {
             vol_dims,
             file_map: mmap,
             map_offset,
+            tf,
         })
     }
 }
@@ -127,6 +133,10 @@ impl Volume for StreamVolume {
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
+    }
+
+    fn get_tf(&self) -> TF {
+        self.tf
     }
 }
 

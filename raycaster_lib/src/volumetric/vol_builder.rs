@@ -1,20 +1,21 @@
-use std::{fs::File, marker::PhantomData, mem::size_of, path::Path};
+use std::{fs::File, mem::size_of, path::Path};
 
 use memmap::{Mmap, MmapOptions};
 use nalgebra::Vector3;
 
-use super::Volume;
+use super::{Volume, TF};
 
 pub trait BuildVolume<M>
 where
     Self: Sized,
 {
-    fn build(metadata: M, data: DataSource<u8>) -> Result<Self, &'static str>;
+    fn build(metadata: M, data: DataSource<u8>, tf: TF) -> Result<Self, &'static str>;
 }
 
 pub fn from_file<P, T, M>(
     path: P,
     parser: fn(&[u8]) -> Result<M, &'static str>,
+    tf: TF,
 ) -> Result<T, &'static str>
 where
     P: AsRef<Path>,
@@ -23,7 +24,7 @@ where
     let ds: DataSource<u8> = DataSource::from_file(path)?;
     let slice = ds.get_slice().ok_or("Cannot get data")?;
     let metadata = parser(slice)?;
-    BuildVolume::<M>::build(metadata, ds)
+    BuildVolume::<M>::build(metadata, ds, tf)
 }
 
 pub struct TypedMmap {

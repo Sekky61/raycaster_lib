@@ -8,6 +8,7 @@ use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 use raycaster_lib::{
     camera::{Camera, TargetCamera},
     render::{RenderOptions, Renderer},
+    transfer_functions::skull_tf,
     volumetric::{parse::skull_parser, BuildVolume, LinearVolume, StreamVolume},
 };
 
@@ -46,20 +47,12 @@ fn main() -> Result<(), String> {
     let mut buf_vec = create_rendering_buffer(RENDER_WIDTH_U, RENDER_HEIGHT_U);
 
     // Create GUI
-    //let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
 
     let mut gui = Gui::new();
     gui.build_gui();
 
-    // Build Renderer and Volume
-    // let vb = raycaster_lib::volumetric::VolumeBuilder::from_file("volumes/Skull.vol")
-    //     .expect("bad read of file");
-
-    // let parsed_vb = skull_parser(vb).unwrap();
-    // let volume = BuildVolume::build(parsed_vb);
-
     let volume: LinearVolume =
-        raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
+        raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
 

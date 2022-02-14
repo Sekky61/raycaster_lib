@@ -6,6 +6,7 @@ mod stream_volume;
 mod vol_builder;
 mod volume;
 
+pub use crate::color::RGBA;
 pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
@@ -14,6 +15,12 @@ pub use vol_builder::{from_file, BuildVolume, VolumeMetadata};
 pub use volume::Volume;
 
 use nalgebra::{vector, Vector3};
+
+type TF = fn(f32) -> RGBA;
+
+pub fn white_tf(sample: f32) -> RGBA {
+    crate::color::mono(255.0, sample / 255.0)
+}
 
 pub fn white_vol() -> (VolumeMetadata, Vec<u8>) {
     let meta = VolumeMetadata {
@@ -54,14 +61,19 @@ mod test {
         V: Volume + BuildVolume<VolumeMetadata>,
     {
         let (meta, vec) = white_vol();
-        <V as BuildVolume<VolumeMetadata>>::build(meta, DataSource::Vec(vec)).unwrap()
+        <V as BuildVolume<VolumeMetadata>>::build(meta, DataSource::Vec(vec), white_tf).unwrap()
     }
 
     fn skull_volume<V>() -> V
     where
         V: Volume + BuildVolume<VolumeMetadata>,
     {
-        from_file("volumes/Skull.vol", parse::skull_parser).expect("skull error")
+        from_file(
+            "volumes/Skull.vol",
+            parse::skull_parser,
+            crate::transfer_functions::skull_tf,
+        )
+        .expect("skull error")
     }
 
     #[test]

@@ -3,6 +3,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use raycaster_lib::{
     camera::TargetCamera,
     render::{RenderOptions, Renderer},
+    transfer_functions::skull_tf,
     volumetric::{
         from_file, parse::skull_parser, BlockVolume, BuildVolume, LinearVolume, Volume,
         VolumeMetadata,
@@ -16,7 +17,7 @@ fn get_volume<V>() -> V
 where
     V: Volume + BuildVolume<VolumeMetadata>,
 {
-    from_file("volumes/Skull.vol", skull_parser).unwrap()
+    from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap()
 }
 
 fn render_linear(c: &mut Criterion) {

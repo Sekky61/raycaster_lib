@@ -1,7 +1,7 @@
 pub mod camera;
 mod ray;
 pub mod render;
-mod transfer_functions;
+pub mod transfer_functions;
 pub mod volumetric;
 
 pub mod color {
@@ -17,8 +17,8 @@ pub mod color {
         vector![0.0, 0.0, 0.0, 0.0]
     }
 
-    pub fn mono(v: f32) -> RGBA {
-        vector![v, v, v, v]
+    pub fn mono(v: f32, opacity: f32) -> RGBA {
+        vector![v, v, v, opacity]
     }
 }
 
@@ -29,7 +29,12 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use volumetric::LinearVolume;
 
     let camera = TargetCamera::new(width, height);
-    let volume = volumetric::from_file("volumes/Skull.vol", skull_parser).unwrap();
+    let volume = volumetric::from_file(
+        "volumes/Skull.vol",
+        skull_parser,
+        crate::transfer_functions::skull_tf,
+    )
+    .unwrap();
 
     let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {

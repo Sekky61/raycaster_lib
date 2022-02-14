@@ -84,7 +84,7 @@ mod test {
 
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         let (meta, vec) = crate::volumetric::empty_vol(vector![x, y, z]);
-        BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
+        BuildVolume::build(meta, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
     }
 
     fn volume_dims_nonempty(
@@ -97,7 +97,7 @@ mod test {
         for &i in non_empty_indexes {
             vec[i] = 1;
         }
-        BuildVolume::build(meta, DataSource::Vec(vec)).unwrap()
+        BuildVolume::build(meta, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
     }
 
     mod from_data {

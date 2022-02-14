@@ -2,7 +2,7 @@ use nalgebra::{vector, Point3, Vector3};
 
 use super::{
     vol_builder::{BuildVolume, DataSource, VolumeMetadata},
-    Volume,
+    Volume, TF,
 };
 
 const BLOCK_SIDE: usize = 3;
@@ -17,6 +17,7 @@ pub struct BlockVolume {
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<Block>,
+    tf: TF,
 }
 
 impl BlockVolume {
@@ -140,10 +141,18 @@ impl Volume for BlockVolume {
     fn get_pos(&self) -> Vector3<f32> {
         self.position
     }
+
+    fn get_tf(&self) -> super::TF {
+        self.tf
+    }
 }
 
 impl BuildVolume<VolumeMetadata> for BlockVolume {
-    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<BlockVolume, &'static str> {
+    fn build(
+        metadata: VolumeMetadata,
+        data: DataSource<u8>,
+        tf: TF,
+    ) -> Result<BlockVolume, &'static str> {
         let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&metadata.scale); // todo workaround
@@ -194,6 +203,7 @@ impl BuildVolume<VolumeMetadata> for BlockVolume {
             scale: metadata.scale,
             vol_dims,
             data: blocks,
+            tf,
         })
     }
 }

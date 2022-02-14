@@ -4,6 +4,7 @@ use nalgebra::point;
 use raycaster_lib::{
     camera::TargetCamera,
     render::{RenderOptions, Renderer},
+    transfer_functions::skull_tf,
     volumetric::{
         from_file, parse::skull_parser, BuildVolume, LinearVolume, Volume, VolumeMetadata,
     },
@@ -13,7 +14,7 @@ fn get_volume<V>() -> V
 where
     V: Volume + BuildVolume<VolumeMetadata>,
 {
-    from_file("volumes/Skull.vol", skull_parser).unwrap()
+    from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap()
 }
 
 fn get_ui_from_usize(c: &mut Criterion) {

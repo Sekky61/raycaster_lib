@@ -4,7 +4,7 @@ use crate::volumetric::vol_builder::DataSource;
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
-    Volume,
+    Volume, TF,
 };
 
 pub struct LinearVolume {
@@ -14,6 +14,7 @@ pub struct LinearVolume {
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<f32>,
+    tf: TF,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -128,10 +129,18 @@ impl Volume for LinearVolume {
     fn get_pos(&self) -> Vector3<f32> {
         self.position
     }
+
+    fn get_tf(&self) -> TF {
+        self.tf
+    }
 }
 
 impl BuildVolume<VolumeMetadata> for LinearVolume {
-    fn build(metadata: VolumeMetadata, data: DataSource<u8>) -> Result<LinearVolume, &'static str> {
+    fn build(
+        metadata: VolumeMetadata,
+        data: DataSource<u8>,
+        tf: TF,
+    ) -> Result<LinearVolume, &'static str> {
         println!("Build started");
 
         let data = data.get_slice().ok_or("No data")?[metadata.data_offset..]
@@ -150,6 +159,7 @@ impl BuildVolume<VolumeMetadata> for LinearVolume {
             scale: metadata.scale,
             vol_dims,
             data,
+            tf,
         })
     }
 }
@@ -165,7 +175,7 @@ mod test {
 
     fn cube_volume() -> LinearVolume {
         let (metadata, vec) = crate::volumetric::white_vol();
-        BuildVolume::build(metadata, DataSource::Vec(vec)).unwrap()
+        BuildVolume::build(metadata, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
     }
 
     #[test]

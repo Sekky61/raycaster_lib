@@ -1,3 +1,4 @@
+use super::TF;
 use crate::ray::Ray;
 use nalgebra::{Point3, Vector3};
 
@@ -13,6 +14,9 @@ pub trait Volume {
 
     // get scaled size
     fn get_dims(&self) -> Vector3<f32>;
+
+    // get transfer function
+    fn get_tf(&self) -> TF;
 
     // trilinear interpolation sample, zero if outside
     // pos in volume coordinates
