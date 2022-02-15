@@ -143,11 +143,10 @@ impl Volume for StreamVolume {
 #[cfg(test)]
 mod test {
 
-    use nalgebra::{point, vector};
+    use super::*;
 
     use crate::ray::Ray;
-
-    use super::*;
+    use nalgebra::{point, vector};
 
     #[test]
     fn t1() {

@@ -10,8 +10,9 @@ pub enum BlockType {
 
 impl BlockType {
     pub fn from_volume(volume: &impl Volume, base: Point3<usize>, side: usize) -> BlockType {
-        let mut block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
-        let is_empty = block_iter.all(|f| f == 0.0);
+        let block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
+        let tf = volume.get_tf();
+        let is_empty = block_iter.map(tf).all(|f| f.w == 0.0);
         match is_empty {
             true => BlockType::Empty,
             false => BlockType::NonEmpty,
@@ -26,7 +27,6 @@ pub struct EmptyIndex<const S: usize> {
 }
 
 impl<const S: usize> EmptyIndex<S> {
-    // todo take transfer function into account
     pub fn from_volume(volume: &impl Volume) -> EmptyIndex<S> {
         let vol_size = volume.get_size();
         let index_size = (vol_size + vector![S - 2, S - 2, S - 2]) / S;
@@ -79,12 +79,16 @@ mod test {
 
     use crate::volumetric::{
         vol_builder::{BuildVolume, DataSource},
-        LinearVolume,
+        LinearVolume, RGBA,
     };
 
     fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
         let (meta, vec) = crate::volumetric::empty_vol(vector![x, y, z]);
         BuildVolume::build(meta, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
+    }
+
+    fn dark_tf(_sample: f32) -> RGBA {
+        crate::color::zero()
     }
 
     fn volume_dims_nonempty(
@@ -153,6 +157,19 @@ mod test {
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
             assert_eq!(empty_index.blocks[2], BlockType::Empty);
             assert_eq!(empty_index.size, vector![4, 3, 2]);
+        }
+
+        // Index takes into account resulting opacity, not values of samples
+        #[test]
+        fn empty_dark_tf() {
+            let (meta, mut vec) = crate::volumetric::empty_vol(vector![7, 7, 7]);
+            vec[2] = 20;
+            let volume: LinearVolume =
+                BuildVolume::build(meta, DataSource::Vec(vec), dark_tf).unwrap();
+
+            let empty_index = EmptyIndex::<2>::from_volume(&volume);
+
+            assert!(empty_index.blocks.iter().all(|&b| b == BlockType::Empty));
         }
     }
 
