@@ -3,10 +3,11 @@ mod gui;
 use std::time::Instant;
 
 use gui::{Gui, WIN_H, WIN_W};
+use nalgebra::{point, vector};
 use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 
 use raycaster_lib::{
-    camera::{Camera, TargetCamera},
+    camera::PerspectiveCamera,
     render::{RenderOptions, Renderer},
     transfer_functions::skull_tf,
     volumetric::{parse::skull_parser, BuildVolume, LinearVolume, StreamVolume},
@@ -54,7 +55,9 @@ fn main() -> Result<(), String> {
     let volume: LinearVolume =
         raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
-    let camera = TargetCamera::new(RENDER_WIDTH as usize, RENDER_HEIGHT as usize);
+    let pos = point![300.0, 300.0, 300.0];
+    let dir = vector![-1.0, -1.0, -1.0];
+    let camera = PerspectiveCamera::new(pos, dir);
 
     let mut raycast_renderer = Renderer::<_, _>::new(volume, camera);
 
@@ -81,7 +84,7 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
             // Camera control
-            raycast_renderer.camera.get_user_input(&event);
+            //raycast_renderer.camera.get_user_input(&event);
 
             // GUI
             match event {
@@ -100,10 +103,12 @@ fn main() -> Result<(), String> {
         // Update gui
         // TODO events?
 
-        let new_cam_pos = raycast_renderer.camera.get_position();
-        gui.send_cam_pos(new_cam_pos);
+        // let new_cam_pos = raycast_renderer.camera.get_position();
+        // gui.send_cam_pos(new_cam_pos);
         gui.send_frame_time(duration);
-        gui.send_spherical_pos(raycast_renderer.camera.get_spherical());
+        // gui.send_spherical_pos(raycast_renderer.camera.get_spherical());
+
+        raycast_renderer.camera.change_pos(vector![2.0, 0.0, 0.0]);
 
         // Render frame, update texture and copy to canvas
         raycast_renderer.render_to_buffer(buf_vec.as_mut_slice());

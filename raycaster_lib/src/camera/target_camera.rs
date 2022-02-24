@@ -1,6 +1,8 @@
 use nalgebra::{matrix, point, vector, Matrix4, Point3, Vector3};
 use sdl2::event::Event;
 
+use crate::ray::Ray;
+
 use super::Camera;
 
 pub struct TargetCamera {
@@ -73,12 +75,6 @@ impl TargetCamera {
 
         self.position = self.target + sphere_offset;
     }
-}
-
-impl Camera for TargetCamera {
-    fn get_resolution(&self) -> (usize, usize) {
-        self.resolution
-    }
 
     fn view_matrix(&self) -> Matrix4<f32> {
         // calculate camera coord system
@@ -92,10 +88,6 @@ impl Camera for TargetCamera {
                 right.y, up.y, camera_forward.y, self.position.y;
                 right.z, up.z, camera_forward.z, self.position.z;
                 0.0, 0.0, 0.0, 1.0]
-    }
-
-    fn get_position(&self) -> Point3<f32> {
-        self.position
     }
 
     fn get_user_input(&mut self, event: &sdl2::event::Event) {
@@ -139,5 +131,11 @@ impl Camera for TargetCamera {
             }
             _ => {}
         }
+    }
+}
+
+impl Camera for TargetCamera {
+    fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
+        todo!()
     }
 }

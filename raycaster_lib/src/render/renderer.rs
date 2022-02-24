@@ -5,7 +5,6 @@ use nalgebra::{max, point, vector, Point3, Vector3, Vector4};
 use crate::{
     camera::Camera,
     ray::Ray,
-    transfer_functions::skull_tf,
     volumetric::{BlockType, EmptyIndex, Volume},
 };
 
@@ -65,41 +64,26 @@ where
     }
 
     fn render(&mut self, buffer: &mut [u8]) {
-        let (img_w, img_h) = self.camera.get_resolution();
+        let (img_w, img_h) = (700, 700); // todo
 
         let (image_width, image_height) = (img_w as f32, img_h as f32);
 
-        let origin_4 = self.camera.get_position().to_homogeneous();
-
-        let aspect_ratio = image_width / image_height;
-
-        // cam to world
-        let lookat_matrix = self.camera.view_matrix();
-
         let mut buffer_index = 0;
 
+        let step_x = 1.0 / image_width;
+        let step_y = 1.0 / image_height;
+
         for y in 0..img_h {
+            let y_norm = y as f32 * step_y;
             for x in 0..img_w {
-                let pixel_ndc_x = (x as f32 + 0.5) / image_width;
-                let pixel_ndc_y = (y as f32 + 0.5) / image_height;
-
-                let pixel_screen_x = (pixel_ndc_x * 2.0 - 1.0) * aspect_ratio;
-                let pixel_screen_y = 1.0 - pixel_ndc_y * 2.0; // v NDC Y roste dolu, obratime
-
-                //todo FOV
-
-                let pix_cam_space = vector![pixel_screen_x, pixel_screen_y, -1.0, 1.0];
-
-                let dir_world = (lookat_matrix * pix_cam_space) - origin_4;
-                let dir_world_3 = dir_world.xyz().normalize();
-
-                let ray_world = Ray::from_3(self.camera.get_position(), dir_world_3);
+                let pixel_coord = (x as f32 * step_x, y_norm);
+                let ray = self.camera.get_ray(pixel_coord);
 
                 // performance: branch gets almost optimized away since it is predictable
                 let ray_color = if self.render_options.empty_index {
-                    self.collect_light_index(&ray_world)
+                    self.collect_light_index(&ray)
                 } else {
-                    self.collect_light(&ray_world)
+                    self.collect_light(&ray)
                 };
 
                 let opacity = ray_color.w;
