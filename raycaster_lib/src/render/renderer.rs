@@ -1,4 +1,6 @@
-use nalgebra::{point, vector, Point3, Vector3, Vector4};
+use std::cmp;
+
+use nalgebra::{max, point, vector, Point3, Vector3, Vector4};
 
 use crate::{
     camera::Camera,
@@ -195,13 +197,25 @@ where
                 continue;
             }
 
-            let sample = self.volume.sample_at(pos);
+            //let sample = self.volume.sample_at(pos);
 
-            let color = tf(sample);
+            let (sample, grad) = self.volume.sample_at_gradient(pos);
+            let grad = grad.normalize();
+
+            let light_source = vector![1.0, 1.0, 0.0].normalize();
+
+            let color_b = tf(sample);
+
+            let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
+            let rgb = color_b.xyz() * n_dot_l;
+
+            // if color_b.w > 0.0 {
+            //     println!("color {color_b} -> {rgb} grad {grad}");
+            // }
 
             pos += step;
 
-            if color.w == 0.0 {
+            if color_b.w == 0.0 {
                 if !self.volume.is_in(&pos) {
                     break;
                 }
@@ -211,12 +225,12 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum += (1.0 - accum.w) * color;
+            accum += (1.0 - accum.w) * vector![rgb.x, rgb.y, rgb.z, color_b.w];
 
             // relying on branch predictor to "eliminate" branch
             if self.render_options.ray_termination {
                 // early ray termination
-                if (color.w - 0.99) > 0.0 {
+                if color_b.w > 0.99 {
                     break;
                 }
             }

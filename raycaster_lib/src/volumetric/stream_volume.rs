@@ -1,5 +1,5 @@
 use memmap::Mmap;
-use nalgebra::{vector, Vector3};
+use nalgebra::{vector, Point3, Vector3};
 
 use crate::volumetric::vol_builder::DataSource;
 
@@ -129,6 +129,10 @@ impl Volume for StreamVolume {
         let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
 
         c0 * (1.0 - x_t) + c1 * x_t
+    }
+
+    fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
+        (0.0, vector![0.0, 0.0, 0.0])
     }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {

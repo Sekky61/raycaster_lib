@@ -73,11 +73,7 @@ impl Volume for LinearVolume {
         let first_index = base;
         let second_index = base + self.size.z * self.size.y;
 
-        let first_data = if second_index > self.data.len() {
-            [0.0; 4]
-        } else {
-            self.get_block_data_half(first_index)
-        };
+        let first_data = self.get_block_data_half(first_index);
 
         //let first_data = self.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
@@ -93,11 +89,7 @@ impl Volume for LinearVolume {
 
         // second plane
 
-        let second_data = if second_index > self.data.len() {
-            [0.0; 4]
-        } else {
-            self.get_block_data_half(first_index)
-        };
+        let second_data = self.get_block_data_half(second_index);
 
         //let second_data = self.get_block_data_half(second_index);
         let [c100, c101, c110, c111] = second_data;
@@ -107,6 +99,37 @@ impl Volume for LinearVolume {
         let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
 
         c0 * (1.0 - x_t) + c1 * x_t
+    }
+
+    fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
+        let sample = self.sample_at(pos);
+        let mut grad_dir = vector![1.0, 1.0, 1.0]; // todo get scale / voxel shape
+        let size = self.get_size().map(|v| v as f32);
+
+        let sample_x_pos = if pos.x + 0.3 > size.x {
+            pos + vector![0.3, 0.0, 0.0]
+        } else {
+            pos - vector![0.3, 0.0, 0.0]
+        };
+
+        let sample_y_pos = if pos.y + 0.3 > size.y {
+            pos + vector![0.0, 0.3, 0.0]
+        } else {
+            pos - vector![0.0, 0.3, 0.0]
+        };
+
+        let sample_z_pos = if pos.z + 0.3 > size.z {
+            pos + vector![0.0, 0.0, 0.3]
+        } else {
+            pos - vector![0.0, 0.0, 0.3]
+        };
+
+        let sample_x = self.sample_at(sample_x_pos);
+        let sample_y = self.sample_at(sample_y_pos);
+        let sample_z = self.sample_at(sample_z_pos);
+        let grad_samples = vector![sample_x - sample, sample_y - sample, sample_z - sample];
+
+        (sample, grad_samples)
     }
 
     fn is_in(&self, pos: &Point3<f32>) -> bool {
@@ -143,10 +166,15 @@ impl BuildVolume<VolumeMetadata> for LinearVolume {
     ) -> Result<LinearVolume, &'static str> {
         println!("Build started");
 
-        let data = data.get_slice().ok_or("No data")?[metadata.data_offset..]
+        let data: Vec<f32> = data.get_slice().ok_or("No data")?[metadata.data_offset..]
             .iter()
             .map(|&val| val.into())
             .collect();
+
+        // let data_range_max = data.iter().fold(-10000.0, |cum, &v| f32::max(v, cum));
+        // let data_range_min = data.iter().fold(100000.0, |cum, &v| f32::min(v, cum));
+
+        // println!("Build data range: {data_range_min} to {data_range_max}");
 
         let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()

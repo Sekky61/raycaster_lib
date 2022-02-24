@@ -22,6 +22,10 @@ pub trait Volume {
     // pos in volume coordinates
     fn sample_at(&self, pos: Point3<f32>) -> f32;
 
+    // trilinear interpolation sample, zero if outside
+    // pos in volume coordinates
+    fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>);
+
     // position is inside volume
     fn is_in(&self, pos: &Point3<f32>) -> bool {
         let dims = self.get_dims();
