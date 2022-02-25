@@ -1,4 +1,4 @@
-use nalgebra::{matrix, point, vector, Point3, Vector2, Vector3};
+use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
 use crate::ray::Ray;
 
@@ -7,6 +7,8 @@ use super::Camera;
 // up vector = 0,1,0
 pub struct PerspectiveCamera {
     position: Point3<f32>,
+    up: Vector3<f32>,
+    right: Vector3<f32>,
     direction: Vector3<f32>,
     aspect: f32,
     fov_y: f32,                   // Vertical field of view, in degrees
@@ -22,15 +24,20 @@ impl PerspectiveCamera {
         let up = vector![0.0, 1.0, 0.0];
         let direction = direction.normalize();
 
+        let right = direction.cross(&up); // todo normalize and unit?
+        let up = right.cross(&direction);
+
         let fov_y = 60.0;
         let mut img_plane_size = vector![0.0, 2.0 * f32::tan(f32::to_radians(0.5 * fov_y))];
         img_plane_size.x = img_plane_size.y; // * aspect, but aspect is 1.0 right now
 
-        let du = direction.cross(&up).normalize() * img_plane_size.x;
-        let dv = du.cross(&direction) * img_plane_size.y;
+        let du: Vector3<f32> = img_plane_size.x * direction.cross(&up).normalize();
+        let dv: Vector3<f32> = img_plane_size.y * du.cross(&direction);
         let dir_00 = direction - 0.5 * du - 0.5 * dv;
         PerspectiveCamera {
             position,
+            up,
+            right,
             direction,
             aspect: 1.0,
             fov_y,
@@ -45,6 +52,36 @@ impl PerspectiveCamera {
         self.position += delta;
     }
 
+    pub fn change_pos_plane(&mut self, x: f32, y: f32) {
+        self.position += x * self.right + y * self.up;
+    }
+
+    pub fn change_pos_view_dir(&mut self, delta: f32) {
+        self.position += delta * self.direction;
+    }
+
+    pub fn look_around(&mut self, x: f32, y: f32) {
+        self.direction += self.du * x + self.dv * y;
+        self.recalc_plane();
+    }
+
+    pub fn change_pos_matrix(&mut self, matrix: Rotation3<f32>) {
+        self.position = matrix * self.position;
+        self.direction = matrix * self.direction;
+
+        self.recalc_plane();
+    }
+
+    fn recalc_plane(&mut self) {
+        let up = vector![0.0, 1.0, 0.0];
+        self.right = self.direction.cross(&up); // todo normalize and unit?
+        self.up = self.right.cross(&self.direction);
+
+        self.du = self.img_plane_size.x * self.direction.cross(&self.up).normalize();
+        self.dv = self.img_plane_size.y * self.du.cross(&self.direction);
+        self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
+    }
+
     pub fn set_pos(&mut self, pos: Point3<f32>) {
         self.position = pos;
     }
@@ -52,8 +89,6 @@ impl PerspectiveCamera {
     pub fn set_direction(&mut self, direction: Vector3<f32>) {
         self.direction = direction.normalize();
     }
-
-    pub fn rotate(&mut self) {}
 }
 
 impl Camera for PerspectiveCamera {

@@ -10,14 +10,21 @@ use crate::{
 
 #[derive(Default)]
 pub struct RenderOptions {
+    pub resolution: (usize, usize),
     pub ray_termination: bool,
     pub empty_index: bool,
     pub multi_thread: bool,
 }
 
 impl RenderOptions {
-    pub fn new(ray_termination: bool, empty_index: bool, multi_thread: bool) -> Self {
-        Self {
+    pub fn new(
+        resolution: (usize, usize),
+        ray_termination: bool,
+        empty_index: bool,
+        multi_thread: bool,
+    ) -> RenderOptions {
+        RenderOptions {
+            resolution,
             ray_termination,
             empty_index,
             multi_thread,
@@ -48,8 +55,9 @@ where
             camera,
             empty_index,
             render_options: RenderOptions {
+                resolution: (100, 100), //todo
                 ray_termination: true,
-                empty_index: false,
+                empty_index: true,
                 multi_thread: false,
             },
         }
@@ -64,7 +72,7 @@ where
     }
 
     fn render(&mut self, buffer: &mut [u8]) {
-        let (img_w, img_h) = (700, 700); // todo
+        let (img_w, img_h) = self.render_options.resolution;
 
         let (image_width, image_height) = (img_w as f32, img_h as f32);
 

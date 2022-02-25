@@ -1,8 +1,6 @@
 mod perspective_camera;
-mod target_camera;
 
 pub use perspective_camera::PerspectiveCamera;
-pub use target_camera::TargetCamera;
 
 use crate::ray::Ray;
 

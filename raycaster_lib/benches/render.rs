@@ -1,31 +1,13 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-
-use raycaster_lib::{
-    camera::TargetCamera,
-    render::{RenderOptions, Renderer},
-    transfer_functions::skull_tf,
-    volumetric::{
-        from_file, parse::skull_parser, BlockVolume, BuildVolume, LinearVolume, Volume,
-        VolumeMetadata,
-    },
-};
-
-const WIDTH: usize = 512;
-const HEIGHT: usize = 512;
-
-fn get_volume<V>() -> V
-where
-    V: Volume + BuildVolume<VolumeMetadata>,
-{
-    from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap()
-}
+mod common;
+use common::*;
 
 fn render_linear(c: &mut Criterion) {
-    let camera = TargetCamera::new(WIDTH, HEIGHT);
+    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
+        resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
@@ -39,11 +21,12 @@ fn render_linear(c: &mut Criterion) {
 }
 
 fn render_linear_ei(c: &mut Criterion) {
-    let camera = TargetCamera::new(WIDTH, HEIGHT);
+    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
     let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
+        resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
         multi_thread: false,
@@ -57,11 +40,12 @@ fn render_linear_ei(c: &mut Criterion) {
 }
 
 fn render_block(c: &mut Criterion) {
-    let camera = TargetCamera::new(WIDTH, HEIGHT);
+    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
     let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
+        resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
@@ -75,11 +59,12 @@ fn render_block(c: &mut Criterion) {
 }
 
 fn render_block_ei(c: &mut Criterion) {
-    let camera = TargetCamera::new(WIDTH, HEIGHT);
+    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
     let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
+        resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
         multi_thread: false,
@@ -96,7 +81,7 @@ criterion_group! {
     name = benches;
     // This can be any expression that returns a `Criterion` object.
     config = Criterion::default().significance_level(0.1).sample_size(10);
-    targets = render_linear, render_block, render_linear_ei, render_block_ei
+    targets = render_linear, render_linear_ei, render_block, render_block_ei
 }
 
 criterion_main!(benches);

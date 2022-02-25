@@ -24,11 +24,14 @@ pub mod color {
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use crate::render::{RenderOptions, Renderer};
-    use camera::TargetCamera;
+    use camera::PerspectiveCamera;
+    use nalgebra::point;
     use volumetric::parse::skull_parser;
     use volumetric::LinearVolume;
 
-    let camera = TargetCamera::new(width, height);
+    let position = point![300.0, 300.0, 300.0];
+    let direction = position - point![34.0, 128.0, 128.0];
+    let camera = PerspectiveCamera::new(position, direction);
     let volume = volumetric::from_file(
         "volumes/Skull.vol",
         skull_parser,
@@ -36,8 +39,9 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     )
     .unwrap();
 
-    let mut renderer = Renderer::<LinearVolume, TargetCamera>::new(volume, camera);
+    let mut renderer = Renderer::<LinearVolume, PerspectiveCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {
+        resolution: (width, height),
         ray_termination: true,
         empty_index: false,
         multi_thread: false,
