@@ -170,12 +170,12 @@ impl State {
                     (true, false) => {
                         // move on the plane described by camera position and normal
                         let drag_diff = (*xrel as f32, *yrel as f32);
-                        cam.change_pos_plane(-drag_diff.0, -drag_diff.1);
+                        cam.change_pos_plane(-drag_diff.0 * 1.2, -drag_diff.1 * 1.2);
                     }
                     (false, true) => {
                         // change camera direction
                         let drag_diff = (*xrel as f32, *yrel as f32);
-                        cam.look_around(drag_diff.0 * -0.05, drag_diff.1 * -0.05);
+                        cam.look_around(drag_diff.0 * -0.01, drag_diff.1 * -0.01);
                     }
                     (true, true) => {
                         // rotate around origin

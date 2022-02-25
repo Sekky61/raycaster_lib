@@ -191,12 +191,19 @@ where
 
             //let sample = self.volume.sample_at(pos);
 
-            let (sample, grad) = self.volume.sample_at_gradient(pos);
-            let grad = grad.normalize();
+            let (sample, grad_samples) = self.volume.sample_at_gradient(pos);
 
             let light_source = vector![1.0, 1.0, 0.0].normalize();
 
             let color_b = tf(sample);
+
+            let grad = vector![
+                sample - grad_samples.x,
+                sample - grad_samples.y,
+                sample - grad_samples.z
+            ];
+
+            let grad = grad.normalize();
 
             let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
             let rgb = color_b.xyz() * n_dot_l;
