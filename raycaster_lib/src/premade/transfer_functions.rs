@@ -29,17 +29,18 @@ pub fn c60large_tf(sample: f32) -> RGBA {
 }
 
 // R G B A -- A <0;1>
-// uses just 12 bits
+// Values <0;4095>
+// uses just 12 bits -- todo are upper bits zero?
 #[allow(dead_code)]
 pub fn beetle_tf(sample: f32) -> RGBA {
-    if sample > 10000.0 {
-        RGBA::new(255.0, 0.0, 0.0, 0.01)
-    } else if sample > 5000.0 {
-        RGBA::new(0.0, 255.0, 0.0, 0.01)
-    } else if sample > 1900.0 {
-        RGBA::new(0.0, 0.0, 255.0, 0.01)
+    if sample > 3000.0 {
+        RGBA::new(255.0, 0.0, 0.0, 0.1)
+    } else if sample > 2000.0 {
+        RGBA::new(0.0, 255.0, 0.0, 0.1)
+    } else if sample > 1500.0 {
+        RGBA::new(0.0, 0.0, 255.0, 0.1)
     } else if sample > 800.0 {
-        RGBA::new(10.0, 10.0, 10.0, 0.01)
+        RGBA::new(10.0, 10.0, 10.0, 0.1)
     } else {
         color::zero()
     }

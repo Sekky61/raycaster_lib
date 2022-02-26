@@ -75,6 +75,7 @@ impl<const S: usize> EmptyIndex<S> {
 mod test {
 
     use super::*;
+    use crate::test_helpers::*;
     use nalgebra::vector;
 
     use crate::volumetric::{
@@ -82,26 +83,22 @@ mod test {
         LinearVolume, RGBA,
     };
 
-    fn volume_dims_empty(x: usize, y: usize, z: usize) -> LinearVolume {
-        let (meta, vec) = crate::volumetric::empty_vol(vector![x, y, z]);
-        BuildVolume::build(meta, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
-    }
-
     fn dark_tf(_sample: f32) -> RGBA {
         crate::color::zero()
     }
 
-    fn volume_dims_nonempty(
-        x: usize,
-        y: usize,
-        z: usize,
-        non_empty_indexes: &[usize],
-    ) -> LinearVolume {
-        let (meta, mut vec) = crate::volumetric::empty_vol(vector![x, y, z]);
-        for &i in non_empty_indexes {
-            vec[i] = 1;
+    fn volume_dims_nonempty(dims: Vector3<usize>, non_empty_indexes: &[usize]) -> LinearVolume {
+        let vol = empty_vol_meta(dims);
+        let data = vol.data.expect("test error - no data from empty_vol");
+        match data {
+            DataSource::Vec(v) => {
+                for &i in non_empty_indexes {
+                    v[i] = 1;
+                }
+            }
+            _ => panic!("Data source not a vector"),
         }
-        BuildVolume::build(meta, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
+        BuildVolume::build(vol).unwrap()
     }
 
     mod from_data {
@@ -110,7 +107,8 @@ mod test {
 
         #[test]
         fn empty() {
-            let volume = volume_dims_empty(2, 2, 2);
+            let meta = empty_vol_meta(vector![2, 2, 2]);
+            let volume =
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(volume.get_size().iter().product::<usize>(), 8);
@@ -121,7 +119,7 @@ mod test {
 
         #[test]
         fn empty_bigger() {
-            let volume = volume_dims_empty(24, 24, 10);
+            let volume = empty_vol(vector![24, 24, 10]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
@@ -141,7 +139,7 @@ mod test {
 
         #[test]
         fn empty_side3() {
-            let volume = volume_dims_empty(10, 5, 18);
+            let volume = empty_vol(vector![10, 5, 18]);
             let empty_index = EmptyIndex::<3>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
@@ -151,7 +149,7 @@ mod test {
 
         #[test]
         fn empty_side6() {
-            let volume = volume_dims_empty(23, 15, 8);
+            let volume = empty_vol(vector![23, 15, 8]);
             let empty_index = EmptyIndex::<6>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
@@ -162,10 +160,13 @@ mod test {
         // Index takes into account resulting opacity, not values of samples
         #[test]
         fn empty_dark_tf() {
-            let (meta, mut vec) = crate::volumetric::empty_vol(vector![7, 7, 7]);
-            vec[2] = 20;
-            let volume: LinearVolume =
-                BuildVolume::build(meta, DataSource::Vec(vec), dark_tf).unwrap();
+            let meta = empty_vol(vector![7, 7, 7]);
+            meta.set_tf(dark_tf);
+            match meta.data.unwrap() {
+                DataSource::Vec(v) => v[2] = 20,
+                _ => panic!("not a vec"),
+            }
+            let volume: LinearVolume = BuildVolume::build(meta).unwrap();
 
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 

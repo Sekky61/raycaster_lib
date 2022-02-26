@@ -1,7 +1,6 @@
 mod block_volume;
 mod empty_index;
 mod linear_volume;
-pub mod parse;
 mod stream_volume;
 mod vol_builder;
 mod volume;
@@ -11,70 +10,19 @@ pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
+pub use vol_builder::DataSource;
 pub use vol_builder::{from_file, BuildVolume, VolumeMetadata};
 pub use volume::Volume;
 
-use nalgebra::{vector, Vector3};
-
 type TF = fn(f32) -> RGBA;
-
-pub fn white_tf(sample: f32) -> RGBA {
-    crate::color::mono(255.0, sample / 255.0)
-}
-
-pub fn white_vol() -> (VolumeMetadata, Vec<u8>) {
-    let meta = VolumeMetadata {
-        size: vector![2, 2, 2],
-        border: 0,
-        scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data_offset: 0,
-    };
-    let data = vec![0, 32, 64, 64 + 32, 128, 128 + 32, 128 + 64, 255];
-
-    (meta, data)
-}
-
-// todo return datasource, not vec
-pub fn empty_vol(dims: Vector3<usize>) -> (VolumeMetadata, Vec<u8>) {
-    let meta = VolumeMetadata {
-        size: dims,
-        border: 0,
-        scale: vector![100.0, 100.0, 100.0], // shape of voxels
-        data_offset: 0,
-    };
-    let data = vec![0; dims.x * dims.y * dims.z];
-
-    (meta, data)
-}
 
 #[cfg(test)]
 mod test {
 
-    use super::vol_builder::DataSource;
     use super::*;
+    use crate::test_helpers::*;
     use crate::volumetric::LinearVolume;
     use nalgebra::{point, vector};
-    use vol_builder::BuildVolume;
-
-    fn cube_volume<V>() -> V
-    where
-        V: Volume + BuildVolume<VolumeMetadata>,
-    {
-        let (meta, vec) = white_vol();
-        <V as BuildVolume<VolumeMetadata>>::build(meta, DataSource::Vec(vec), white_tf).unwrap()
-    }
-
-    fn skull_volume<V>() -> V
-    where
-        V: Volume + BuildVolume<VolumeMetadata>,
-    {
-        from_file(
-            "volumes/Skull.vol",
-            parse::skull_parser,
-            crate::transfer_functions::skull_tf,
-        )
-        .expect("skull error")
-    }
 
     #[test]
     fn linear_block_matches() {

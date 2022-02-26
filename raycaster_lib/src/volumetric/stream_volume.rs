@@ -51,28 +51,32 @@ impl StreamVolume {
     }
 }
 
-impl BuildVolume<VolumeMetadata> for StreamVolume {
-    fn build(
-        metadata: VolumeMetadata,
-        data: DataSource<u8>,
-        tf: TF,
-    ) -> Result<StreamVolume, &'static str> {
+impl BuildVolume<u8> for StreamVolume {
+    fn build(metadata: VolumeMetadata<u8>>) -> Result<StreamVolume, &'static str> {
         println!("Build started");
 
+        let data = metadata.data.ok_or("No data")?;
+
         let (mmap, map_offset) = if let DataSource::Mmap(tm) = data {
+            // todo or use typedmap?
             tm.into_inner()
         } else {
             return Err("No file mapped");
         };
 
-        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
+        let position = metadata.position.unwrap_or(vector![0.0, 0.0, 0.0]);
+        let size = metadata.size.ok_or("No size")?;
+        let scale = metadata.scale.ok_or("No scale")?;
+        let tf = metadata.tf.ok_or("No tf")?;
+
+        let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
-            .component_mul(&metadata.scale);
+            .component_mul(&scale);
         Ok(StreamVolume {
-            position: vector![0.0, 0.0, 0.0],
-            size: metadata.size,
+            position,
+            size,
             border: 0,
-            scale: metadata.scale,
+            scale,
             vol_dims,
             file_map: mmap,
             map_offset,

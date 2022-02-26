@@ -1,20 +1,74 @@
 use std::{fs::File, mem::size_of, path::Path};
 
 use memmap::{Mmap, MmapOptions};
-use nalgebra::Vector3;
+use nalgebra::{vector, Vector3};
 
 use super::{Volume, TF};
 
-pub trait BuildVolume<M>
+// Build Volume this trait is defined on from the metadata object
+// T is the type of sample
+pub trait BuildVolume<T>
 where
     Self: Sized,
 {
-    fn build(metadata: M, data: DataSource<u8>, tf: TF) -> Result<Self, &'static str>;
+    fn build(metadata: VolumeMetadata<T>) -> Result<Self, &'static str>;
 }
 
+#[derive(Default)]
+pub struct VolumeMetadata<T> {
+    // Shape
+    pub position: Option<Vector3<f32>>,
+    pub size: Option<Vector3<usize>>,
+    pub scale: Option<Vector3<f32>>, // Shape of cells
+    // Data
+    pub data: Option<DataSource<T>>,
+    pub data_offset: Option<usize>,
+    pub tf: Option<TF>, // Transfer function
+}
+
+impl<T> VolumeMetadata<T> {
+    pub fn new<U>() -> VolumeMetadata<U>
+    where
+        U: Default,
+    {
+        Default::default()
+    }
+
+    pub fn set_position(self, position: Vector3<f32>) -> VolumeMetadata<T> {
+        self.position = Some(position);
+        self
+    }
+
+    pub fn set_size(self, size: Vector3<usize>) -> VolumeMetadata<T> {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn set_scale(self, scale: Vector3<f32>) -> VolumeMetadata<T> {
+        self.scale = Some(scale);
+        self
+    }
+
+    pub fn set_data(self, data: DataSource<T>) -> VolumeMetadata<T> {
+        self.data = Some(data);
+        self
+    }
+
+    pub fn set_data_offset(self, data_offset: usize) -> VolumeMetadata<T> {
+        self.data_offset = Some(data_offset);
+        self
+    }
+
+    pub fn set_tf(self, tf: TF) -> VolumeMetadata<T> {
+        self.tf = Some(tf);
+        self
+    }
+}
+
+// Common pattern
 pub fn from_file<P, T, M>(
     path: P,
-    parser: fn(&[u8]) -> Result<M, &'static str>,
+    parser: fn(&[u8]) -> Result<VolumeMetadata<M>, &'static str>,
     tf: TF,
 ) -> Result<T, &'static str>
 where
@@ -24,7 +78,20 @@ where
     let ds: DataSource<u8> = DataSource::from_file(path)?;
     let slice = ds.get_slice().ok_or("Cannot get data")?;
     let metadata = parser(slice)?;
-    BuildVolume::<M>::build(metadata, ds, tf)
+    BuildVolume::build(metadata)
+}
+
+pub fn from_data_source<T, M>(
+    ds: DataSource<u8>,
+    parser: fn(&[u8]) -> Result<VolumeMetadata<M>, &'static str>,
+    tf: TF,
+) -> Result<T, &'static str>
+where
+    T: BuildVolume<M> + Volume,
+{
+    let slice = ds.get_slice().ok_or("Cannot get data")?;
+    let metadata = parser(slice)?;
+    BuildVolume::<M>::build(metadata)
 }
 
 pub struct TypedMmap {
@@ -76,6 +143,56 @@ pub enum DataSource<T> {
 }
 
 impl<T> DataSource<T> {
+    pub fn new() -> DataSource<T> {
+        DataSource::None
+    }
+
+    pub fn into<U>(self) -> DataSource<U>
+    where
+        T: Into<U>,
+    {
+        match self {
+            DataSource::Vec(v) => {
+                let new = v.iter().map(|&v| v.into()).collect();
+                DataSource::Vec(new)
+            }
+            DataSource::Mmap(m) => DataSource::Mmap(m),
+            DataSource::None => DataSource::None,
+        }
+    }
+
+    pub fn into_transmute<U>(self) -> DataSource<U> {
+        match self {
+            DataSource::Vec(v) => {
+                let ptr = v.as_ptr();
+                let elements = v.len();
+                let allocated_elements = v.capacity();
+                //let (ptr, elements, allocated_elements) = v.into_raw_parts();
+                let growth = size_of::<T>() / size_of::<U>();
+                let new_length = elements * growth;
+                let new_allocated = allocated_elements * growth;
+                let new = unsafe { Vec::from_raw_parts(ptr as *mut U, new_length, new_allocated) };
+                DataSource::Vec(new)
+            }
+            DataSource::Mmap(m) => DataSource::Mmap(m),
+            DataSource::None => DataSource::None,
+        }
+    }
+
+    pub fn get_slice_transmute<U>(&self) -> Option<&[U]> {
+        let slice = match self {
+            DataSource::Vec(v) => Some(v.as_slice()),
+            DataSource::Mmap(m) => Some(m.get_all()),
+            DataSource::None => None,
+        }?;
+
+        let ptr = slice.as_ptr();
+        let len = slice.len();
+        let growth = size_of::<T>() / size_of::<U>();
+        let new_length = len * growth;
+        Some(unsafe { std::slice::from_raw_parts(ptr as *mut U, new_length) })
+    }
+
     pub fn get_slice(&self) -> Option<&[T]> {
         match self {
             DataSource::Vec(v) => Some(v.as_slice()),
@@ -119,11 +236,4 @@ impl<T> DataSource<T> {
         let data_source = DataSource::from_mmap(mmap);
         Ok(data_source)
     }
-}
-
-pub struct VolumeMetadata {
-    pub size: Vector3<usize>,
-    pub border: u32,
-    pub scale: Vector3<f32>, // shape of voxels
-    pub data_offset: usize,
 }

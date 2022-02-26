@@ -151,12 +151,9 @@ impl Volume for BlockVolume {
     }
 }
 
-impl BuildVolume<VolumeMetadata> for BlockVolume {
-    fn build(
-        metadata: VolumeMetadata,
-        data: DataSource<u8>,
-        tf: TF,
-    ) -> Result<BlockVolume, &'static str> {
+impl BuildVolume<u8> for BlockVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
+        // todo fix
         let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&metadata.scale); // todo workaround

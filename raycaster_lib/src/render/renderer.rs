@@ -1,5 +1,3 @@
-use std::cmp;
-
 use nalgebra::{max, point, vector, Point3, Vector3, Vector4};
 
 use crate::{
@@ -39,7 +37,7 @@ where
 {
     pub volume: V,
     pub camera: C,
-    pub empty_index: EmptyIndex<2>,
+    pub empty_index: EmptyIndex<3>,
     render_options: RenderOptions,
 }
 

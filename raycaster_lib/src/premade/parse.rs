@@ -1,4 +1,3 @@
-use super::vol_builder::VolumeMetadata;
 use nalgebra::{vector, Vector3};
 use nom::{
     bytes::complete::take,
@@ -7,8 +6,17 @@ use nom::{
     IResult,
 };
 
-pub fn beetle_parser(slice: &[u8]) -> Result<VolumeMetadata, &'static str> {
+use crate::volumetric::{DataSource, VolumeMetadata};
+
+use super::transfer_functions::{beetle_tf, skull_tf};
+
+// Little endian 2 byte values
+// Values <0;4095>
+pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>, &'static str> {
     let mut beetle_header = tuple((le_u16, le_u16, le_u16));
+    let slice = data_source
+        .get_slice()
+        .ok_or(Err("No data in data_source"))?;
     let parse_res: IResult<_, _> = beetle_header(slice);
 
     let (_rest, size) = match parse_res {
@@ -16,15 +24,17 @@ pub fn beetle_parser(slice: &[u8]) -> Result<VolumeMetadata, &'static str> {
         Err(_) => return Err("Parse error"),
     };
 
-    // offset 2B * 3 = 6B
+    let new_data_src = data_source.into_transmute();
 
     let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
 
     let meta = VolumeMetadata {
+        position: None,
         size,
-        border: 0,
-        scale: vector![1.0 * 0.99, 1.0 * 0.99, 1.0 * 0.99],
-        data_offset: 6,
+        scale: None,
+        data: Some(new_data_src),
+        data_offset: Some(6),
+        tf: beetle_tf,
     };
 
     Ok(meta)
@@ -36,7 +46,11 @@ pub struct ExtractedMeta {
     scale: Vector3<f32>,
 }
 
-pub fn skull_parser(slice: &[u8]) -> Result<VolumeMetadata, &'static str> {
+pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
+    let slice = data_source
+        .get_slice()
+        .ok_or(Err("No data in data_source"))?;
+
     let parse_res = skull_inner(slice);
 
     let ExtractedMeta {
@@ -49,10 +63,12 @@ pub fn skull_parser(slice: &[u8]) -> Result<VolumeMetadata, &'static str> {
     };
 
     Ok(VolumeMetadata {
+        position: None,
         size,
-        border: 0,
         scale,
         data_offset: offset,
+        data: todo!(),
+        tf: skull_tf,
     })
 }
 

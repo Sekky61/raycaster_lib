@@ -1,7 +1,10 @@
+use crate::premade::{parse::skull_parser, transfer_functions::skull_tf};
+
 pub mod camera;
+pub mod premade;
 mod ray;
 pub mod render;
-pub mod transfer_functions;
+pub mod test_helpers;
 pub mod volumetric;
 
 pub mod color {
@@ -26,18 +29,12 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use crate::render::{RenderOptions, Renderer};
     use camera::PerspectiveCamera;
     use nalgebra::point;
-    use volumetric::parse::skull_parser;
     use volumetric::LinearVolume;
 
     let position = point![300.0, 300.0, 300.0];
     let direction = position - point![34.0, 128.0, 128.0];
     let camera = PerspectiveCamera::new(position, direction);
-    let volume = volumetric::from_file(
-        "volumes/Skull.vol",
-        skull_parser,
-        crate::transfer_functions::skull_tf,
-    )
-    .unwrap();
+    let volume = volumetric::from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let mut renderer = Renderer::<LinearVolume, PerspectiveCamera>::new(volume, camera);
     renderer.set_render_options(RenderOptions {

@@ -10,7 +10,6 @@ use super::{
 pub struct LinearVolume {
     position: Vector3<f32>,
     size: Vector3<usize>,
-    border: u32,
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<f32>,
@@ -21,7 +20,6 @@ impl std::fmt::Debug for LinearVolume {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Volume")
             .field("size", &self.size)
-            .field("border", &self.border)
             .field("scale", &self.scale)
             .field("vol_dims", &self.vol_dims)
             .field("data len ", &self.data.len())
@@ -153,33 +151,33 @@ impl Volume for LinearVolume {
     }
 }
 
-impl BuildVolume<VolumeMetadata> for LinearVolume {
-    fn build(
-        metadata: VolumeMetadata,
-        data: DataSource<u8>,
-        tf: TF,
-    ) -> Result<LinearVolume, &'static str> {
+impl BuildVolume<u8> for LinearVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<LinearVolume, &'static str> {
         println!("Build started");
 
-        let data: Vec<f32> = data.get_slice().ok_or("No data")?[metadata.data_offset..]
-            .iter()
-            .map(|&val| val.into())
-            .collect();
+        let data = metadata.data.ok_or("No volumetric data passed")?;
+        let slice = data.get_slice().ok_or("No data inside datasource")?;
+        let offset = metadata.data_offset.unwrap_or(0);
+
+        let data: Vec<f32> = slice[offset..].iter().map(|&val| val.into()).collect();
 
         // let data_range_max = data.iter().fold(-10000.0, |cum, &v| f32::max(v, cum));
         // let data_range_min = data.iter().fold(100000.0, |cum, &v| f32::min(v, cum));
 
         // println!("Build data range: {data_range_min} to {data_range_max}");
 
-        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
-            .cast::<f32>()
-            .component_mul(&metadata.scale);
+        let size = metadata.size.ok_or("No size")?;
+        let scale = metadata.scale.unwrap_or(vector![1.0, 1.0, 1.0]);
+        let tf = metadata.tf.ok_or("No transfer function")?;
+
+        let vol_dims = size.map(|v| v as f32).component_mul(&scale);
+
+        let position = metadata.position.unwrap_or(Vector3::zeros());
 
         Ok(LinearVolume {
-            position: Vector3::zeros(),
-            size: metadata.size,
-            border: metadata.border,
-            scale: metadata.scale,
+            position,
+            size,
+            scale,
             vol_dims,
             data,
             tf,
@@ -195,15 +193,11 @@ mod test {
     use crate::ray::Ray;
 
     use super::*;
-
-    fn cube_volume() -> LinearVolume {
-        let (metadata, vec) = crate::volumetric::white_vol();
-        BuildVolume::build(metadata, DataSource::Vec(vec), crate::volumetric::white_tf).unwrap()
-    }
+    use crate::test_helpers::*;
 
     #[test]
     fn intersect_works() {
-        let bbox = cube_volume();
+        let bbox: LinearVolume = white_volume();
         let ray = Ray {
             origin: point![-1.0, -1.0, 0.0],
             direction: vector![1.0, 1.0, 1.0],
@@ -215,7 +209,7 @@ mod test {
 
     #[test]
     fn intersect_works2() {
-        let vol = cube_volume();
+        let vol: LinearVolume = white_volume();
         let ray = Ray {
             origin: point![-0.4, 0.73, 0.0],
             direction: vector![1.0, 0.0, 1.0],
@@ -227,7 +221,7 @@ mod test {
 
     #[test]
     fn not_intersecting() {
-        let vol = cube_volume();
+        let vol: LinearVolume = white_volume();
         let ray = Ray {
             origin: point![200.0, 200.0, 200.0],
             direction: vector![1.0, 0.0, 0.0],
