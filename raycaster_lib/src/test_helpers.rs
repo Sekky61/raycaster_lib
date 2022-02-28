@@ -56,6 +56,7 @@ pub fn skull_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
 {
+    // Tests dont use the same cwd, todo: build path from std::env::current_exe()
     let ds = DataSource::from_file("volumes/Skull.vol").unwrap();
     let meta = skull_parser(ds).expect("skull error");
     BuildVolume::build(meta).unwrap()

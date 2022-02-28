@@ -8,7 +8,10 @@ use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 
 use raycaster_lib::{
     camera::PerspectiveCamera,
-    premade::{parse::skull_parser, transfer_functions::skull_tf},
+    premade::{
+        parse::{from_file, skull_parser},
+        transfer_functions::skull_tf,
+    },
     render::{RenderOptions, Renderer},
     volumetric::{BuildVolume, LinearVolume, StreamVolume},
 };
@@ -52,8 +55,7 @@ fn main() -> Result<(), String> {
     let mut gui = Gui::new();
     gui.build_gui();
 
-    let volume: LinearVolume =
-        raycaster_lib::volumetric::from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+    let volume: LinearVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let pos = point![300.0, 300.0, 300.0];
     let dir = vector![-1.0, -1.0, -1.0];

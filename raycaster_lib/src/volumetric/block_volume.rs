@@ -124,10 +124,6 @@ impl Volume for BlockVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
-        (0.0, vector![0.0, 0.0, 0.0])
-    }
-
     fn is_in(&self, pos: &Point3<f32>) -> bool {
         self.vol_dims.x > pos.x
             && self.vol_dims.y > pos.y
@@ -168,7 +164,7 @@ impl BuildVolume<u8> for BlockVolume {
 
         let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
 
-        let slice = data.get_slice().ok_or("No data in datasource")?;
+        let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
         for x in (0..size.x).step_by(step_size) {
             for y in (0..size.y).step_by(step_size) {

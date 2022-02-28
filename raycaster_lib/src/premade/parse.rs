@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use nalgebra::{vector, Vector3};
 use nom::{
     bytes::complete::take,
@@ -6,9 +8,39 @@ use nom::{
     IResult,
 };
 
-use crate::volumetric::{DataSource, VolumeMetadata};
+use crate::volumetric::{BuildVolume, DataSource, Volume, VolumeMetadata, TF};
 
 use super::transfer_functions::{beetle_tf, skull_tf};
+
+// Common pattern
+pub fn from_file<P, T, M>(
+    path: P,
+    parser: fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
+    tf: TF,
+) -> Result<T, &'static str>
+where
+    P: AsRef<Path>,
+    T: BuildVolume<M> + Volume,
+{
+    let ds: DataSource<u8> = DataSource::from_file(path)?;
+    let mut metadata = parser(ds)?;
+    metadata.set_tf(tf);
+    BuildVolume::build(metadata)
+}
+
+pub fn from_data_source<T, M>(
+    ds: DataSource<u8>,
+    parser: fn(&[u8]) -> Result<VolumeMetadata<M>, &'static str>,
+    tf: TF,
+) -> Result<T, &'static str>
+where
+    T: BuildVolume<M> + Volume,
+{
+    let slice = ds.get_slice().ok_or("Cannot get data")?;
+    let mut metadata = parser(slice)?;
+    metadata.set_tf(tf);
+    BuildVolume::<M>::build(metadata)
+}
 
 // Little endian 2 byte values
 // Values <0;4095>

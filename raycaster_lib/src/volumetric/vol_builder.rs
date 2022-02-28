@@ -1,9 +1,8 @@
 use std::{fs::File, mem::size_of, path::Path};
 
+use super::TF;
 use memmap::{Mmap, MmapOptions};
-use nalgebra::{vector, Vector3};
-
-use super::{Volume, TF};
+use nalgebra::Vector3;
 
 // Build Volume this trait is defined on from the metadata object
 // T is the type of sample
@@ -63,36 +62,6 @@ impl<T> VolumeMetadata<T> {
         self.tf = Some(tf);
         self
     }
-}
-
-// Common pattern
-pub fn from_file<P, T, M>(
-    path: P,
-    parser: fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
-    tf: TF,
-) -> Result<T, &'static str>
-where
-    P: AsRef<Path>,
-    T: BuildVolume<M> + Volume,
-{
-    let ds: DataSource<u8> = DataSource::from_file(path)?;
-    let mut metadata = parser(ds)?;
-    metadata.set_tf(tf);
-    BuildVolume::build(metadata)
-}
-
-pub fn from_data_source<T, M>(
-    ds: DataSource<u8>,
-    parser: fn(&[u8]) -> Result<VolumeMetadata<M>, &'static str>,
-    tf: TF,
-) -> Result<T, &'static str>
-where
-    T: BuildVolume<M> + Volume,
-{
-    let slice = ds.get_slice().ok_or("Cannot get data")?;
-    let mut metadata = parser(slice)?;
-    metadata.set_tf(tf);
-    BuildVolume::<M>::build(metadata)
 }
 
 pub struct TypedMmap {
@@ -236,5 +205,11 @@ impl<T> DataSource<T> {
 
         let data_source = DataSource::from_mmap(mmap);
         Ok(data_source)
+    }
+}
+
+impl<T> Default for DataSource<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }

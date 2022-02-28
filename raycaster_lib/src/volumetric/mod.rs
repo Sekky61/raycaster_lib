@@ -11,10 +11,10 @@ pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
 pub use vol_builder::DataSource;
-pub use vol_builder::{from_file, BuildVolume, VolumeMetadata};
+pub use vol_builder::{BuildVolume, VolumeMetadata};
 pub use volume::Volume;
 
-type TF = fn(f32) -> RGBA;
+pub type TF = fn(f32) -> RGBA;
 
 #[cfg(test)]
 mod test {
