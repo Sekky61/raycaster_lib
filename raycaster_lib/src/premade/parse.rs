@@ -13,15 +13,17 @@ use super::transfer_functions::{beetle_tf, skull_tf};
 // Little endian 2 byte values
 // Values <0;4095>
 pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>, &'static str> {
-    let mut beetle_header = tuple((le_u16, le_u16, le_u16));
-    let slice = data_source
-        .get_slice()
-        .ok_or(Err("No data in data_source"))?;
-    let parse_res: IResult<_, _> = beetle_header(slice);
+    // Scope to drop DataSource
+    let size = {
+        let mut beetle_header = tuple((le_u16, le_u16, le_u16));
+        let slice = data_source.get_slice().ok_or("No data in data_source")?;
+        let parse_res: IResult<_, _> = beetle_header(slice);
 
-    let (_rest, size) = match parse_res {
-        Ok(r) => r,
-        Err(_) => return Err("Parse error"),
+        let (_rest, size) = match parse_res {
+            Ok(r) => r,
+            Err(_) => return Err("Parse error"),
+        };
+        size
     };
 
     let new_data_src = data_source.into_transmute();
@@ -30,11 +32,11 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
 
     let meta = VolumeMetadata {
         position: None,
-        size,
+        size: Some(size),
         scale: None,
         data: Some(new_data_src),
         data_offset: Some(6),
-        tf: beetle_tf,
+        tf: Some(beetle_tf),
     };
 
     Ok(meta)
@@ -47,9 +49,7 @@ pub struct ExtractedMeta {
 }
 
 pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
-    let slice = data_source
-        .get_slice()
-        .ok_or(Err("No data in data_source"))?;
+    let slice = data_source.get_slice().ok_or("No data in data_source")?;
 
     let parse_res = skull_inner(slice);
 
@@ -64,11 +64,11 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
 
     Ok(VolumeMetadata {
         position: None,
-        size,
-        scale,
-        data_offset: offset,
-        data: todo!(),
-        tf: skull_tf,
+        size: Some(size),
+        scale: Some(scale),
+        data_offset: Some(offset),
+        data: Some(data_source),
+        tf: Some(skull_tf),
     })
 }
 

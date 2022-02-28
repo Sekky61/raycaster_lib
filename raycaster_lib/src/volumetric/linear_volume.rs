@@ -1,7 +1,5 @@
 use nalgebra::{vector, Point3, Vector3};
 
-use crate::volumetric::vol_builder::DataSource;
-
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
     Volume, TF,
@@ -167,12 +165,12 @@ impl BuildVolume<u8> for LinearVolume {
         // println!("Build data range: {data_range_min} to {data_range_max}");
 
         let size = metadata.size.ok_or("No size")?;
-        let scale = metadata.scale.unwrap_or(vector![1.0, 1.0, 1.0]);
+        let scale = metadata.scale.unwrap_or_else(|| vector![1.0, 1.0, 1.0]);
         let tf = metadata.tf.ok_or("No transfer function")?;
 
-        let vol_dims = size.map(|v| v as f32).component_mul(&scale);
+        let vol_dims = size.map(|v| (v - 1) as f32).component_mul(&scale);
 
-        let position = metadata.position.unwrap_or(Vector3::zeros());
+        let position = metadata.position.unwrap_or_else(Vector3::zeros);
 
         Ok(LinearVolume {
             position,

@@ -1,7 +1,7 @@
 use nalgebra::{vector, Point3, Vector3};
 
 use super::{
-    vol_builder::{BuildVolume, DataSource, VolumeMetadata},
+    vol_builder::{BuildVolume, VolumeMetadata},
     Volume, TF,
 };
 
@@ -13,7 +13,6 @@ pub struct BlockVolume {
     position: Vector3<f32>,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>,
-    border: u32,
     scale: Vector3<f32>,    // shape of voxels
     vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<Block>,
@@ -153,12 +152,19 @@ impl Volume for BlockVolume {
 
 impl BuildVolume<u8> for BlockVolume {
     fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
-        // todo fix
-        let vol_dims = (metadata.size - vector![1, 1, 1]) // side length is n-1 times the point
-            .cast::<f32>();
-        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&metadata.scale); // todo workaround
+        let position = metadata.position.unwrap_or(vector![0.0, 0.0, 0.0]);
+        let size = metadata.size.ok_or("No size")?;
+        let scale = metadata.scale.ok_or("No scale")?;
+        let data = metadata.data.ok_or("No data")?;
+        let offset = metadata.data_offset.unwrap_or(0);
+        let tf = metadata.tf.ok_or("No transfer function")?;
 
-        let mapped: Vec<u16> = data.get_slice().ok_or("No data")?[metadata.data_offset..]
+        // todo fix
+        let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
+            .cast::<f32>();
+        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&scale); // todo workaround
+
+        let mapped: Vec<u16> = data.get_slice().ok_or("No data")?[offset..]
             .chunks(2)
             .map(|x| {
                 let arr = x.try_into().unwrap_or([0; 2]);
@@ -171,8 +177,6 @@ impl BuildVolume<u8> for BlockVolume {
         let mut blocks = vec![];
 
         let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
-
-        let size = metadata.size;
 
         for x in (0..size.x).step_by(step_size) {
             for y in (0..size.y).step_by(step_size) {
@@ -197,11 +201,10 @@ impl BuildVolume<u8> for BlockVolume {
         );
 
         Ok(BlockVolume {
-            position: Vector3::zeros(),
-            data_size: metadata.size,
+            position,
+            data_size: size,
             block_size,
-            border: metadata.border,
-            scale: metadata.scale,
+            scale,
             vol_dims,
             data: blocks,
             tf,

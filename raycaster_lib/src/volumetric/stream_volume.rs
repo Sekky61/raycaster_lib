@@ -52,7 +52,7 @@ impl StreamVolume {
 }
 
 impl BuildVolume<u8> for StreamVolume {
-    fn build(metadata: VolumeMetadata<u8>>) -> Result<StreamVolume, &'static str> {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamVolume, &'static str> {
         println!("Build started");
 
         let data = metadata.data.ok_or("No data")?;

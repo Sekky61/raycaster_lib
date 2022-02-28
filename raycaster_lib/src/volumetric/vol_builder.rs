@@ -34,32 +34,32 @@ impl<T> VolumeMetadata<T> {
         Default::default()
     }
 
-    pub fn set_position(self, position: Vector3<f32>) -> VolumeMetadata<T> {
+    pub fn set_position(&mut self, position: Vector3<f32>) -> &mut Self {
         self.position = Some(position);
         self
     }
 
-    pub fn set_size(self, size: Vector3<usize>) -> VolumeMetadata<T> {
+    pub fn set_size(&mut self, size: Vector3<usize>) -> &mut Self {
         self.size = Some(size);
         self
     }
 
-    pub fn set_scale(self, scale: Vector3<f32>) -> VolumeMetadata<T> {
+    pub fn set_scale(&mut self, scale: Vector3<f32>) -> &mut Self {
         self.scale = Some(scale);
         self
     }
 
-    pub fn set_data(self, data: DataSource<T>) -> VolumeMetadata<T> {
+    pub fn set_data(&mut self, data: DataSource<T>) -> &mut Self {
         self.data = Some(data);
         self
     }
 
-    pub fn set_data_offset(self, data_offset: usize) -> VolumeMetadata<T> {
+    pub fn set_data_offset(&mut self, data_offset: usize) -> &mut Self {
         self.data_offset = Some(data_offset);
         self
     }
 
-    pub fn set_tf(self, tf: TF) -> VolumeMetadata<T> {
+    pub fn set_tf(&mut self, tf: TF) -> &mut Self {
         self.tf = Some(tf);
         self
     }
@@ -68,7 +68,7 @@ impl<T> VolumeMetadata<T> {
 // Common pattern
 pub fn from_file<P, T, M>(
     path: P,
-    parser: fn(&[u8]) -> Result<VolumeMetadata<M>, &'static str>,
+    parser: fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
     tf: TF,
 ) -> Result<T, &'static str>
 where
@@ -76,8 +76,8 @@ where
     T: BuildVolume<M> + Volume,
 {
     let ds: DataSource<u8> = DataSource::from_file(path)?;
-    let slice = ds.get_slice().ok_or("Cannot get data")?;
-    let metadata = parser(slice)?;
+    let mut metadata = parser(ds)?;
+    metadata.set_tf(tf);
     BuildVolume::build(metadata)
 }
 
@@ -90,7 +90,8 @@ where
     T: BuildVolume<M> + Volume,
 {
     let slice = ds.get_slice().ok_or("Cannot get data")?;
-    let metadata = parser(slice)?;
+    let mut metadata = parser(slice)?;
+    metadata.set_tf(tf);
     BuildVolume::<M>::build(metadata)
 }
 
@@ -149,10 +150,10 @@ impl<T> DataSource<T> {
 
     pub fn into<U>(self) -> DataSource<U>
     where
-        T: Into<U>,
+        T: Into<U> + Copy,
     {
         match self {
-            DataSource::Vec(v) => {
+            DataSource::Vec(ref v) => {
                 let new = v.iter().map(|&v| v.into()).collect();
                 DataSource::Vec(new)
             }

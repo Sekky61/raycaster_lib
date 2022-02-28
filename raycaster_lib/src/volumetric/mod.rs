@@ -26,8 +26,8 @@ mod test {
 
     #[test]
     fn linear_block_matches() {
-        let linear: LinearVolume = cube_volume();
-        let block: BlockVolume = cube_volume();
+        let linear: LinearVolume = white_volume();
+        let block: BlockVolume = white_volume();
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();

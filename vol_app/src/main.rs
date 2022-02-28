@@ -8,9 +8,9 @@ use sdl2::{event::Event, keyboard::Keycode, rect::Rect};
 
 use raycaster_lib::{
     camera::PerspectiveCamera,
+    premade::{parse::skull_parser, transfer_functions::skull_tf},
     render::{RenderOptions, Renderer},
-    transfer_functions::skull_tf,
-    volumetric::{parse::skull_parser, BuildVolume, LinearVolume, StreamVolume},
+    volumetric::{BuildVolume, LinearVolume, StreamVolume},
 };
 
 const RENDER_WIDTH_U: usize = 700;

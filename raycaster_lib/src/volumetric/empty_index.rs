@@ -88,16 +88,20 @@ mod test {
     }
 
     fn volume_dims_nonempty(dims: Vector3<usize>, non_empty_indexes: &[usize]) -> LinearVolume {
-        let vol = empty_vol_meta(dims);
-        let data = vol.data.expect("test error - no data from empty_vol");
-        match data {
-            DataSource::Vec(v) => {
-                for &i in non_empty_indexes {
-                    v[i] = 1;
+        let mut vol = empty_vol_meta(dims);
+        if let Some(ref mut data) = vol.data {
+            match data {
+                DataSource::Vec(ref mut v) => {
+                    for &i in non_empty_indexes {
+                        v[i] = 1;
+                    }
                 }
+                _ => panic!("Data source not a vector"),
             }
-            _ => panic!("Data source not a vector"),
+        } else {
+            panic!("test error - no data from empty_vol");
         }
+
         BuildVolume::build(vol).unwrap()
     }
 
@@ -107,8 +111,7 @@ mod test {
 
         #[test]
         fn empty() {
-            let meta = empty_vol_meta(vector![2, 2, 2]);
-            let volume =
+            let volume: LinearVolume = empty_volume(vector![2, 2, 2]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(volume.get_size().iter().product::<usize>(), 8);
@@ -119,7 +122,7 @@ mod test {
 
         #[test]
         fn empty_bigger() {
-            let volume = empty_vol(vector![24, 24, 10]);
+            let volume: LinearVolume = empty_volume(vector![24, 24, 10]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
@@ -129,7 +132,7 @@ mod test {
 
         #[test]
         fn non_empty() {
-            let volume = volume_dims_nonempty(2, 2, 2, &[2]);
+            let volume: LinearVolume = volume_dims_nonempty(vector![2, 2, 2], &[2]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 1);
@@ -139,7 +142,7 @@ mod test {
 
         #[test]
         fn empty_side3() {
-            let volume = empty_vol(vector![10, 5, 18]);
+            let volume: LinearVolume = empty_volume(vector![10, 5, 18]);
             let empty_index = EmptyIndex::<3>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
@@ -149,7 +152,7 @@ mod test {
 
         #[test]
         fn empty_side6() {
-            let volume = empty_vol(vector![23, 15, 8]);
+            let volume: LinearVolume = empty_volume(vector![23, 15, 8]);
             let empty_index = EmptyIndex::<6>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
@@ -160,12 +163,18 @@ mod test {
         // Index takes into account resulting opacity, not values of samples
         #[test]
         fn empty_dark_tf() {
-            let meta = empty_vol(vector![7, 7, 7]);
+            let mut meta = empty_vol_meta(vector![7, 7, 7]);
             meta.set_tf(dark_tf);
-            match meta.data.unwrap() {
-                DataSource::Vec(v) => v[2] = 20,
-                _ => panic!("not a vec"),
+
+            if let Some(ref mut data) = meta.data {
+                match data {
+                    DataSource::Vec(ref mut v) => v[2] = 20,
+                    _ => panic!("Data source not a vector"),
+                }
+            } else {
+                panic!("test error - no data from empty_vol");
             }
+
             let volume: LinearVolume = BuildVolume::build(meta).unwrap();
 
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
@@ -179,7 +188,7 @@ mod test {
 
         #[test]
         fn base() {
-            let volume = volume_dims_nonempty(5, 5, 5, &[1]);
+            let volume = volume_dims_nonempty(vector![5, 5, 5], &[1]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 8);
@@ -198,7 +207,7 @@ mod test {
 
         #[test]
         fn border_nonempty() {
-            let volume = volume_dims_nonempty(5, 5, 5, &[2]);
+            let volume = volume_dims_nonempty(vector![5, 5, 5], &[2]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             println!("blocks: {:?}", &empty_index.blocks[..]);
