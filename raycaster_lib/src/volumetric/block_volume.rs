@@ -152,7 +152,7 @@ impl Volume for BlockVolume {
 
 impl BuildVolume<u8> for BlockVolume {
     fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
-        let position = metadata.position.unwrap_or(vector![0.0, 0.0, 0.0]);
+        let position = metadata.position.unwrap_or_else(|| vector![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
@@ -164,24 +164,16 @@ impl BuildVolume<u8> for BlockVolume {
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&scale); // todo workaround
 
-        let mapped: Vec<u16> = data.get_slice().ok_or("No data")?[offset..]
-            .chunks(2)
-            .map(|x| {
-                let arr = x.try_into().unwrap_or([0; 2]);
-                let mut v = u16::from_le_bytes(arr);
-                v &= 0b0000111111111111;
-                v
-            })
-            .collect();
-
         let mut blocks = vec![];
 
         let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
 
+        let slice = data.get_slice().ok_or("No data in datasource")?;
+
         for x in (0..size.x).step_by(step_size) {
             for y in (0..size.y).step_by(step_size) {
                 for z in (0..size.z).step_by(step_size) {
-                    let block = get_block(&mapped[..], size, x, y, z);
+                    let block = get_block(slice, size, x, y, z);
                     blocks.push(block);
                 }
             }
@@ -213,7 +205,7 @@ impl BuildVolume<u8> for BlockVolume {
 }
 
 // todo redo
-pub fn get_block(data: &[u16], size: Vector3<usize>, x: usize, y: usize, z: usize) -> Block {
+pub fn get_block(data: &[u8], size: Vector3<usize>, x: usize, y: usize, z: usize) -> Block {
     let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {

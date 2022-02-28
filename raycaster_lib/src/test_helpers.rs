@@ -27,7 +27,7 @@ pub fn empty_vol_meta(dims: Vector3<usize>) -> VolumeMetadata<u8> {
     let data = vec![0; dims.x * dims.y * dims.z];
     let data_source = DataSource::Vec(data);
     VolumeMetadata {
-        size: Some(vector![2, 2, 2]),
+        size: Some(dims),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
         data_offset: Some(0),
         position: Some(vector![0.0, 0.0, 0.0]),
