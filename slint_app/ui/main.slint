@@ -10,6 +10,11 @@ App := Window {
     property<image> render_target;
     callback send_rendered_frame();
 
+    property<length> render_area_mouse_x <=> render_area.mouse-x;
+    property<length> render_area_mouse_y <=> render_area.mouse-y;
+    callback render_area_pointer_event <=> render_area.pointer-event;
+    callback render_area_moved_event <=> render_area.moved;
+
     VerticalBox {
         HorizontalBox {
             Text {
@@ -67,6 +72,11 @@ App := Window {
                         RenTar := Image {
                             source: root.render_target;
                             width: 700px;
+
+                            render_area := TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                            }
                         }
                     }
 
