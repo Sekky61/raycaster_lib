@@ -2,11 +2,13 @@ import { ScrollView, Button, CheckBox, SpinBox, Slider, GroupBox, LineEdit, Stan
     ComboBox, HorizontalBox, VerticalBox, GridBox, TabWidget, TextEdit, AboutSlint } from "std-widgets.slint";
 
 App := Window {
-    property<image> render_target;
     preferred-width: 1000px;
     preferred-height: 800px;
     title: "Volume app";
     icon: @image-url("../../logo/slint-logo-small-light-128x128.png");
+
+    property<image> render_target;
+    callback send_rendered_frame();
 
     VerticalBox {
         HorizontalBox {
