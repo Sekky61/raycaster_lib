@@ -3,7 +3,8 @@
 members = [
     "raycaster_lib",
     "vol_app",
-    "pushrod"
+    "pushrod",
+    "slint_app"
 ]
 
 # firegraph

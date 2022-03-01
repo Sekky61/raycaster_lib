@@ -1,0 +1,13 @@
+[package]
+name = "slint_app"
+version = "0.1.0"
+build = "build.rs"
+edition = "2021"
+
+[dependencies]
+slint = "0.2.0"
+nalgebra = "0.29.0"
+raycaster_lib = { path = "../raycaster_lib" }
+
+[build-dependencies]
+slint-build = "0.2.0"
