@@ -2,6 +2,7 @@ import { ScrollView, Button, CheckBox, SpinBox, Slider, GroupBox, LineEdit, Stan
     ComboBox, HorizontalBox, VerticalBox, GridBox, TabWidget, TextEdit, AboutSlint } from "std-widgets.slint";
 
 App := Window {
+    property<image> render_target;
     preferred-width: 1000px;
     preferred-height: 800px;
     title: "Volume app";
@@ -59,6 +60,11 @@ App := Window {
                                 checked: true;
                                 enabled: !disable-toggle.checked;
                             }
+                        }
+
+                        RenTar := Image {
+                            source: root.render_target;
+                            width: 700px;
                         }
                     }
 
