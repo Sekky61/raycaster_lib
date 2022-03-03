@@ -1104,15 +1104,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gl"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a94edab108827d67608095e269cf862e60d920f144a5026d3dbcfd8b877fb404"
-dependencies = [
- "gl_generator",
-]
-
-[[package]]
 name = "gl_generator"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2262,13 +2253,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pushrod"
-version = "0.5.0"
-dependencies = [
- "sdl2",
-]
-
-[[package]]
 name = "qttypes"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3354,18 +3338,6 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
-
-[[package]]
-name = "vol_app"
-version = "0.2.0"
-dependencies = [
- "criterion",
- "gl",
- "nalgebra",
- "pushrod",
- "raycaster_lib",
- "sdl2",
-]
 
 [[package]]
 name = "volatile-register"

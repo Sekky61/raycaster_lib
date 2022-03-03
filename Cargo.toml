@@ -2,8 +2,6 @@
 
 members = [
     "raycaster_lib",
-    "vol_app",
-    "pushrod",
     "slint_app"
 ]
 
