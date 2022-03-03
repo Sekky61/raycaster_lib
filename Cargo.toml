@@ -2,7 +2,7 @@
 
 members = [
     "raycaster_lib",
-    "slint_app"
+    "vol_app"
 ]
 
 # firegraph
