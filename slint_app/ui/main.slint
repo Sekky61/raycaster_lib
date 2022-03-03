@@ -1,5 +1,5 @@
 import { ScrollView, Button, CheckBox, SpinBox, Slider, GroupBox, LineEdit, StandardListView,
-    ComboBox, HorizontalBox, VerticalBox, GridBox, TabWidget, TextEdit, AboutSlint } from "std-widgets.slint";
+    ComboBox, HorizontalBox, VerticalBox, GridBox, TabWidget, TextEdit } from "std-widgets.slint";
 
 export struct MousePos := {
     x: length,
@@ -7,10 +7,9 @@ export struct MousePos := {
 }
 
 App := Window {
-    preferred-width: 1000px;
+    preferred-width: 1200px;
     preferred-height: 800px;
     title: "Volume app";
-    icon: @image-url("../../logo/slint-logo-small-light-128x128.png");
 
     property<image> render_target;
     callback send_rendered_frame();
@@ -22,87 +21,83 @@ App := Window {
 
     callback render_area_pointer_event <=> render_area.pointer-event;
 
-    HorizontalBox {
+    callback load_file <=> load_file_button.clicked;
+    callback load_folder <=> load_folder_button.clicked;
+
+    HorizontalLayout {
+        padding-left: 10px;
         TabWidget {
+            width: 390px;
+            Tab {
+                title: "Load";
+                VerticalLayout {
+                    alignment: start;
+                    padding-top: 20px;
+                    spacing: 10px;
+
+                    load_file_button := Button { 
+                        text: "Load from a file";
+                        
+                    }
+                    load_folder_button := Button { 
+                        text: "Load from a folder";
+                    }
+                }
+            }
             Tab {
                 title: "Controls";
                 VerticalBox {
                     alignment: start;
-                    HorizontalBox {
-                        alignment: start;
-                        GroupBox {
-                            title: "Button";
-
-                            Button {
-                                text: "Regular Button";
-                            }
-                        }
-
-                        GroupBox {
-                            title: "Button with Icon";
-
-                            Button {
-                                text: "Regular Button";
-                                icon: @image-url("thumbsup.png");
-                            }
-                        }
-
-                        GroupBox {
-                            title: "CheckBox";
-                            checkbox := CheckBox {
-                                text: checkbox.checked ? "(checked)" : "(unchecked)";
-                                checked: true;
-                            }
-                        }
-                    }
-
-                    HorizontalBox {
-                        alignment: start;
-                        GroupBox {
-                            title: "SpinBox";
-                            SpinBox {
-                                value: 42;
-                            }
-                        }
-
-                        GroupBox {
-                            title: "ComboBox";
-                            ComboBox {
-                                model: ["Select Something", "From this", "Combobox"];
-                            }
-                        }
-                    }
-
                     GroupBox {
-                        title: "Slider";
+                        title: "x";
                         Slider {
                             minimum: -100;
                             maximum: 100;
-                            value: 42;
+                            value: 0;
                         }
-                    }
-
+                    }   
                     GroupBox {
-                        title: "LineEdit";
-                        LineEdit {
-                            placeholder-text: "Enter some text";
+                        title: "y";
+                        Slider {
+                            minimum: -100;
+                            maximum: 100;
+                            value: 0;
                         }
-                    }
+                    }  
+                    GroupBox {
+                        title: "z";
+                        Slider {
+                            minimum: -100;
+                            maximum: 100;
+                            value: 0;
+                        }
+                    }  
                 }
+            }
+            Tab {
+                title: "Transfer function";
             }
         }
 
-        RenTar := Image {
-            source: root.render_target;
+        VerticalLayout {
+
             width: 700px;
             height: 700px;
-
-            render_area := TouchArea {
-                width: parent.width;
-                height: parent.height;
-
-                moved => {
-                    root.render_area_move_event({ x: self.mouse-x, y: self.mouse-y})
+            padding-top: 50px;
+            padding-bottom: 50px;
+            
+            RenTar := Image {
+                source: root.render_target;
+                max-width: 700px;
+                max-height: 700px;
+                
+                render_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    
+                    moved => {
+                        root.render_area_move_event({ x: self.mouse-x, y: self.mouse-y})
+                    }
                 }
             }
         }

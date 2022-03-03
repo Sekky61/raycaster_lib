@@ -65,6 +65,10 @@ where
         self.render_options = opts;
     }
 
+    pub fn set_render_resolution(&mut self, res: (usize, usize)) {
+        self.render_options.resolution = res;
+    }
+
     pub fn render_to_buffer(&mut self, buffer: &mut [u8]) {
         self.render(buffer);
     }

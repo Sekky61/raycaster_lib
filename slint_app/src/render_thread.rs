@@ -1,15 +1,18 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{point, vector, Vector3};
 use raycaster_lib::{
-    camera::PerspectiveCamera,
+    camera::{Camera, PerspectiveCamera},
     premade::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
     render::{RenderOptions, Renderer},
-    volumetric::LinearVolume,
+    volumetric::{LinearVolume, Volume},
 };
 use slint::re_exports::{PointerEvent, PointerEventButton, PointerEventKind};
 
@@ -44,7 +47,8 @@ impl State {
 #[derive(PartialEq)]
 pub enum RenderThreadMessage {
     StartRendering,
-    ChangeResolution(usize, usize),
+    ChangeResolution((usize, usize)),
+    NewVolume(PathBuf),
     MousePos(MousePos),
     MouseClick(PointerEvent),
     ShutDown,
@@ -116,7 +120,7 @@ impl RenderThread {
 
                 self.notify_frame_rendered();
 
-                let res = self.get_user_input(&mut raycast_renderer.camera);
+                let res = self.get_user_input(&mut raycast_renderer);
                 if res {
                     continue;
                 } else {
@@ -135,7 +139,7 @@ impl RenderThread {
 
     // todo dont use bool
     // todo build translation matrix in different thread, just apply it here and continue rendering
-    fn get_user_input(&mut self, cam: &mut PerspectiveCamera) -> bool {
+    fn get_user_input<V: Volume>(&mut self, ren: &mut Renderer<V, PerspectiveCamera>) -> bool {
         loop {
             let event = self.message_receiver.try_recv();
 
@@ -153,10 +157,11 @@ impl RenderThread {
 
             match event {
                 RenderThreadMessage::StartRendering => self.state.can_start_rendering = true,
-                RenderThreadMessage::ChangeResolution(w, h) => todo!(),
+                RenderThreadMessage::ChangeResolution(res) => ren.set_render_resolution(res),
                 RenderThreadMessage::MouseClick(pe) => self.handle_pointer_event(pe),
-                RenderThreadMessage::MousePos(m) => self.handle_mouse_pos(cam, m),
+                RenderThreadMessage::MousePos(m) => self.handle_mouse_pos(&mut ren.camera, m),
                 RenderThreadMessage::ShutDown => return false,
+                RenderThreadMessage::NewVolume(path) => self.handle_new_volume(ren, path),
             }
         }
     }
@@ -207,5 +212,13 @@ impl RenderThread {
             } => self.state.right_mouse_held = true,
             _ => (),
         }
+    }
+
+    fn handle_new_volume<V: Volume>(
+        &self,
+        ren: &mut Renderer<V, PerspectiveCamera>,
+        path: PathBuf,
+    ) {
+        todo!()
     }
 }

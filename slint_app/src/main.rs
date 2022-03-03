@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use native_dialog::FileDialog;
 use render_thread::{
     RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
 };
@@ -67,6 +68,36 @@ pub fn main() {
     let sender = renderer_sender.clone();
     app.on_render_area_pointer_event(move |pe| {
         sender.send_message(RenderThreadMessage::MouseClick(pe));
+    });
+
+    let sender = renderer_sender.clone();
+    app.on_load_file(move || {
+        let path = FileDialog::new()
+            .set_location(".")
+            .show_open_single_file()
+            .unwrap();
+
+        let path = match path {
+            Some(path) => path,
+            None => return,
+        };
+
+        sender.send_message(RenderThreadMessage::NewVolume(path));
+    });
+
+    let sender = renderer_sender.clone();
+    app.on_load_folder(move || {
+        let path = FileDialog::new()
+            .set_location(".")
+            .show_open_single_dir()
+            .unwrap();
+
+        let path = match path {
+            Some(path) => path,
+            None => return,
+        };
+
+        sender.send_message(RenderThreadMessage::NewVolume(path));
     });
 
     app.show();

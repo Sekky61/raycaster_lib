@@ -9,6 +9,7 @@ slint = "0.2.0"
 nalgebra = "0.29.0"
 raycaster_lib = { path = "../raycaster_lib" }
 crossbeam-channel = "0.5.2"
+native-dialog = "0.6.3"
 
 [build-dependencies]
 slint-build = "0.2.0"
