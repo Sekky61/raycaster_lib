@@ -1,4 +1,6 @@
-use nalgebra::{vector, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
+
+use crate::ray::BoundBox;
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -10,11 +12,9 @@ const BLOCK_OVERLAP: usize = 1;
 const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
 pub struct BlockVolume {
-    position: Vector3<f32>,
+    bound_box: BoundBox,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>,
-    scale: Vector3<f32>,    // shape of voxels
-    vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<Block>,
     tf: TF,
 }
@@ -79,10 +79,6 @@ impl Volume for BlockVolume {
         self.data_size
     }
 
-    fn get_dims(&self) -> Vector3<f32> {
-        self.vol_dims
-    }
-
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
         //let data = self.get_block_data(pos);
 
@@ -124,31 +120,22 @@ impl Volume for BlockVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn is_in(&self, pos: &Point3<f32>) -> bool {
-        self.vol_dims.x > pos.x
-            && self.vol_dims.y > pos.y
-            && self.vol_dims.z > pos.z
-            && pos.x > 0.0
-            && pos.y > 0.0
-            && pos.z > 0.0
-    }
-
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
-    }
-
-    fn get_pos(&self) -> Vector3<f32> {
-        self.position
     }
 
     fn get_tf(&self) -> super::TF {
         self.tf
     }
+
+    fn get_bound_box(&self) -> BoundBox {
+        self.bound_box
+    }
 }
 
 impl BuildVolume<u8> for BlockVolume {
     fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
-        let position = metadata.position.unwrap_or_else(|| vector![0.0, 0.0, 0.0]);
+        let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
@@ -159,6 +146,8 @@ impl BuildVolume<u8> for BlockVolume {
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&scale); // todo workaround
+
+        let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         let mut blocks = vec![];
 
@@ -189,11 +178,9 @@ impl BuildVolume<u8> for BlockVolume {
         );
 
         Ok(BlockVolume {
-            position,
+            bound_box,
             data_size: size,
             block_size,
-            scale,
-            vol_dims,
             data: blocks,
             tf,
         })

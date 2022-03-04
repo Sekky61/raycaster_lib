@@ -1,6 +1,6 @@
 use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
-use crate::ray::Ray;
+use crate::ray::{BoundBox, Ray, ViewportBox};
 
 use super::Camera;
 
@@ -96,5 +96,27 @@ impl Camera for PerspectiveCamera {
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
         Ray::from_3(self.position, dir)
+    }
+
+    fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
+        let mut viewbox = ViewportBox::new();
+
+        for point in bound_box {
+            let v = point - self.position;
+            let n = v.normalize();
+            let neg_n = -n;
+            let neg_dir = -self.direction;
+
+            let den = neg_n.dot(&neg_dir);
+            if den != 0.0 {
+                let t = 1.0 / den;
+                let screen_dir = n * t - self.dir_00;
+                let x = screen_dir.dot(&self.du);
+                let y = screen_dir.dot(&self.dv);
+                viewbox.add_point(x, y);
+            }
+        }
+
+        viewbox
     }
 }

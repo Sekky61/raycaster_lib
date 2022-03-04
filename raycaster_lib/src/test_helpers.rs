@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3};
+use nalgebra::{point, vector, Vector3};
 
 use crate::{
     color::RGBA,
@@ -17,7 +17,7 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
         size: Some(vector![2, 2, 2]),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
         data_offset: Some(0),
-        position: Some(vector![0.0, 0.0, 0.0]),
+        position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
     }
@@ -30,7 +30,7 @@ pub fn empty_vol_meta(dims: Vector3<usize>) -> VolumeMetadata<u8> {
         size: Some(dims),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
         data_offset: Some(0),
-        position: Some(vector![0.0, 0.0, 0.0]),
+        position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
     }

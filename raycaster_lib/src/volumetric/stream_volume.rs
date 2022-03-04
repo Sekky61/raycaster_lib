@@ -1,31 +1,17 @@
 use memmap::Mmap;
-use nalgebra::{vector, Vector3};
+use nalgebra::{point, vector, Vector3};
 
-use crate::volumetric::vol_builder::DataSource;
+use crate::{ray::BoundBox, volumetric::vol_builder::DataSource};
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume, TF};
 
+#[derive(Debug)]
 pub struct StreamVolume {
-    position: Vector3<f32>,
+    bound_box: BoundBox,
     size: Vector3<usize>,
-    border: u32,
-    scale: Vector3<f32>,    // shape of voxels
-    vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     file_map: Mmap,
     map_offset: usize,
     tf: TF,
-}
-
-impl std::fmt::Debug for StreamVolume {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StreamVolume")
-            .field("size", &self.size)
-            .field("border", &self.border)
-            .field("scale", &self.scale)
-            .field("vol_dims", &self.vol_dims)
-            .field("file_map", &self.file_map)
-            .finish()
-    }
 }
 
 impl StreamVolume {
@@ -64,7 +50,7 @@ impl BuildVolume<u8> for StreamVolume {
             return Err("No file mapped");
         };
 
-        let position = metadata.position.unwrap_or_else(|| vector![0.0, 0.0, 0.0]);
+        let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No tf")?;
@@ -72,12 +58,12 @@ impl BuildVolume<u8> for StreamVolume {
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&scale);
+
+        let bound_box = BoundBox::from_position_dims(position, vol_dims);
+
         Ok(StreamVolume {
-            position,
+            bound_box,
             size,
-            border: 0,
-            scale,
-            vol_dims,
             file_map: mmap,
             map_offset,
             tf,
@@ -88,14 +74,6 @@ impl BuildVolume<u8> for StreamVolume {
 impl Volume for StreamVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.size
-    }
-
-    fn get_pos(&self) -> Vector3<f32> {
-        self.position
-    }
-
-    fn get_dims(&self) -> Vector3<f32> {
-        self.vol_dims
     }
 
     fn sample_at(&self, pos: nalgebra::Point3<f32>) -> f32 {
@@ -141,6 +119,10 @@ impl Volume for StreamVolume {
 
     fn get_tf(&self) -> TF {
         self.tf
+    }
+
+    fn get_bound_box(&self) -> BoundBox {
+        self.bound_box
     }
 }
 

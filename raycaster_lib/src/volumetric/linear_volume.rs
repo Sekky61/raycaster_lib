@@ -1,4 +1,6 @@
-use nalgebra::{vector, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
+
+use crate::ray::BoundBox;
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -6,10 +8,8 @@ use super::{
 };
 
 pub struct LinearVolume {
-    position: Vector3<f32>,
+    bound_box: BoundBox, // lower and upper point in world coordinates; lower == position; upper - lower = size
     size: Vector3<usize>,
-    scale: Vector3<f32>,    // shape of voxels
-    vol_dims: Vector3<f32>, // size * scale = resulting size of bounding box ; max of bounding box
     data: Vec<f32>,
     tf: TF,
 }
@@ -17,9 +17,8 @@ pub struct LinearVolume {
 impl std::fmt::Debug for LinearVolume {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Volume")
+            .field("box", &self.bound_box)
             .field("size", &self.size)
-            .field("scale", &self.scale)
-            .field("vol_dims", &self.vol_dims)
             .field("data len ", &self.data.len())
             .finish()
     }
@@ -31,7 +30,6 @@ impl LinearVolume {
     }
 
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
-        //println!("Getting {} {} {}", x, y, z);
         let val = self.data.get(self.get_3d_index(x, y, z));
         match val {
             Some(&v) => v,
@@ -50,10 +48,6 @@ impl LinearVolume {
 }
 
 impl Volume for LinearVolume {
-    fn get_dims(&self) -> Vector3<f32> {
-        self.vol_dims
-    }
-
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
         // todo taky zkusit rozseknout
         let x_low = pos.x as usize;
@@ -71,7 +65,6 @@ impl Volume for LinearVolume {
 
         let first_data = self.get_block_data_half(first_index);
 
-        //let first_data = self.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
 
         let inv_z_t = 1.0 - z_t;
@@ -97,15 +90,6 @@ impl Volume for LinearVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn is_in(&self, pos: &Point3<f32>) -> bool {
-        self.vol_dims.x > pos.x
-            && self.vol_dims.y > pos.y
-            && self.vol_dims.z > pos.z
-            && pos.x > 0.0
-            && pos.y > 0.0
-            && pos.z > 0.0
-    }
-
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
         self.get_3d_data(x, y, z)
     }
@@ -114,12 +98,12 @@ impl Volume for LinearVolume {
         self.size
     }
 
-    fn get_pos(&self) -> Vector3<f32> {
-        self.position
-    }
-
     fn get_tf(&self) -> TF {
         self.tf
+    }
+
+    fn get_bound_box(&self) -> BoundBox {
+        self.bound_box
     }
 }
 
@@ -144,13 +128,13 @@ impl BuildVolume<u8> for LinearVolume {
 
         let vol_dims = size.map(|v| (v - 1) as f32).component_mul(&scale);
 
-        let position = metadata.position.unwrap_or_else(Vector3::zeros);
+        let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
+
+        let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         Ok(LinearVolume {
-            position,
+            bound_box,
             size,
-            scale,
-            vol_dims,
             data,
             tf,
         })

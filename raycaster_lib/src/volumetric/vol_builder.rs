@@ -2,7 +2,7 @@ use std::{fs::File, mem::size_of, path::Path};
 
 use super::TF;
 use memmap::{Mmap, MmapOptions};
-use nalgebra::Vector3;
+use nalgebra::{Point3, Vector3};
 
 // Build Volume this trait is defined on from the metadata object
 // T is the type of sample
@@ -16,7 +16,7 @@ where
 #[derive(Default)]
 pub struct VolumeMetadata<T> {
     // Shape
-    pub position: Option<Vector3<f32>>,
+    pub position: Option<Point3<f32>>,
     pub size: Option<Vector3<usize>>,
     pub scale: Option<Vector3<f32>>, // Shape of cells
     // Data
@@ -33,7 +33,7 @@ impl<T> VolumeMetadata<T> {
         Default::default()
     }
 
-    pub fn set_position(&mut self, position: Vector3<f32>) -> &mut Self {
+    pub fn set_position(&mut self, position: Point3<f32>) -> &mut Self {
         self.position = Some(position);
         self
     }

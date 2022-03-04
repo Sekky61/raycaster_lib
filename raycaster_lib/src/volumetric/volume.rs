@@ -1,5 +1,5 @@
 use super::TF;
-use crate::ray::Ray;
+use crate::ray::{BoundBox, Ray};
 use nalgebra::{vector, Point3, Vector3};
 
 // Volume assumes f32 data
@@ -10,10 +10,14 @@ pub trait Volume {
 
     // get volume position
     // axis aligned, lowest corner
-    fn get_pos(&self) -> Vector3<f32>;
+    fn get_pos(&self) -> Point3<f32> {
+        self.get_bound_box().lower
+    }
 
     // get scaled size
-    fn get_dims(&self) -> Vector3<f32>;
+    fn get_dims(&self) -> Vector3<f32> {
+        self.get_bound_box().dims()
+    }
 
     // get transfer function
     fn get_tf(&self) -> TF;
@@ -51,15 +55,11 @@ pub trait Volume {
         (sample, grad_samples)
     }
 
+    fn get_bound_box(&self) -> BoundBox;
+
     // position is inside volume
     fn is_in(&self, pos: &Point3<f32>) -> bool {
-        let dims = self.get_dims();
-        dims.x > pos.x
-            && dims.y > pos.y
-            && dims.z > pos.z
-            && pos.x > 0.0
-            && pos.y > 0.0
-            && pos.z > 0.0
+        self.get_bound_box().is_in(pos)
     }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
