@@ -1,4 +1,4 @@
-use nalgebra::{point, Point2, Point3, Vector3};
+use nalgebra::{point, Point2, Point3, Vector2, Vector3};
 
 // Todo rename to common / types
 
@@ -98,6 +98,7 @@ impl IntoIterator for BoundBox {
     }
 }
 
+// a 2D range, rectangle described by two points
 pub struct ViewportBox {
     pub lower: Point2<f32>,
     pub upper: Point2<f32>,
@@ -107,8 +108,8 @@ impl ViewportBox {
     // Maximum viewport, flipped
     pub fn new() -> Self {
         Self {
-            lower: point![1.0, 1.0],
-            upper: point![0.0, 0.0],
+            lower: point![f32::INFINITY, f32::INFINITY],
+            upper: point![f32::NEG_INFINITY, f32::NEG_INFINITY],
         }
     }
 
@@ -117,6 +118,16 @@ impl ViewportBox {
         self.upper.y = f32::max(self.upper.y, y);
         self.lower.x = f32::min(self.lower.x, x);
         self.lower.y = f32::min(self.lower.y, y);
+    }
+
+    pub fn size(&self) -> Vector2<f32> {
+        self.upper - self.lower
+    }
+}
+
+impl Default for ViewportBox {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

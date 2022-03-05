@@ -55,7 +55,7 @@ pub trait Volume {
         (sample, grad_samples)
     }
 
-    fn get_bound_box(&self) -> BoundBox;
+    fn get_bound_box(&self) -> BoundBox; // todo ref
 
     // position is inside volume
     fn is_in(&self, pos: &Point3<f32>) -> bool {

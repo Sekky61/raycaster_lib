@@ -32,7 +32,7 @@ impl PerspectiveCamera {
         img_plane_size.x = img_plane_size.y; // * aspect, but aspect is 1.0 right now
 
         let du: Vector3<f32> = img_plane_size.x * direction.cross(&up).normalize();
-        let dv: Vector3<f32> = img_plane_size.y * du.cross(&direction);
+        let dv: Vector3<f32> = img_plane_size.y * du.cross(&direction).normalize();
         let dir_00 = direction - 0.5 * du - 0.5 * dv;
         PerspectiveCamera {
             position,
@@ -107,16 +107,65 @@ impl Camera for PerspectiveCamera {
             let neg_n = -n;
             let neg_dir = -self.direction;
 
+            let dun = self.du.normalize() / self.img_plane_size.x;
+            let dvn = self.dv.normalize() / self.img_plane_size.y;
+
             let den = neg_n.dot(&neg_dir);
             if den != 0.0 {
                 let t = 1.0 / den;
                 let screen_dir = n * t - self.dir_00;
-                let x = screen_dir.dot(&self.du);
-                let y = screen_dir.dot(&self.dv);
+                let x = screen_dir.dot(&dun);
+                let y = screen_dir.dot(&dvn);
                 viewbox.add_point(x, y);
             }
         }
 
         viewbox
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use nalgebra::point;
+
+    use super::*;
+
+    #[test]
+    fn camera_du_dv() {
+        let cam_pos = point![0.0, 0.0, 0.0];
+        let cam_target = point![1.0, 0.0, 0.0];
+        let cam = PerspectiveCamera::new(cam_pos, cam_target - cam_pos);
+
+        assert_eq!(cam.right, vector![0.0, 0.0, 1.0]);
+        assert_eq!(cam.up, vector![0.0, 1.0, 0.0]);
+
+        assert_eq!(cam.du.normalize(), vector![0.0, 0.0, 1.0]);
+        assert_eq!(cam.dv.normalize(), vector![0.0, 1.0, 0.0]);
+
+        assert_eq!(cam.du.z, cam.img_plane_size.x);
+        assert_eq!(cam.dv.y, cam.img_plane_size.y);
+    }
+
+    #[test]
+    fn project_origin() {
+        let cam_pos = point![-10.0, 0.0, 0.0];
+        let cam_target = point![0.0, 0.0, 0.0];
+        let cam = PerspectiveCamera::new(cam_pos, cam_target - cam_pos);
+
+        assert_eq!(cam.direction.normalize(), vector![1.0, 0.0, 0.0]);
+
+        let origin = point![0.0, 0.0, 0.0];
+
+        assert_eq!(cam_pos + 10.0 * cam.direction.normalize(), origin);
+
+        let origin_bbox = BoundBox::new(origin, origin);
+
+        assert_eq!(origin_bbox.lower, point![0.0, 0.0, 0.0]);
+        assert_eq!(origin_bbox.upper, point![0.0, 0.0, 0.0]);
+
+        let projection = cam.project_box(origin_bbox);
+
+        assert_eq!(projection.lower, point![0.5, 0.5]);
     }
 }

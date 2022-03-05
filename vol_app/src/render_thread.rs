@@ -98,7 +98,7 @@ impl RenderThread {
             let volume: LinearVolume =
                 from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
-            let pos = point![300.0, 300.0, 300.0];
+            let pos = point![700.0, 700.0, 700.0];
             let dir = vector![-1.0, -1.0, -1.0];
             let camera = PerspectiveCamera::new(pos, dir);
 
