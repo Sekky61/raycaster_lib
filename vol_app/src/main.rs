@@ -107,5 +107,9 @@ pub fn main() {
     println!("App shutting down");
     renderer_sender.send_message(RenderThreadMessage::ShutDown);
 
-    render_thread_handle.join().unwrap();
+    let join_result = render_thread_handle.join();
+    match join_result {
+        Ok(_) => (),
+        Err(_) => eprintln!("Render thread fialed"),
+    }
 }

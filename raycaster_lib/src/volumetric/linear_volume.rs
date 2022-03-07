@@ -29,11 +29,11 @@ impl LinearVolume {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let val = self.data.get(self.get_3d_index(x, y, z));
         match val {
-            Some(&v) => v,
-            None => 0.0,
+            Some(&v) => Some(v),
+            None => None,
         }
     }
 
@@ -90,7 +90,7 @@ impl Volume for LinearVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         self.get_3d_data(x, y, z)
     }
 

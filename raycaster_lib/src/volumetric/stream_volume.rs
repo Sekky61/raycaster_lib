@@ -5,6 +5,7 @@ use crate::{ray::BoundBox, volumetric::vol_builder::DataSource};
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume, TF};
 
+// todo typed mmap
 #[derive(Debug)]
 pub struct StreamVolume {
     bound_box: BoundBox,
@@ -19,11 +20,13 @@ impl StreamVolume {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
-        //println!("Getting {} {} {}", x, y, z);
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let index = self.map_offset + self.get_3d_index(x, y, z);
         let buf: &[u8] = self.file_map.as_ref();
-        buf[index] as f32
+        match buf.get(index) {
+            Some(v) => Some(*v as f32),
+            None => None,
+        }
     }
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {
@@ -113,7 +116,7 @@ impl Volume for StreamVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         self.get_3d_data(x, y, z)
     }
 

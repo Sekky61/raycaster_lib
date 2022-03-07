@@ -56,8 +56,10 @@ pub fn skull_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
 {
-    // Tests dont use the same cwd, todo: build path from std::env::current_exe()
-    let ds = DataSource::from_file("volumes/Skull.vol").unwrap();
+    let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")); // should be library root (!not workspace dir!)
+    path.push("../volumes/Skull.vol");
+    println!("{:?}", path);
+    let ds = DataSource::from_file(path).unwrap();
     let meta = skull_parser(ds).expect("skull error");
     BuildVolume::build(meta).unwrap()
 }

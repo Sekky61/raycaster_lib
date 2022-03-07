@@ -12,7 +12,7 @@ use raycaster_lib::{
         transfer_functions::skull_tf,
     },
     render::{RenderOptions, Renderer},
-    volumetric::{LinearVolume, Volume},
+    volumetric::{BlockVolume, LinearVolume, Volume},
 };
 use slint::re_exports::{PointerEvent, PointerEventButton, PointerEventKind};
 
@@ -95,7 +95,7 @@ impl RenderThread {
 
     pub fn start(mut self) -> std::thread::JoinHandle<()> {
         std::thread::spawn(move || {
-            let volume: LinearVolume =
+            let volume: BlockVolume =
                 from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
             let pos = point![700.0, 700.0, 700.0];

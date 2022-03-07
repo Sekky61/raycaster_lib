@@ -14,7 +14,7 @@ const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 pub struct BlockVolume {
     bound_box: BoundBox,
     data_size: Vector3<usize>,
-    block_size: Vector3<usize>,
+    block_size: Vector3<usize>, // Number of blocks in structure (.data)
     data: Vec<Block>,
     tf: TF,
 }
@@ -49,9 +49,15 @@ impl BlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
-        self.data[block_index].data[block_offset]
+        match self.data.get(block_index) {
+            Some(b) => match b.data.get(block_offset) {
+                Some(v) => Some(*v),
+                None => None,
+            },
+            None => None,
+        }
     }
 }
 
@@ -120,7 +126,7 @@ impl Volume for BlockVolume {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         self.get_3d_data(x, y, z)
     }
 

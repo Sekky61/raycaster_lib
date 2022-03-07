@@ -24,6 +24,15 @@ mod test {
     use crate::volumetric::LinearVolume;
     use nalgebra::{point, vector};
 
+    fn compare_samples(s1: Option<f32>, s2: Option<f32>) -> bool {
+        match (s1, s2) {
+            (None, None) => true,
+            (None, Some(_)) => false,
+            (Some(_), None) => false,
+            (Some(v1), Some(v2)) => (v1 - v2).abs() < f32::EPSILON,
+        }
+    }
+
     #[test]
     fn linear_block_matches() {
         let linear: LinearVolume = white_volume();
@@ -38,9 +47,8 @@ mod test {
                 for z in 0..vol_size_l.z {
                     let lin_data = linear.get_data(x, y, z);
                     let bl_data = block.get_data(x, y, z);
-                    let dif = (lin_data - bl_data).abs();
 
-                    assert!(dif < f32::EPSILON);
+                    assert!(compare_samples(lin_data, bl_data));
                 }
             }
         }
@@ -60,9 +68,8 @@ mod test {
                 for z in 0..vol_size_l.z {
                     let lin_data = linear.get_data(x, y, z);
                     let bl_data = block.get_data(x, y, z);
-                    let dif = (lin_data - bl_data).abs();
 
-                    assert!(dif < f32::EPSILON);
+                    assert!(compare_samples(lin_data, bl_data));
                 }
             }
         }

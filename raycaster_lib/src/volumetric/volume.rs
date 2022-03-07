@@ -62,7 +62,7 @@ pub trait Volume {
         self.get_bound_box().is_in(pos)
     }
 
-    fn get_data(&self, x: usize, y: usize, z: usize) -> f32;
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32>;
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
         let dims = self.get_dims();
@@ -106,6 +106,8 @@ pub trait Volume {
     }
 }
 
+// Warning: Returns None if block element is outside the volume
+// In other words, returned None option does not necesarily mean the iterator is exhausted
 pub struct VolumeBlockIter<'a, V>
 where
     V: 'a + Volume + ?Sized,
@@ -135,7 +137,7 @@ impl<'a, V: Volume> Iterator for VolumeBlockIter<'a, V> {
 
             self.iter_progress += 1;
 
-            Some(sample)
+            sample
         } else {
             None
         }
