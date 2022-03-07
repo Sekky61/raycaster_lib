@@ -2301,9 +2301,11 @@ name = "raycaster_lib"
 version = "0.2.0"
 dependencies = [
  "criterion",
+ "crossbeam-channel",
  "memmap",
  "nalgebra",
  "nom",
+ "rayon",
 ]
 
 [[package]]

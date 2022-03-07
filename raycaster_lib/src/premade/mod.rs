@@ -28,7 +28,6 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
         resolution: (width, height),
         ray_termination: true,
         empty_index: false,
-        multi_thread: false,
     });
 
     let mut buffer = vec![0; 3 * width * height];

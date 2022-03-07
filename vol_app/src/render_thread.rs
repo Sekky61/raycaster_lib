@@ -108,7 +108,6 @@ impl RenderThread {
                 resolution: (RENDER_WIDTH_U, RENDER_HEIGHT_U),
                 ray_termination: true,
                 empty_index: true,
-                multi_thread: false,
             });
 
             loop {

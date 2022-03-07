@@ -10,7 +10,6 @@ fn render_linear(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: false,
-        multi_thread: false,
     });
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
@@ -29,7 +28,6 @@ fn render_linear_ei(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-        multi_thread: false,
     });
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
@@ -48,7 +46,6 @@ fn render_block(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: false,
-        multi_thread: false,
     });
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
@@ -67,7 +64,6 @@ fn render_block_ei(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-        multi_thread: false,
     });
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];

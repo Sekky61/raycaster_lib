@@ -13,7 +13,6 @@ pub struct RenderOptions {
     pub resolution: (usize, usize),
     pub ray_termination: bool,
     pub empty_index: bool,
-    pub multi_thread: bool,
 }
 
 impl RenderOptions {
@@ -21,13 +20,11 @@ impl RenderOptions {
         resolution: (usize, usize),
         ray_termination: bool,
         empty_index: bool,
-        multi_thread: bool,
     ) -> RenderOptions {
         RenderOptions {
             resolution,
             ray_termination,
             empty_index,
-            multi_thread,
         }
     }
 }
@@ -58,7 +55,6 @@ where
                 resolution: (100, 100), //todo
                 ray_termination: true,
                 empty_index: true,
-                multi_thread: false,
             },
         }
     }

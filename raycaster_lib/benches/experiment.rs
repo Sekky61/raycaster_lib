@@ -12,7 +12,6 @@ fn get_ui_from_usize(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-        multi_thread: false,
     });
 
     c.bench_function("get blocktype from usize position", |b| {
@@ -33,7 +32,6 @@ fn get_ui_from_float(c: &mut Criterion) {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-        multi_thread: false,
     });
 
     c.bench_function("get blocktype from float position", |b| {
