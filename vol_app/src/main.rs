@@ -60,10 +60,13 @@ pub fn main() {
         let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(RENDER_WIDTH, RENDER_HEIGHT);
 
         {
-            let lock = shared_img.lock().unwrap();
-            pixel_buffer
-                .make_mut_bytes()
-                .clone_from_slice(lock.as_slice());
+            let mut lock = shared_img.lock().unwrap();
+            let slice = lock.as_mut_slice();
+            pixel_buffer.make_mut_bytes().clone_from_slice(slice);
+            // TODO measure performance
+            for v in slice {
+                *v = 0;
+            }
             // mutex drop
         }
         state_ref.render_thread_send_message(RenderThreadMessage::StartRendering);

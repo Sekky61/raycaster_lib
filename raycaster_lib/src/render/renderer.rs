@@ -117,6 +117,17 @@ where
 
                 let index = (x + img_w * y) * 3;
 
+                // let render_bound_box = true;
+
+                // if render_bound_box {
+                //     if x == start_x || x == end_x - 1 || y == end_y - 1 || y == start_y {
+                //         buffer[index] = 255;
+                //         buffer[index + 1] = 255;
+                //         buffer[index + 2] = 255;
+                //         continue;
+                //     }
+                // }
+
                 // expects black background
                 buffer[index] = (ray_color.x * opacity) as u8;
                 buffer[index + 1] = (ray_color.y * opacity) as u8;

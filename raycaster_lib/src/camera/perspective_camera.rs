@@ -79,7 +79,7 @@ impl PerspectiveCamera {
         self.up = self.right.cross(&self.direction);
 
         self.du = self.img_plane_size.x * self.direction.cross(&self.up).normalize();
-        self.dv = self.img_plane_size.y * self.du.cross(&self.direction);
+        self.dv = self.img_plane_size.y * self.du.cross(&self.direction).normalize();
         self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
     }
 
