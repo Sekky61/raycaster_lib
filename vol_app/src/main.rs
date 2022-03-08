@@ -1,24 +1,21 @@
 use std::{
-    cell::RefCell,
-    rc::Rc,
     sync::{Arc, Mutex},
     time::Instant,
 };
 
-use nalgebra::{vector, Vector2};
+use nalgebra::vector;
 use native_dialog::FileDialog;
 use render_thread::{
-    RenderThread, RenderThreadMessage, RenderThreadMessageSender, RENDER_HEIGHT, RENDER_HEIGHT_U,
-    RENDER_WIDTH, RENDER_WIDTH_U,
+    RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
 };
-use slint::{
-    re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
-    Image, Rgb8Pixel, SharedPixelBuffer,
-};
+use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer};
+
+use crate::state::State;
 
 slint::include_modules!();
 
 mod render_thread;
+mod state;
 
 /* chybí mousewheel
 // y        ... vertical scroll
@@ -26,91 +23,6 @@ mod render_thread;
 
                 cam.change_pos_view_dir((*y as f32) * 5.0);
 */
-
-pub struct State {
-    pub sender: RenderThreadMessageSender,
-    pub timer: Instant,
-    pub left_mouse_held: bool,
-    pub right_mouse_held: bool,
-    pub mouse: Option<Vector2<f32>>,
-}
-
-impl State {
-    fn new(sender: RenderThreadMessageSender) -> State {
-        State {
-            sender,
-            left_mouse_held: false,
-            right_mouse_held: false,
-            mouse: None,
-            timer: Instant::now(),
-        }
-    }
-
-    fn render_thread_send_message(&self, message: RenderThreadMessage) {
-        self.sender.send_message(message);
-    }
-
-    fn handle_mouse_pos(&mut self, action: MousePos) {
-        // rust-analyzer struggles here because m is of generated type
-        // The type is (f32, f32)
-
-        let drag_diff = if let Some(base) = self.mouse {
-            (action.x - base.x, action.y - base.y)
-        } else {
-            self.mouse = Some(vector![action.x, action.y]);
-            return;
-        };
-
-        self.mouse = Some(vector![action.x, action.y]);
-
-        match (self.left_mouse_held, self.right_mouse_held) {
-            (false, false) => (),
-            (true, false) => {
-                // move on the plane described by camera position and normal
-                let delta = vector![drag_diff.0 * 0.2, drag_diff.1 * 0.2];
-                self.sender
-                    .send_message(RenderThreadMessage::CameraChangePositionPlane(delta));
-            }
-            (false, true) => {
-                // change camera direction
-                let delta = vector![drag_diff.0 * -0.001, drag_diff.1 * -0.001];
-                self.sender
-                    .send_message(RenderThreadMessage::CameraChangeDirection(delta));
-            }
-            (true, true) => {
-                // rotate around origin
-                // TODO
-                // let axisangle = Vector3::y() * (std::f32::consts::FRAC_PI_8 * drag_diff.0);
-                // let rot = nalgebra::Rotation3::new(axisangle);
-
-                // cam.change_pos_matrix(rot);
-            }
-        }
-    }
-
-    fn handle_pointer_event(&mut self, pe: PointerEvent) {
-        self.mouse = None;
-        match pe {
-            PointerEvent {
-                button: PointerEventButton::left,
-                kind: PointerEventKind::up,
-            } => self.left_mouse_held = false,
-            PointerEvent {
-                button: PointerEventButton::left,
-                kind: PointerEventKind::down,
-            } => self.left_mouse_held = true,
-            PointerEvent {
-                button: PointerEventButton::right,
-                kind: PointerEventKind::up,
-            } => self.right_mouse_held = false,
-            PointerEvent {
-                button: PointerEventButton::right,
-                kind: PointerEventKind::down,
-            } => self.right_mouse_held = true,
-            _ => (),
-        }
-    }
-}
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 pub fn main() {
@@ -135,8 +47,7 @@ pub fn main() {
 
     // State
     // Wrapped for access in closures
-    let state = State::new(renderer_sender);
-    let state = Rc::new(RefCell::new(state));
+    let state = State::new_shared(renderer_sender);
 
     // Callback
     // Invoked when new frame is rendered
@@ -168,13 +79,25 @@ pub fn main() {
     // React to mouse move in render area
     let state_clone = state.clone();
     app.on_render_area_move_event(move |mouse_pos| {
-        state_clone.borrow_mut().handle_mouse_pos(mouse_pos);
+        state_clone
+            .borrow_mut()
+            .handle_mouse_pos(vector![mouse_pos.x, mouse_pos.y]);
     });
 
     // React to mouse event (click) in render area
     let state_clone = state.clone();
     app.on_render_area_pointer_event(move |pe| {
         state_clone.borrow_mut().handle_pointer_event(pe);
+    });
+
+    let state_clone = state.clone();
+    app.on_render_key_pressed(move |ke| {
+        let ch = match ke.text.as_str().chars().next() {
+            Some(ch) => ch,
+            None => return EventResult::accept,
+        };
+        state_clone.borrow_mut().handle_key_press(ch);
+        EventResult::accept
     });
 
     let state_clone = state.clone();

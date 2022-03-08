@@ -20,6 +20,7 @@ App := Window {
 
     // Just declaration, body is in Rust code
     callback render_area_move_event(MousePos);
+    callback render_key_pressed <=> render_key_handler.key-pressed;
 
     callback render_area_pointer_event <=> render_area.pointer-event;
 
@@ -109,6 +110,11 @@ App := Window {
                 render_area := TouchArea {
                     width: parent.width;
                     height: parent.height;
+
+                    forward-focus: render_key_handler;
+
+                    render_key_handler := FocusScope {
+                    }
                     
                     moved => {
                         root.render_area_move_event({ x: self.mouse-x, y: self.mouse-y})

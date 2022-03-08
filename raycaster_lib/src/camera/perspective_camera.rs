@@ -61,7 +61,7 @@ impl PerspectiveCamera {
     }
 
     pub fn look_around(&mut self, delta: Vector2<f32>) {
-        self.direction += self.du * delta.x + self.dv * delta.y;
+        self.direction += self.right * delta.x + self.up * delta.y;
         self.recalc_plane();
     }
 
@@ -73,6 +73,7 @@ impl PerspectiveCamera {
     }
 
     fn recalc_plane(&mut self) {
+        self.direction = self.direction.normalize();
         let up = vector![0.0, 1.0, 0.0];
         self.right = self.direction.cross(&up); // todo normalize and unit?
         self.up = self.right.cross(&self.direction);

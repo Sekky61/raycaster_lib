@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector, Rotation3, Vector2, Vector3};
+use nalgebra::{point, vector, Vector2};
 use raycaster_lib::{
     camera::{Camera, PerspectiveCamera},
     premade::{
@@ -14,9 +14,8 @@ use raycaster_lib::{
     render::{RenderOptions, Renderer},
     volumetric::{BlockVolume, LinearVolume, Volume},
 };
-use slint::re_exports::{PointerEvent, PointerEventButton, PointerEventKind};
 
-use crate::{App, MousePos}; // todo
+use crate::App; // todo
 
 pub const RENDER_WIDTH_U: usize = 700;
 pub const RENDER_HEIGHT_U: usize = 700;
@@ -51,6 +50,7 @@ pub enum RenderThreadMessage {
     NewVolume(PathBuf),
     CameraChangePositionPlane(Vector2<f32>),
     CameraChangeDirection(Vector2<f32>),
+    CameraChangePositionInDir(f32),
     ShutDown,
 }
 
@@ -161,6 +161,9 @@ impl RenderThread {
                 RenderThreadMessage::NewVolume(path) => self.handle_new_volume(ren, path),
                 RenderThreadMessage::CameraChangePositionPlane(d) => ren.camera.change_pos_plane(d),
                 RenderThreadMessage::CameraChangeDirection(d) => ren.camera.look_around(d),
+                RenderThreadMessage::CameraChangePositionInDir(d) => {
+                    ren.camera.change_pos_view_dir(d)
+                }
             }
         }
     }
