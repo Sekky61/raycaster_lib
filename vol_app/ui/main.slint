@@ -11,6 +11,8 @@ App := Window {
     preferred-height: 800px;
     title: "Volume app";
 
+    property<int> frame_time;
+
     property<image> render_target;
     callback send_rendered_frame();
 
@@ -26,6 +28,7 @@ App := Window {
 
     HorizontalLayout {
         padding-left: 10px;
+        spacing: 20px;
         TabWidget {
             width: 390px;
             Tab {
@@ -90,6 +93,18 @@ App := Window {
                 source: root.render_target;
                 max-width: 700px;
                 max-height: 700px;
+
+                Rectangle { 
+                    x: 50px; // offset to corner of render screen
+                    y: 0px;
+                    width: 40px;
+                    height: 20px;
+                    Text { 
+                        text: root.frame_time;
+                        font-size: 11pt;
+                        color: red;
+                    }
+                }
                 
                 render_area := TouchArea {
                     width: parent.width;

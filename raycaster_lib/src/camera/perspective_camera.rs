@@ -52,16 +52,16 @@ impl PerspectiveCamera {
         self.position += delta;
     }
 
-    pub fn change_pos_plane(&mut self, x: f32, y: f32) {
-        self.position += x * self.right + y * self.up;
+    pub fn change_pos_plane(&mut self, delta: Vector2<f32>) {
+        self.position += delta.x * self.right + delta.y * self.up;
     }
 
     pub fn change_pos_view_dir(&mut self, delta: f32) {
         self.position += delta * self.direction;
     }
 
-    pub fn look_around(&mut self, x: f32, y: f32) {
-        self.direction += self.du * x + self.dv * y;
+    pub fn look_around(&mut self, delta: Vector2<f32>) {
+        self.direction += self.du * delta.x + self.dv * delta.y;
         self.recalc_plane();
     }
 

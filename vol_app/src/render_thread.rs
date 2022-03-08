@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector, Vector3};
+use nalgebra::{point, vector, Rotation3, Vector2, Vector3};
 use raycaster_lib::{
     camera::{Camera, PerspectiveCamera},
     premade::{
@@ -49,8 +49,8 @@ pub enum RenderThreadMessage {
     StartRendering,
     ChangeResolution((usize, usize)),
     NewVolume(PathBuf),
-    MousePos(MousePos),
-    MouseClick(PointerEvent),
+    CameraChangePositionPlane(Vector2<f32>),
+    CameraChangeDirection(Vector2<f32>),
     ShutDown,
 }
 
@@ -157,59 +157,11 @@ impl RenderThread {
             match event {
                 RenderThreadMessage::StartRendering => self.state.can_start_rendering = true,
                 RenderThreadMessage::ChangeResolution(res) => ren.set_render_resolution(res),
-                RenderThreadMessage::MouseClick(pe) => self.handle_pointer_event(pe),
-                RenderThreadMessage::MousePos(m) => self.handle_mouse_pos(&mut ren.camera, m),
                 RenderThreadMessage::ShutDown => return false,
                 RenderThreadMessage::NewVolume(path) => self.handle_new_volume(ren, path),
+                RenderThreadMessage::CameraChangePositionPlane(d) => ren.camera.change_pos_plane(d),
+                RenderThreadMessage::CameraChangeDirection(d) => ren.camera.look_around(d),
             }
-        }
-    }
-
-    fn handle_mouse_pos(&mut self, cam: &mut PerspectiveCamera, action: MousePos) {
-        // rust-analyzer struggles here because m is of generated type
-        // The type is (f32, f32)
-        let drag_diff = (self.state.mouse_x - action.x, self.state.mouse_y - action.y); // todo reset mouse_xy when click
-        self.state.mouse_x = action.x;
-        self.state.mouse_y = action.y;
-        match (self.state.left_mouse_held, self.state.right_mouse_held) {
-            (false, false) => (),
-            (true, false) => {
-                // move on the plane described by camera position and normal
-                cam.change_pos_plane(drag_diff.0 * 0.2, drag_diff.1 * 0.2);
-            }
-            (false, true) => {
-                // change camera direction
-                cam.look_around(drag_diff.0 * -0.001, drag_diff.1 * -0.001);
-            }
-            (true, true) => {
-                // rotate around origin
-                let axisangle = Vector3::y() * (std::f32::consts::FRAC_PI_8 * drag_diff.0);
-                let rot = nalgebra::Rotation3::new(axisangle);
-
-                cam.change_pos_matrix(rot);
-            }
-        }
-    }
-
-    fn handle_pointer_event(&mut self, pe: PointerEvent) {
-        match pe {
-            PointerEvent {
-                button: PointerEventButton::left,
-                kind: PointerEventKind::up,
-            } => self.state.left_mouse_held = false,
-            PointerEvent {
-                button: PointerEventButton::left,
-                kind: PointerEventKind::down,
-            } => self.state.left_mouse_held = true,
-            PointerEvent {
-                button: PointerEventButton::right,
-                kind: PointerEventKind::up,
-            } => self.state.right_mouse_held = false,
-            PointerEvent {
-                button: PointerEventButton::right,
-                kind: PointerEventKind::down,
-            } => self.state.right_mouse_held = true,
-            _ => (),
         }
     }
 

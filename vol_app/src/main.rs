@@ -1,10 +1,20 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
+use nalgebra::{vector, Vector2};
 use native_dialog::FileDialog;
 use render_thread::{
-    RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
+    RenderThread, RenderThreadMessage, RenderThreadMessageSender, RENDER_HEIGHT, RENDER_HEIGHT_U,
+    RENDER_WIDTH, RENDER_WIDTH_U,
 };
-use slint::{Image, Rgb8Pixel, SharedPixelBuffer};
+use slint::{
+    re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
+    Image, Rgb8Pixel, SharedPixelBuffer,
+};
 
 slint::include_modules!();
 
@@ -15,7 +25,92 @@ mod render_thread;
                 // +1 unit  ... 1 step of wheel down (negative -> scroll up)
 
                 cam.change_pos_view_dir((*y as f32) * 5.0);
-                 */
+*/
+
+pub struct State {
+    pub sender: RenderThreadMessageSender,
+    pub timer: Instant,
+    pub left_mouse_held: bool,
+    pub right_mouse_held: bool,
+    pub mouse: Option<Vector2<f32>>,
+}
+
+impl State {
+    fn new(sender: RenderThreadMessageSender) -> State {
+        State {
+            sender,
+            left_mouse_held: false,
+            right_mouse_held: false,
+            mouse: None,
+            timer: Instant::now(),
+        }
+    }
+
+    fn render_thread_send_message(&self, message: RenderThreadMessage) {
+        self.sender.send_message(message);
+    }
+
+    fn handle_mouse_pos(&mut self, action: MousePos) {
+        // rust-analyzer struggles here because m is of generated type
+        // The type is (f32, f32)
+
+        let drag_diff = if let Some(base) = self.mouse {
+            (action.x - base.x, action.y - base.y)
+        } else {
+            self.mouse = Some(vector![action.x, action.y]);
+            return;
+        };
+
+        self.mouse = Some(vector![action.x, action.y]);
+
+        match (self.left_mouse_held, self.right_mouse_held) {
+            (false, false) => (),
+            (true, false) => {
+                // move on the plane described by camera position and normal
+                let delta = vector![drag_diff.0 * 0.2, drag_diff.1 * 0.2];
+                self.sender
+                    .send_message(RenderThreadMessage::CameraChangePositionPlane(delta));
+            }
+            (false, true) => {
+                // change camera direction
+                let delta = vector![drag_diff.0 * -0.001, drag_diff.1 * -0.001];
+                self.sender
+                    .send_message(RenderThreadMessage::CameraChangeDirection(delta));
+            }
+            (true, true) => {
+                // rotate around origin
+                // TODO
+                // let axisangle = Vector3::y() * (std::f32::consts::FRAC_PI_8 * drag_diff.0);
+                // let rot = nalgebra::Rotation3::new(axisangle);
+
+                // cam.change_pos_matrix(rot);
+            }
+        }
+    }
+
+    fn handle_pointer_event(&mut self, pe: PointerEvent) {
+        self.mouse = None;
+        match pe {
+            PointerEvent {
+                button: PointerEventButton::left,
+                kind: PointerEventKind::up,
+            } => self.left_mouse_held = false,
+            PointerEvent {
+                button: PointerEventButton::left,
+                kind: PointerEventKind::down,
+            } => self.left_mouse_held = true,
+            PointerEvent {
+                button: PointerEventButton::right,
+                kind: PointerEventKind::up,
+            } => self.right_mouse_held = false,
+            PointerEvent {
+                button: PointerEventButton::right,
+                kind: PointerEventKind::down,
+            } => self.right_mouse_held = true,
+            _ => (),
+        }
+    }
+}
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 pub fn main() {
@@ -38,11 +133,18 @@ pub fn main() {
     let renderer_sender = render_thread.get_sender();
     let render_thread_handle = render_thread.start();
 
+    // State
+    // Wrapped for access in closures
+    let state = State::new(renderer_sender);
+    let state = Rc::new(RefCell::new(state));
+
     // Callback
     // Invoked when new frame is rendered
-    let sender = renderer_sender.clone();
+    let state_clone = state.clone();
     app.on_send_rendered_frame(move || {
         let app = app_render.unwrap();
+
+        let mut state_ref = state_clone.borrow_mut();
 
         let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(RENDER_WIDTH, RENDER_HEIGHT);
 
@@ -53,24 +155,29 @@ pub fn main() {
                 .clone_from_slice(lock.as_slice());
             // mutex drop
         }
-        sender.send_message(RenderThreadMessage::StartRendering);
+        state_ref.render_thread_send_message(RenderThreadMessage::StartRendering);
         let image = Image::from_rgb8(pixel_buffer);
         app.set_render_target(image);
+
+        // Frame time
+        let elapsed = state_ref.timer.elapsed();
+        app.set_frame_time(elapsed.as_millis().try_into().unwrap());
+        state_ref.timer = Instant::now();
     });
 
     // React to mouse move in render area
-    let sender = renderer_sender.clone();
+    let state_clone = state.clone();
     app.on_render_area_move_event(move |mouse_pos| {
-        sender.send_message(RenderThreadMessage::MousePos(mouse_pos));
+        state_clone.borrow_mut().handle_mouse_pos(mouse_pos);
     });
 
     // React to mouse event (click) in render area
-    let sender = renderer_sender.clone();
+    let state_clone = state.clone();
     app.on_render_area_pointer_event(move |pe| {
-        sender.send_message(RenderThreadMessage::MouseClick(pe));
+        state_clone.borrow_mut().handle_pointer_event(pe);
     });
 
-    let sender = renderer_sender.clone();
+    let state_clone = state.clone();
     app.on_load_file(move || {
         let path = FileDialog::new()
             .set_location(".")
@@ -82,10 +189,12 @@ pub fn main() {
             None => return,
         };
 
-        sender.send_message(RenderThreadMessage::NewVolume(path));
+        state_clone
+            .borrow_mut()
+            .render_thread_send_message(RenderThreadMessage::NewVolume(path));
     });
 
-    let sender = renderer_sender.clone();
+    let state_clone = state.clone();
     app.on_load_folder(move || {
         let path = FileDialog::new()
             .set_location(".")
@@ -97,7 +206,9 @@ pub fn main() {
             None => return,
         };
 
-        sender.send_message(RenderThreadMessage::NewVolume(path));
+        state_clone
+            .borrow_mut()
+            .render_thread_send_message(RenderThreadMessage::NewVolume(path));
     });
 
     app.show();
@@ -105,7 +216,9 @@ pub fn main() {
     app.hide();
 
     println!("App shutting down");
-    renderer_sender.send_message(RenderThreadMessage::ShutDown);
+    state
+        .borrow_mut()
+        .render_thread_send_message(RenderThreadMessage::ShutDown);
 
     let join_result = render_thread_handle.join();
     match join_result {
