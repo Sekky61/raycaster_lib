@@ -22,6 +22,10 @@ App := Window {
     callback render_area_move_event(MousePos);
     callback render_key_pressed <=> render_key_handler.key-pressed;
 
+    callback x_slider_new_value <=> x_slider.changed; // float
+    callback y_slider_new_value <=> y_slider.changed; // float
+    callback z_slider_new_value <=> z_slider.changed; // float
+
     callback render_area_pointer_event <=> render_area.pointer-event;
 
     callback load_file <=> load_file_button.clicked;
@@ -54,25 +58,25 @@ App := Window {
                     alignment: start;
                     GroupBox {
                         title: "x";
-                        Slider {
-                            minimum: -100;
-                            maximum: 100;
+                        x_slider := Slider {
+                            minimum: -1000;
+                            maximum: 1000;
                             value: 0;
                         }
                     }   
                     GroupBox {
                         title: "y";
-                        Slider {
-                            minimum: -100;
-                            maximum: 100;
+                        y_slider := Slider {
+                            minimum: -1000;
+                            maximum: 1000;
                             value: 0;
                         }
                     }  
                     GroupBox {
                         title: "z";
-                        Slider {
-                            minimum: -100;
-                            maximum: 100;
+                        z_slider := Slider {
+                            minimum: -1000;
+                            maximum: 1000;
                             value: 0;
                         }
                     }  

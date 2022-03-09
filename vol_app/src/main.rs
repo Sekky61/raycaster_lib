@@ -137,6 +137,15 @@ pub fn main() {
             .render_thread_send_message(RenderThreadMessage::NewVolume(path));
     });
 
+    let state_clone = state.clone();
+    app.on_x_slider_new_value(move |f| state_clone.borrow_mut().slider_event(0, f));
+
+    let state_clone = state.clone();
+    app.on_y_slider_new_value(move |f| state_clone.borrow_mut().slider_event(1, f));
+
+    let state_clone = state.clone();
+    app.on_z_slider_new_value(move |f| state_clone.borrow_mut().slider_event(2, f));
+
     app.show();
     slint::run_event_loop();
     app.hide();

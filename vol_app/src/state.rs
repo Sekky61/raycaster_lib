@@ -1,12 +1,13 @@
 use std::{cell::RefCell, rc::Rc, time::Instant};
 
 use crate::render_thread::{RenderThreadMessage, RenderThreadMessageSender};
-use nalgebra::{vector, Vector2};
+use nalgebra::{vector, Vector2, Vector3};
 use slint::re_exports::{PointerEvent, PointerEventButton, PointerEventKind};
 
 pub struct State {
     pub sender: RenderThreadMessageSender,
     pub timer: Instant,
+    pub slider: Vector3<f32>,
     pub left_mouse_held: bool,
     pub right_mouse_held: bool,
     pub mouse: Option<Vector2<f32>>,
@@ -20,6 +21,7 @@ impl State {
             right_mouse_held: false,
             mouse: None,
             timer: Instant::now(),
+            slider: Default::default(),
         }
     }
 
@@ -30,6 +32,29 @@ impl State {
 
     pub fn render_thread_send_message(&self, message: RenderThreadMessage) {
         self.sender.send_message(message);
+    }
+
+    pub fn slider_event(&mut self, slider_id: u8, slider: f32) {
+        let delta = match slider_id {
+            0 => {
+                let res = vector![slider - self.slider.x, 0.0, 0.0];
+                self.slider.x = slider;
+                res
+            }
+            1 => {
+                let res = vector![0.0, slider - self.slider.y, 0.0];
+                self.slider.y = slider;
+                res
+            }
+            2 => {
+                let res = vector![0.0, 0.0, slider - self.slider.z];
+                self.slider.z = slider;
+                res
+            }
+            _ => panic!("Bad slider id, todo enum"),
+        };
+        self.sender
+            .send_message(RenderThreadMessage::CameraChangePositionOrtho(delta));
     }
 
     pub fn handle_mouse_pos(&mut self, action: Vector2<f32>) {

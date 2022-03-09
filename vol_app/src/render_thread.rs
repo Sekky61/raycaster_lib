@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector, Vector2};
+use nalgebra::{point, vector, Vector2, Vector3};
 use raycaster_lib::{
     camera::{Camera, PerspectiveCamera},
     premade::{
@@ -48,6 +48,7 @@ pub enum RenderThreadMessage {
     StartRendering,
     ChangeResolution((usize, usize)),
     NewVolume(PathBuf),
+    CameraChangePositionOrtho(Vector3<f32>),
     CameraChangePositionPlane(Vector2<f32>),
     CameraChangeDirection(Vector2<f32>),
     CameraChangePositionInDir(f32),
@@ -164,6 +165,7 @@ impl RenderThread {
                 RenderThreadMessage::CameraChangePositionInDir(d) => {
                     ren.camera.change_pos_view_dir(d)
                 }
+                RenderThreadMessage::CameraChangePositionOrtho(d) => ren.camera.change_pos(d),
             }
         }
     }
