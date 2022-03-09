@@ -1,6 +1,6 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::ray::BoundBox;
+use crate::common::BoundBox;
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -146,10 +146,8 @@ mod test {
 
     use nalgebra::{point, vector};
 
-    use crate::ray::Ray;
-
     use super::*;
-    use crate::test_helpers::*;
+    use crate::{common::Ray, test_helpers::*};
 
     #[test]
     fn intersect_works() {

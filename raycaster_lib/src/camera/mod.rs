@@ -2,7 +2,7 @@ mod perspective_camera;
 
 pub use perspective_camera::PerspectiveCamera;
 
-use crate::ray::{BoundBox, Ray, ViewportBox};
+use crate::common::{BoundBox, Ray, ViewportBox};
 
 pub trait Camera {
     // pixel_coord: normalized pixel coords. Range <0;1>^2

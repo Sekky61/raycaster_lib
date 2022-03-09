@@ -1,7 +1,7 @@
 use memmap::Mmap;
 use nalgebra::{point, vector, Vector3};
 
-use crate::{ray::BoundBox, volumetric::vol_builder::DataSource};
+use crate::{common::BoundBox, volumetric::vol_builder::DataSource};
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume, TF};
 
@@ -133,8 +133,6 @@ impl Volume for StreamVolume {
 mod test {
 
     use super::*;
-
-    use crate::ray::Ray;
     use nalgebra::{point, vector};
 
     #[test]

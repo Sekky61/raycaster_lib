@@ -1,5 +1,6 @@
+use crate::common::{BoundBox, Ray};
+
 use super::TF;
-use crate::ray::{BoundBox, Ray};
 use nalgebra::{vector, Point3, Vector3};
 
 // Volume assumes f32 data

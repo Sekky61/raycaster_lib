@@ -1,6 +1,6 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::ray::BoundBox;
+use crate::common::{BoundBox, ValueRange};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -62,12 +62,19 @@ impl BlockVolume {
 }
 
 pub struct Block {
+    value_range: ValueRange,
+    bound_box: BoundBox,
     data: [f32; BLOCK_DATA_LEN],
 }
 
 impl Block {
-    pub fn from_data(data: [f32; BLOCK_DATA_LEN]) -> Block {
-        Block { data }
+    pub fn from_data(data: [f32; BLOCK_DATA_LEN], bound_box: BoundBox) -> Block {
+        let value_range = ValueRange::new();
+        Block {
+            data,
+            bound_box,
+            value_range,
+        }
     }
 
     fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
@@ -195,6 +202,7 @@ impl BuildVolume<u8> for BlockVolume {
 
 // todo redo
 pub fn get_block(data: &[u8], size: Vector3<usize>, x: usize, y: usize, z: usize) -> Block {
+    let bbox = BoundBox::from_position_dims(point![0.0, 0.0, 0.0], vector![1.0, 1.0, 1.0]);
     let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
@@ -211,7 +219,7 @@ pub fn get_block(data: &[u8], size: Vector3<usize>, x: usize, y: usize, z: usize
             }
         }
     }
-    Block::from_data(v)
+    Block::from_data(v, bbox)
 }
 
 fn get_3d_index(size: Vector3<usize>, x: usize, y: usize, z: usize) -> usize {

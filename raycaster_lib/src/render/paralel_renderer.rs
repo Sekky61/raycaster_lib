@@ -1,7 +1,7 @@
 use crossbeam_channel::{Receiver, Sender};
 use rayon::ThreadPool;
 
-use crate::{camera::PerspectiveCamera, ray::ViewportBox, volumetric::BlockVolume};
+use crate::{camera::PerspectiveCamera, volumetric::BlockVolume};
 
 use super::RenderOptions;
 

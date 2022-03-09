@@ -1,6 +1,6 @@
 use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
-use crate::ray::{BoundBox, Ray, ViewportBox};
+use crate::common::{BoundBox, Ray, ViewportBox};
 
 use super::Camera;
 

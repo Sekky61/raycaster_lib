@@ -4,7 +4,7 @@ use nalgebra::{point, vector, Point3, Vector3, Vector4};
 
 use crate::{
     camera::Camera,
-    ray::Ray,
+    common::Ray,
     volumetric::{BlockType, EmptyIndex, Volume},
 };
 

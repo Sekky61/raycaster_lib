@@ -1,7 +1,7 @@
 pub mod camera;
 pub mod color;
+mod common;
 pub mod premade;
-mod ray;
 pub mod render;
 pub mod test_helpers;
 pub mod volumetric;
