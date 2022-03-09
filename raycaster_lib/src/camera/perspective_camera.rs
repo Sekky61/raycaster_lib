@@ -48,6 +48,28 @@ impl PerspectiveCamera {
         }
     }
 
+    // In degrees
+    pub fn change_fov(&mut self, vertical_fov: f32) {
+        self.fov_y = vertical_fov;
+        self.recalc_plane_size();
+        self.recalc_dudv();
+    }
+
+    // W/H ... for example 1.7777 for 16:9
+    pub fn change_aspect(&mut self, aspect_ratio: f32) {
+        self.aspect = aspect_ratio;
+        self.recalc_plane_size();
+        self.recalc_dudv();
+    }
+
+    pub fn set_pos(&mut self, pos: Point3<f32>) {
+        self.position = pos;
+    }
+
+    pub fn set_direction(&mut self, direction: Vector3<f32>) {
+        self.direction = direction.normalize();
+    }
+
     pub fn change_pos(&mut self, delta: Vector3<f32>) {
         self.position += delta;
     }
@@ -72,23 +94,31 @@ impl PerspectiveCamera {
         self.recalc_plane();
     }
 
+    // Call when camera direction changed
     fn recalc_plane(&mut self) {
         self.direction = self.direction.normalize();
+        self.recalc_up_right();
+        self.recalc_dudv();
+    }
+
+    // Call when camera direction changed
+    fn recalc_up_right(&mut self) {
         let up = vector![0.0, 1.0, 0.0];
         self.right = self.direction.cross(&up); // todo normalize and unit?
         self.up = self.right.cross(&self.direction);
+    }
 
+    // Call when fov or aspect ratio changed
+    fn recalc_plane_size(&mut self) {
+        self.img_plane_size = vector![0.0, 2.0 * f32::tan(f32::to_radians(0.5 * self.fov_y))];
+        self.img_plane_size.x = self.img_plane_size.y * self.aspect;
+    }
+
+    // Call when direction changed
+    fn recalc_dudv(&mut self) {
         self.du = self.img_plane_size.x * self.direction.cross(&self.up).normalize();
         self.dv = self.img_plane_size.y * self.du.cross(&self.direction).normalize();
         self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
-    }
-
-    pub fn set_pos(&mut self, pos: Point3<f32>) {
-        self.position = pos;
-    }
-
-    pub fn set_direction(&mut self, direction: Vector3<f32>) {
-        self.direction = direction.normalize();
     }
 }
 
@@ -122,6 +152,11 @@ impl Camera for PerspectiveCamera {
         }
 
         viewbox
+    }
+
+    fn box_distance(&self, bound_box: &BoundBox) -> f32 {
+        let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower);
+        (center - self.position).magnitude()
     }
 }
 
@@ -168,5 +203,23 @@ mod test {
         let projection = cam.project_box(origin_bbox);
 
         assert_eq!(projection.lower, point![0.5, 0.5]);
+    }
+
+    #[test]
+    fn box_distance() {
+        let cam_pos = point![-1.0, 0.5, 0.5];
+        let cam_target = point![0.0, 0.0, 0.0];
+        let cam = PerspectiveCamera::new(cam_pos, cam_target - cam_pos);
+
+        let lower = point![0.0, 0.0, 0.0];
+        let upper = point![1.0, 1.0, 1.0];
+
+        let origin_bbox = BoundBox::new(lower, upper);
+
+        let distance = cam.box_distance(&origin_bbox);
+
+        dbg!(distance);
+
+        assert!((distance - 1.5).abs() < f32::EPSILON);
     }
 }

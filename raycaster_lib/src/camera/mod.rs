@@ -1,6 +1,5 @@
 mod perspective_camera;
 
-use nalgebra::{point, Point2, Point3};
 pub use perspective_camera::PerspectiveCamera;
 
 use crate::ray::{BoundBox, Ray, ViewportBox};
@@ -12,4 +11,5 @@ pub trait Camera {
     fn project_box(&self, bound_box: BoundBox) -> ViewportBox;
 
     // todo fn box_distance ?
+    fn box_distance(&self, bound_box: &BoundBox) -> f32;
 }

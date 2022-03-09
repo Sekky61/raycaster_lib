@@ -62,6 +62,7 @@ pub trait Volume {
         self.get_bound_box().is_in(pos)
     }
 
+    // For building and tests, mostly
     fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32>;
 
     fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
