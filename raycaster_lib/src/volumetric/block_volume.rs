@@ -39,6 +39,7 @@ impl BlockVolume {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
+        //assert_ne!(jump_per_block, 0);
         let block_offset = (z % jump_per_block)
             + (y % jump_per_block) * BLOCK_SIDE
             + (x % jump_per_block) * BLOCK_SIDE * BLOCK_SIDE;
@@ -52,10 +53,7 @@ impl BlockVolume {
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
         match self.data.get(block_index) {
-            Some(b) => match b.data.get(block_offset) {
-                Some(v) => Some(*v),
-                None => None,
-            },
+            Some(b) => b.data.get(block_offset).copied(),
             None => None,
         }
     }
@@ -69,7 +67,7 @@ pub struct Block {
 
 impl Block {
     pub fn from_data(data: [f32; BLOCK_DATA_LEN], bound_box: BoundBox) -> Block {
-        let value_range = ValueRange::new();
+        let value_range = ValueRange::from_iter(&data);
         Block {
             data,
             bound_box,
@@ -155,7 +153,6 @@ impl BuildVolume<u8> for BlockVolume {
         let offset = metadata.data_offset.unwrap_or(0);
         let tf = metadata.tf.ok_or("No transfer function")?;
 
-        // todo fix
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&scale); // todo workaround
@@ -165,23 +162,21 @@ impl BuildVolume<u8> for BlockVolume {
         let mut blocks = vec![];
 
         let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
+        let block_size = size.map(|v| (v / step_size) as usize);
 
         let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
         for x in (0..size.x).step_by(step_size) {
             for y in (0..size.y).step_by(step_size) {
                 for z in (0..size.z).step_by(step_size) {
-                    let block = get_block(slice, size, x, y, z);
+                    let block_start = point![x, y, z];
+                    let block_data = get_block_data(slice, size, block_start);
+                    let block_bound_box = get_bound_box(position, scale, block_size, block_start);
+                    let block = Block::from_data(block_data, block_bound_box);
                     blocks.push(block);
                 }
             }
         }
-
-        let block_size = vector![
-            (size.x / step_size) as usize,
-            (size.y / step_size) as usize,
-            (size.z / step_size) as usize
-        ];
 
         println!(
             "Built {} blocks of dims {} {}",
@@ -200,28 +195,48 @@ impl BuildVolume<u8> for BlockVolume {
     }
 }
 
+fn get_bound_box(
+    vol_position: Point3<f32>,
+    vol_scale: Vector3<f32>,
+    block_size: Vector3<usize>,
+    block_start: Point3<usize>,
+) -> BoundBox {
+    let block_lower = vector![
+        block_start.x as f32,
+        block_start.y as f32,
+        block_start.z as f32
+    ];
+    let block_pos = vol_position + block_lower.component_mul(&vol_scale);
+    let block_dims =
+        vector![BLOCK_SIDE as f32, BLOCK_SIDE as f32, BLOCK_SIDE as f32].component_mul(&vol_scale);
+
+    BoundBox::from_position_dims(block_pos, block_dims)
+}
+
 // todo redo
-pub fn get_block(data: &[u8], size: Vector3<usize>, x: usize, y: usize, z: usize) -> Block {
-    let bbox = BoundBox::from_position_dims(point![0.0, 0.0, 0.0], vector![1.0, 1.0, 1.0]);
-    let mut v = [0.0; BLOCK_DATA_LEN]; // todo push
+pub fn get_block_data(
+    volume: &[u8],
+    size: Vector3<usize>,
+    block_start: Point3<usize>,
+) -> [f32; BLOCK_DATA_LEN] {
+    let mut data = [0.0; BLOCK_DATA_LEN]; // todo background value
     let mut ptr = 0;
     for off_x in 0..BLOCK_SIDE {
         for off_y in 0..BLOCK_SIDE {
             for off_z in 0..BLOCK_SIDE {
-                if x + off_x >= size.x || y + off_y >= size.y || z + off_z >= size.z {
-                    v[ptr] = 0.0; // todo inefficient
-                } else {
-                    let index = get_3d_index(size, x + off_x, y + off_y, z + off_z);
-                    let value = data[index];
-                    v[ptr] = value as f32;
+                let pos = block_start + vector![off_x, off_y, off_z];
+                if pos.x < size.x && pos.y < size.y && pos.z < size.z {
+                    let index = get_3d_index(size, pos);
+                    let value = volume[index];
+                    data[ptr] = value as f32;
                 }
                 ptr += 1;
             }
         }
     }
-    Block::from_data(v, bbox)
+    data
 }
 
-fn get_3d_index(size: Vector3<usize>, x: usize, y: usize, z: usize) -> usize {
-    z + y * size.z + x * size.y * size.z
+fn get_3d_index(size: Vector3<usize>, pos: Point3<usize>) -> usize {
+    pos.z + pos.y * size.z + pos.x * size.y * size.z
 }
