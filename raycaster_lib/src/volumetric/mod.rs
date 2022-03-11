@@ -6,7 +6,7 @@ mod vol_builder;
 mod volume;
 
 pub use crate::color::RGBA;
-pub use block_volume::BlockVolume;
+pub use block_volume::{Block, BlockVolume};
 pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
@@ -14,7 +14,7 @@ pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, VolumeMetadata};
 pub use volume::Volume;
 
-pub type TF = fn(f32) -> RGBA;
+pub type TF = fn(f32) -> RGBA; // todo tf module, with trait
 
 #[cfg(test)]
 mod test {

@@ -15,7 +15,7 @@ pub struct BlockVolume {
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    data: Vec<Block>,
+    pub data: Vec<Block>,
     tf: TF,
 }
 
@@ -60,9 +60,9 @@ impl BlockVolume {
 }
 
 pub struct Block {
-    value_range: ValueRange,
-    bound_box: BoundBox,
-    data: [f32; BLOCK_DATA_LEN],
+    pub value_range: ValueRange,
+    pub bound_box: BoundBox,
+    pub data: [f32; BLOCK_DATA_LEN],
 }
 
 impl Block {
