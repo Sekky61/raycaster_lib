@@ -1,7 +1,8 @@
 use std::{cmp::min, collections::BinaryHeap, ops::Range, thread::JoinHandle};
 
+use crossbeam::thread::{Scope, ScopedJoinHandle};
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{Vector3, Vector4};
+use nalgebra::{point, vector, Vector3, Vector4};
 use rayon::ThreadPool;
 
 use crate::{
@@ -12,13 +13,9 @@ use crate::{
 
 use super::RenderOptions;
 
-pub struct OpacityDataRequest {
+pub struct OpacityRequest {
     order: usize, // distance from the camera
     pixel_range: (Range<usize>, Range<usize>),
-}
-
-pub enum RenderWorkerMessage {
-    Finish,
 }
 
 pub struct SubRenderResult {
@@ -27,36 +24,26 @@ pub struct SubRenderResult {
     opacities: Vec<f32>,
 }
 
-pub struct RenderThreadHandle {
-    pub handle: JoinHandle<()>,
-    pub sender: Sender<RenderWorkerMessage>,
-    pub receiver: Receiver<RenderWorkerMessage>,
+pub struct OpacityData {
+    start_pixel: usize, // offset of lowest pixel
+    width: usize,
+    opacities: Vec<f32>,
 }
 
-impl RenderThreadHandle {
-    pub fn new(
-        handle: JoinHandle<()>,
-        sender: Sender<RenderWorkerMessage>,
-        receiver: Receiver<RenderWorkerMessage>,
-    ) -> Self {
-        Self {
-            handle,
-            sender,
-            receiver,
-        }
-    }
+pub enum ToCompositorMsg {
+    OpacityRequest(OpacityRequest),
+    RenderResult(SubRenderResult),
+    Finish,
+}
 
-    pub fn join(self) {
-        self.handle.join().unwrap()
-    }
+pub struct ToRendererMsg {
+    opacity: OpacityData,
 }
 
 pub struct ParalelRenderer {
     volume: BlockVolume,
     camera: PerspectiveCamera,
     render_options: RenderOptions,
-    compositors: [JoinHandle<()>; 4],
-    renderers: [RenderThreadHandle; 4],
 }
 
 impl ParalelRenderer {
@@ -65,56 +52,135 @@ impl ParalelRenderer {
         camera: PerspectiveCamera,
         render_options: RenderOptions,
     ) -> ParalelRenderer {
-        // Send to compositor, compositor recieves message
-        let ren_to_comp = [
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-        ];
-        let compositor_send = [
-            ren_to_comp[0].0,
-            ren_to_comp[1].0,
-            ren_to_comp[2].0,
-            ren_to_comp[3].0,
-        ];
-        // Send to renderer, renderer recieves message
-        let comp_to_ren = [
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-            crossbeam_channel::unbounded(),
-        ];
-
-        for i in 0..4 {
-            // Create render thread
-            // Move these to thread
-            let ren_to_comp_send = ren_to_comp[i].0;
-            let comp_to_ren_recv = comp_to_ren[i].1;
-
-            // Channel associated with this renderer
-            let (sender, receiver) = comp_to_ren[i];
-            let x = RenderThreadHandle::new(
-                std::thread::spawn(move || {
-                    println!("deez {i}");
-                    let all_compositors = ren_to_comp;
-                }),
-                sender,
-                receiver,
-            );
-        }
-
         ParalelRenderer {
             volume,
             camera,
             render_options,
-            compositors,
-            renderers,
-            channel,
         }
     }
 
-    pub fn render(&mut self, buffer: &mut [u8]) {
+    pub fn start_rendering(mut self) -> JoinHandle<()> {
+        std::thread::spawn(move || {
+            // Scope assures threads will be joined before exiting the scope
+            crossbeam::scope(|s| {
+                let volume = &self.volume;
+
+                // inlined function because borrow checker defeated me (scope cannot leave closure)
+                let (render_handles, comp_handles) = {
+                    // Send to compositor, compositor recieves message
+                    let ren_to_comp = [
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                    ];
+                    let compositor_send: [Sender<ToCompositorMsg>; 4] = [
+                        ren_to_comp[0].0.clone(),
+                        ren_to_comp[1].0.clone(),
+                        ren_to_comp[2].0.clone(),
+                        ren_to_comp[3].0.clone(),
+                    ];
+                    // Send to renderer, renderer recieves message
+                    let comp_to_ren = [
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                    ];
+                    let renderer_send: [Sender<ToRendererMsg>; 4] = [
+                        comp_to_ren[0].0.clone(),
+                        comp_to_ren[1].0.clone(),
+                        comp_to_ren[2].0.clone(),
+                        comp_to_ren[3].0.clone(),
+                    ];
+
+                    let mut renderers = Vec::with_capacity(4);
+                    let mut compositors = Vec::with_capacity(4);
+
+                    for i in 0..4 {
+                        // Create render thread
+                        let receiver = comp_to_ren[i].1.clone(); // Receiver
+                        let all_compositors = compositor_send.clone();
+                        let blocks_ref = &volume.data[..];
+                        let handle = s.spawn(move |_| {
+                            println!("Started renderer {i}");
+                            // Force move into closure
+                            let renderer_id = i;
+                            let all_compositors = all_compositors; // Senders for all compositors
+                            let message_receiver = receiver;
+                            let blocks_ref = blocks_ref;
+
+                            loop {
+
+                                // Wait for task from master thread or finish call
+
+                                // Get data from compositers
+
+                                // Render task
+
+                                // give data to compositers
+                            }
+                        });
+
+                        renderers.push(handle);
+                    }
+
+                    for i in 0..4 {
+                        // Create compositor thread
+                        let receiver = ren_to_comp[i].1.clone(); // Receiver
+                        let all_renderers = renderer_send.clone();
+                        let blocks_ref = &volume.data[..];
+                        let handle = s.spawn(move |_| {
+                            println!("Started compositor {i}");
+                            // Force move into closure
+                            let compositor_id = i;
+                            let all_renderers = all_renderers; // Senders for all compositors
+                            let message_receiver = receiver;
+                            let blocks_ref = blocks_ref;
+
+                            // Subcanvas
+                            let subcanvas_size = (0, 0);
+                            let subcanvas_items = subcanvas_size.0 * subcanvas_size.1;
+                            let subcanvas_rgb = vec![Vector3::<f32>::zeros(); subcanvas_items]; // todo RGB
+                            let subcanvas_opacity = vec![0.0; subcanvas_items];
+
+                            // Calculate which subvolumes appear in my subcanvas
+                            // Also calculate expected order of subvolumes
+
+                            loop {
+                                // Receive requests
+
+                                // Send opacity / store subrender / finish
+
+                                // Finally convert to RGB bytes and send to master thread for output
+
+                                // Wait for wakeup call or finish call
+                            }
+                        });
+
+                        compositors.push(handle);
+                    }
+
+                    (renderers, compositors)
+                };
+
+                let (width, height) = self.render_options.resolution;
+
+                loop {
+                    // Gather input
+
+                    // Render
+                    let mut buffer = vec![0u8; 3 * width * height];
+                    self.render(&mut buffer[..]);
+
+                    // Send result
+                }
+            })
+            .unwrap();
+        })
+    }
+
+    pub fn render(&self, buffer: &mut [u8]) {
         let resolution = self.render_options.resolution;
 
         // get subvolume distances
@@ -125,23 +191,17 @@ impl ParalelRenderer {
         }
         block_order.sort_unstable_by(|i1, i2| i1.1.partial_cmp(&i2.1).unwrap());
 
-        // New canvas
-        let num_of_pixels = resolution.0 * resolution.1;
-        let color_canvas = vec![Vector3::<f32>::zeros(); num_of_pixels];
-        let opacity_canvas = vec![0.0f32; num_of_pixels];
-
-        // Divide canvas
-        let compositers_count = self.compositors.current_num_threads();
-        assert_eq!(compositers_count, 4);
-        let halfpoint = (resolution.0 / 2, resolution.1 / 2);
-
         // Send rendering tasks
+        //
+        // Sent in order of camera distance (asc)
+        // for Load balancing
         for (block_id, distance) in block_order {
             let block = &self.volume.data[block_id];
-            self.renderers.install(move || {
-                let block_ref = block;
-            })
+
+            // Find out if block is empty
         }
+
+        // Get subcanvases from compositors and save them to buffer
     }
 
     fn render_block(&mut self, block: &Block) -> SubRenderResult {
@@ -157,6 +217,8 @@ impl ParalelRenderer {
         let (x_range, y_range) = self.get_pixel_range(vpb);
 
         // Request opacity data
+        let mut colors = vec![];
+        let mut opacities = vec![];
 
         for y in y_range {
             let y_norm = y as f32 * step_y;
@@ -173,8 +235,12 @@ impl ParalelRenderer {
                 // Add to opacity buffer
             }
         }
-
-        SubRenderResult { colors, opacities }
+        let width = x_range.end - x_range.start;
+        SubRenderResult {
+            width,
+            colors,
+            opacities,
+        }
     }
 
     fn get_pixel_range(&self, tile: ViewportBox) -> (Range<usize>, Range<usize>) {
