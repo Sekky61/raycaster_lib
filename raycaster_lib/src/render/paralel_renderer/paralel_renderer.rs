@@ -1,51 +1,18 @@
 use std::{
-    cell::RefCell,
-    cmp::min,
-    collections::BinaryHeap,
-    ops::Range,
     sync::{Arc, RwLock},
     thread::JoinHandle,
 };
 
-use crossbeam::thread::{Scope, ScopedJoinHandle};
-use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector, Vector3, Vector4};
-use rayon::ThreadPool;
+use crossbeam_channel::Sender;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::{Ray, ViewportBox},
-    volumetric::{Block, BlockVolume},
+    render::RenderOptions,
+    volumetric::BlockVolume,
 };
 
-use super::RenderOptions;
-
-pub struct OpacityRequest {
-    order: usize, // distance from the camera
-    pixel_range: (Range<usize>, Range<usize>),
-}
-
-pub struct SubRenderResult {
-    width: usize,
-    colors: Vec<Vector3<f32>>,
-    opacities: Vec<f32>,
-}
-
-pub struct OpacityData {
-    start_pixel: usize, // offset of lowest pixel
-    width: usize,
-    opacities: Vec<f32>,
-}
-
-pub enum ToCompositorMsg {
-    OpacityRequest(OpacityRequest),
-    RenderResult(SubRenderResult),
-    Finish,
-}
-
-pub struct ToRendererMsg {
-    opacity: OpacityData,
-}
+use super::messages::{ToCompositorMsg, ToRendererMsg};
+use super::workers::{CompositorWorker, RenderWorker};
 
 pub struct ParalelRenderer {
     volume: BlockVolume,
@@ -212,145 +179,5 @@ impl ParalelRenderer {
         }
 
         // Get subcanvases from compositors and save them to buffer
-    }
-}
-
-pub struct RenderWorker<'a> {
-    renderer_id: usize,
-    camera: Arc<RwLock<PerspectiveCamera>>,
-    resolution: (usize, usize),
-    compositors: [Sender<ToCompositorMsg>; 4],
-    receiver: Receiver<ToRendererMsg>,
-    blocks: &'a [Block],
-}
-
-impl<'a> RenderWorker<'a> {
-    pub fn new(
-        renderer_id: usize,
-        camera: Arc<RwLock<PerspectiveCamera>>,
-        resolution: (usize, usize),
-        compositors: [Sender<ToCompositorMsg>; 4],
-        receiver: Receiver<ToRendererMsg>,
-        blocks: &'a [Block],
-    ) -> Self {
-        Self {
-            renderer_id,
-            camera,
-            resolution,
-            compositors,
-            receiver,
-            blocks,
-        }
-    }
-
-    pub fn run(&self) {
-        let camera = self
-            .camera
-            .read()
-            .expect("Cannot acquire read lock to camera");
-
-        loop {
-
-            // Wait for task from master thread or finish call
-
-            // Get data from compositers
-
-            // Render task
-
-            // give data to compositers
-        }
-    }
-
-    fn render_block(&self, camera: &PerspectiveCamera, block: &Block) -> SubRenderResult {
-        // get viewport box
-        let vpb = camera.project_box(block.bound_box);
-
-        // Image size, todo move to property
-        let (img_w, img_h) = self.resolution;
-        let (image_width, image_height) = (img_w as f32, img_h as f32);
-        let step_x = 1.0 / image_width;
-        let step_y = 1.0 / image_height;
-
-        let (x_range, y_range) = vpb.get_pixel_range(self.resolution);
-
-        // Request opacity data
-        let mut colors = vec![];
-        let mut opacities = vec![];
-
-        for y in y_range {
-            let y_norm = y as f32 * step_y;
-            for x in x_range.clone() {
-                // todo clone here -- maybe use own impl
-                let pixel_coord = (x as f32 * step_x, y_norm);
-                let ray = camera.get_ray(pixel_coord);
-
-                let (color, opacity) = self.sample_color(block, ray);
-
-                colors.push(color);
-                opacities.push(opacity);
-
-                // Add to opacity buffer
-            }
-        }
-        let width = x_range.end - x_range.start;
-        SubRenderResult {
-            width,
-            colors,
-            opacities,
-        }
-    }
-
-    fn sample_color(&self, block: &Block, ray: Ray) -> (Vector3<f32>, f32) {
-        todo!()
-    }
-}
-
-pub struct CompositorWorker<'a> {
-    compositor_id: usize,
-    camera: Arc<RwLock<PerspectiveCamera>>,
-    resolution: (usize, usize),
-    renderers: [Sender<ToRendererMsg>; 4],
-    receiver: Receiver<ToCompositorMsg>,
-    blocks: &'a [Block],
-}
-
-impl<'a> CompositorWorker<'a> {
-    pub fn new(
-        compositor_id: usize,
-        camera: Arc<RwLock<PerspectiveCamera>>,
-        resolution: (usize, usize),
-        renderers: [Sender<ToRendererMsg>; 4],
-        receiver: Receiver<ToCompositorMsg>,
-        blocks: &'a [Block],
-    ) -> Self {
-        Self {
-            compositor_id,
-            camera,
-            resolution,
-            renderers,
-            receiver,
-            blocks,
-        }
-    }
-
-    pub fn run(&self) {
-        // Subcanvas
-        let subcanvas_size = (0, 0);
-        let subcanvas_items = subcanvas_size.0 * subcanvas_size.1;
-        let subcanvas_rgb = vec![Vector3::<f32>::zeros(); subcanvas_items]; // todo RGB
-        let subcanvas_opacity = vec![0.0; subcanvas_items];
-
-        // Calculate which subvolumes appear in my subcanvas
-        // Also calculate expected order of subvolumes
-
-        loop {
-            // Receive requests
-
-            // Send opacity / store subrender / finish
-
-            // Finally convert to RGB bytes and send to master thread for output
-
-            // Wait for wakeup call or finish call
-        }
     }
 }
