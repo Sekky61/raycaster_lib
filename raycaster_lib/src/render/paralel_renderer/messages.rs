@@ -2,6 +2,8 @@ use std::ops::Range;
 
 use nalgebra::Vector3;
 
+use crate::common::PixelBox;
+
 pub struct RenderTask {
     block_id: usize,
 }
@@ -13,8 +15,9 @@ impl RenderTask {
 }
 
 pub struct OpacityRequest {
-    order: usize, // distance from the camera
-    pixel_range: (Range<usize>, Range<usize>),
+    pub from_id: usize, // Id of renderer
+    pub order: usize,   // order by distance from the camera
+    pub pixel_range: PixelBox,
 }
 
 pub struct SubRenderResult {
@@ -34,9 +37,17 @@ impl SubRenderResult {
 }
 
 pub struct OpacityData {
-    start_pixel: usize, // offset of lowest pixel
-    width: usize,
+    pixel_range: PixelBox,
     opacities: Vec<f32>,
+}
+
+impl OpacityData {
+    pub fn new(pixel_range: PixelBox, opacities: Vec<f32>) -> Self {
+        Self {
+            pixel_range,
+            opacities,
+        }
+    }
 }
 
 pub enum ToCompositorMsg {
@@ -45,6 +56,8 @@ pub enum ToCompositorMsg {
     Finish,
 }
 
-pub struct ToRendererMsg {
-    opacity: OpacityData,
+pub enum ToRendererMsg {
+    Opacity(OpacityData),
+    EmptyOpacity,
+    Finish,
 }

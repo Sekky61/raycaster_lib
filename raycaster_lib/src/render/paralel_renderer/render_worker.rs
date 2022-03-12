@@ -5,7 +5,7 @@ use nalgebra::Vector3;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::Ray,
+    common::{PixelBox, Ray},
     volumetric::Block,
 };
 
@@ -70,7 +70,10 @@ impl<'a> RenderWorker<'a> {
         let step_x = 1.0 / image_width;
         let step_y = 1.0 / image_height;
 
-        let (x_range, y_range) = vpb.get_pixel_range(self.resolution);
+        let PixelBox {
+            x: x_range,
+            y: y_range,
+        } = vpb.get_pixel_range(self.resolution);
 
         // Request opacity data
         let mut colors = vec![];
