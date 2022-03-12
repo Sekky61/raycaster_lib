@@ -3,6 +3,7 @@ use std::{cmp::min, ops::Range};
 use nalgebra::{point, Point2, Vector2};
 
 // a 2D range, rectangle described by two points
+#[derive(Clone, Copy)]
 pub struct ViewportBox {
     pub lower: Point2<f32>,
     pub upper: Point2<f32>,
@@ -51,6 +52,11 @@ impl ViewportBox {
         let end_y = min(start_y + lim_y, height);
 
         (start_x..end_x, start_y..end_y)
+    }
+
+    // True if rectangles share any area (in other words, if bounds cross)
+    pub fn crosses(&self, area: ViewportBox) -> bool {
+        todo!()
     }
 }
 

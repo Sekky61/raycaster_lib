@@ -9,7 +9,7 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{SubRenderResult, ToCompositorMsg, ToRendererMsg};
+use super::messages::{RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg};
 
 pub struct RenderWorker<'a> {
     renderer_id: usize,
@@ -17,6 +17,7 @@ pub struct RenderWorker<'a> {
     resolution: (usize, usize),
     compositors: [Sender<ToCompositorMsg>; 4],
     receiver: Receiver<ToRendererMsg>,
+    task_receiver: Receiver<RenderTask>,
     blocks: &'a [Block],
 }
 
@@ -27,6 +28,7 @@ impl<'a> RenderWorker<'a> {
         resolution: (usize, usize),
         compositors: [Sender<ToCompositorMsg>; 4],
         receiver: Receiver<ToRendererMsg>,
+        task_receiver: Receiver<RenderTask>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -35,6 +37,7 @@ impl<'a> RenderWorker<'a> {
             resolution,
             compositors,
             receiver,
+            task_receiver,
             blocks,
         }
     }
@@ -89,11 +92,8 @@ impl<'a> RenderWorker<'a> {
             }
         }
         let width = x_range.end - x_range.start;
-        SubRenderResult {
-            width,
-            colors,
-            opacities,
-        }
+
+        SubRenderResult::new(width, colors, opacities)
     }
 
     fn sample_color(&self, block: &Block, ray: Ray) -> (Vector3<f32>, f32) {

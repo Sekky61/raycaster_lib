@@ -7,11 +7,12 @@ use crossbeam_channel::Sender;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
+    common::ViewportBox,
     render::RenderOptions,
     volumetric::BlockVolume,
 };
 
-use super::messages::{ToCompositorMsg, ToRendererMsg};
+use super::messages::{RenderTask, ToCompositorMsg, ToRendererMsg};
 use super::workers::{CompositorWorker, RenderWorker};
 
 pub struct ParalelRenderer {
@@ -40,7 +41,7 @@ impl ParalelRenderer {
                 let volume = &self.volume;
 
                 // inlined function because borrow checker defeated me (scope cannot leave closure)
-                let (render_handles, comp_handles) = {
+                let (render_handles, comp_handles, task_sender) = {
                     // Send to compositor, compositor recieves message
                     let ren_to_comp = [
                         crossbeam_channel::unbounded(),
@@ -68,6 +69,8 @@ impl ParalelRenderer {
                         comp_to_ren[3].0.clone(),
                     ];
 
+                    let (task_sender, task_receiver) = crossbeam_channel::unbounded();
+
                     let mut renderers = Vec::with_capacity(4);
                     let mut compositors = Vec::with_capacity(4);
 
@@ -77,6 +80,7 @@ impl ParalelRenderer {
                         // Create render thread
                         let receiver = comp_to_ren[i].1.clone(); // Receiver
                         let all_compositors = compositor_send.clone();
+                        let task_receiver = task_receiver.clone();
                         let blocks_ref = &volume.data[..];
                         let camera_ref = self.camera.clone();
                         let handle = s.spawn(move |_| {
@@ -84,6 +88,7 @@ impl ParalelRenderer {
                             // Force move into closure
                             let renderer_id = i;
                             let all_compositors = all_compositors; // Senders for all compositors
+                            let task_receiver = task_receiver;
                             let message_receiver = receiver;
                             let blocks_ref = blocks_ref;
                             let camera_ref = camera_ref;
@@ -94,6 +99,7 @@ impl ParalelRenderer {
                                 resolution,
                                 all_compositors,
                                 message_receiver,
+                                task_receiver,
                                 blocks_ref,
                             );
 
@@ -103,11 +109,15 @@ impl ParalelRenderer {
                         renderers.push(handle);
                     }
 
+                    let compositor_areas = ParalelRenderer::generate_compositor_areas(4);
+
                     for i in 0..4 {
                         // Create compositor thread
+
                         let receiver = ren_to_comp[i].1.clone(); // Receiver
                         let all_renderers = renderer_send.clone();
                         let camera_ref = self.camera.clone();
+                        let area = compositor_areas[i];
                         let blocks_ref = &volume.data[..];
                         let handle = s.spawn(move |_| {
                             println!("Started compositor {i}");
@@ -116,10 +126,12 @@ impl ParalelRenderer {
                             let all_renderers = all_renderers; // Senders for all compositors
                             let message_receiver = receiver;
                             let blocks_ref = blocks_ref;
+                            let area = area;
 
                             let compositor = CompositorWorker::new(
                                 compositor_id,
                                 camera_ref,
+                                area,
                                 resolution,
                                 all_renderers,
                                 message_receiver,
@@ -132,7 +144,7 @@ impl ParalelRenderer {
                         compositors.push(handle);
                     }
 
-                    (renderers, compositors)
+                    (renderers, compositors, task_sender)
                 };
 
                 let (width, height) = self.render_options.resolution;
@@ -142,7 +154,7 @@ impl ParalelRenderer {
 
                     // Render
                     let mut buffer = vec![0u8; 3 * width * height];
-                    self.render(&mut buffer[..]);
+                    self.render(task_sender.clone(), &mut buffer[..]);
 
                     // Send result
                 }
@@ -151,7 +163,7 @@ impl ParalelRenderer {
         })
     }
 
-    pub fn render(&self, buffer: &mut [u8]) {
+    fn render(&self, task_sender: Sender<RenderTask>, buffer: &mut [u8]) {
         let resolution = self.render_options.resolution;
 
         // Read lock until end of function
@@ -173,11 +185,17 @@ impl ParalelRenderer {
         // Sent in order of camera distance (asc)
         // for Load balancing
         for (block_id, distance) in block_order {
+            // Find out if block is empty, in which case dont send it
             let block = &self.volume.data[block_id];
 
-            // Find out if block is empty
+            // Send task
+            task_sender.send(RenderTask::new(block_id)).unwrap();
         }
 
         // Get subcanvases from compositors and save them to buffer
+    }
+
+    fn generate_compositor_areas(arg: usize) -> Vec<ViewportBox> {
+        todo!()
     }
 }
