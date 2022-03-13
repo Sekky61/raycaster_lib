@@ -1,10 +1,10 @@
-use std::{cmp::min, ops::Range};
+use std::ops::Range;
 
-use nalgebra::{point, vector, Point2, Vector2};
+use nalgebra::{vector, Vector2};
 
 // A 2D range, rectangle described by two points
 // Expected values in range <0;1>
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct ViewportBox {
     pub lower: Vector2<f32>,
     pub upper: Vector2<f32>,
@@ -35,9 +35,9 @@ impl ViewportBox {
         // Approach: floor values down to nearest pixel
         // Two adjacent boxes can share one line of pixels
 
-        let (width, height) = (resolution.x, resolution.y);
         let res_f = resolution.map(|v| v as f32);
 
+        // Converting to integer rounds down
         let low_pixel = (self.lower.component_mul(&res_f)).map(|v| v as usize);
         let high_pixel = (self.upper.component_mul(&res_f)).map(|v| v as usize);
 
@@ -45,16 +45,37 @@ impl ViewportBox {
     }
 
     // True if rectangles share any area (in other words, if bounds cross)
+    // Touching boundboxes do not cross
     pub fn crosses(&self, other: &ViewportBox) -> bool {
-        let outside = self.upper.x < other.lower.x
-            || self.lower.x > other.upper.x
-            || self.upper.y < other.lower.y
-            || self.lower.y > other.upper.y;
+        let outside = self.upper.x <= other.lower.x
+            || self.lower.x >= other.upper.x
+            || self.upper.y <= other.lower.y
+            || self.lower.y >= other.upper.y;
         !outside
     }
 
-    pub fn intersection(&self, other: &ViewportBox) -> ViewportBox {
-        todo!()
+    // Touching boundboxes do not intersect
+    pub fn intersection(&self, other: &ViewportBox) -> Option<ViewportBox> {
+        let result = self.intersection_unchecked(other);
+        if result.lower.x >= result.upper.x || result.lower.y >= result.upper.y {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    //
+    pub fn intersection_unchecked(&self, other: &ViewportBox) -> ViewportBox {
+        let lower = vector![
+            f32::max(self.lower.x, other.lower.x),
+            f32::max(self.lower.y, other.lower.y)
+        ];
+        let upper = vector![
+            f32::min(self.upper.x, other.upper.x),
+            f32::min(self.upper.y, other.upper.y)
+        ];
+
+        ViewportBox { lower, upper }
     }
 }
 
@@ -79,14 +100,6 @@ mod test {
     use nalgebra::vector;
 
     use super::*;
-
-    fn from_slice(slice: &[(f32, f32)]) -> ViewportBox {
-        let mut vp = ViewportBox::new();
-        for (x, y) in slice {
-            vp.add_point(*x, *y);
-        }
-        vp
-    }
 
     #[test]
     fn viewport() {
@@ -159,5 +172,22 @@ mod test {
         assert!(!c.crosses(&d));
 
         assert!(a.crosses(&e));
+    }
+
+    #[test]
+    fn touching_dont_cross() {
+        let a = ViewportBox {
+            lower: vector![0.0, 0.0],
+            upper: vector![1.0, 1.0],
+        };
+        let b = ViewportBox {
+            lower: vector![1.0, 0.0],
+            upper: vector![2.0, 1.0],
+        };
+
+        let c = a.intersection(&b);
+
+        assert!(!a.crosses(&b));
+        assert!(c.is_none());
     }
 }

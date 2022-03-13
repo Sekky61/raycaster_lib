@@ -73,7 +73,8 @@ impl<'a> CompositorWorker<'a> {
                                 // Block is up
 
                                 let info = &block_info[index];
-                                let box_intersection = self.area.intersection(&info.viewport);
+                                let box_intersection =
+                                    self.area.intersection_unchecked(&info.viewport);
                                 let pixels = box_intersection.get_pixel_range(self.resolution);
 
                                 // Shift pixelbox to our subframe
