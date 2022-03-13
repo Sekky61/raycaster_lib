@@ -1,7 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    ops::Range,
+    sync::{Arc, RwLock},
+};
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -9,13 +12,13 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{OpacityData, ToCompositorMsg, ToRendererMsg};
+use super::messages::{OpacityData, SubRenderResult, ToCompositorMsg, ToRendererMsg};
 
 pub struct CompositorWorker<'a> {
     compositor_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     area: ViewportBox,
-    resolution: (usize, usize), // Resolution of full image
+    resolution: Vector2<usize>, // Resolution of full image
     renderers: [Sender<ToRendererMsg>; 4],
     receiver: Receiver<ToCompositorMsg>,
     blocks: &'a [Block],
@@ -26,7 +29,7 @@ impl<'a> CompositorWorker<'a> {
         compositor_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
         area: ViewportBox,
-        resolution: (usize, usize),
+        resolution: Vector2<usize>,
         renderers: [Sender<ToRendererMsg>; 4],
         receiver: Receiver<ToCompositorMsg>,
         blocks: &'a [Block],
@@ -46,31 +49,14 @@ impl<'a> CompositorWorker<'a> {
         // Subcanvas
         let subcanvas_size = self.calc_resolution();
         let subcanvas_items = subcanvas_size.items();
-        let subcanvas_rgb = vec![Vector3::<f32>::zeros(); subcanvas_items]; // todo RGB
-        let subcanvas_opacity = vec![0.0; subcanvas_items];
+        let mut subcanvas_rgb = vec![Vector3::<f32>::zeros(); subcanvas_items]; // todo RGB
+        let mut subcanvas_opacity = vec![0.0; subcanvas_items];
 
         // Calculate info about blocks
+        // Only subvolumes that appear in my subcanvas
         let block_info = self.get_block_info();
 
-        // Calculate which subvolumes appear in my subcanvas
-        // Indexes are in asc. order
-        let relevant_blocks: Vec<usize> = block_info
-            .iter()
-            .enumerate()
-            .filter(|(i, info)| self.area.crosses(&info.viewport))
-            .map(|v| v.0)
-            .collect();
-
-        // Also calculate expected order of subvolumes
-        let mut order_indexes = relevant_blocks.clone();
-        order_indexes.sort_unstable_by(|&i, &j| {
-            block_info[i]
-                .distance
-                .partial_cmp(&block_info[j].distance)
-                .unwrap()
-        });
-
-        let expected_volume = 0; // pointer into order_indexes, todo peekable iter
+        let mut expected_volume = 0; // pointer into block_info, todo peekable iter
 
         loop {
             // Receive requests
@@ -79,23 +65,31 @@ impl<'a> CompositorWorker<'a> {
                 ToCompositorMsg::OpacityRequest(req) => {
                     let responder = &self.renderers[req.from_id];
 
-                    match relevant_blocks.binary_search_by(|item| item.cmp(&req.order)) {
+                    match block_info.binary_search_by(|item| item.index.cmp(&req.order)) {
                         Ok(index) => {
                             // Block is in compositors field
 
-                            if order_indexes[expected_volume] == index {
+                            if block_info[expected_volume].index == index {
                                 // Block is up
 
                                 let info = &block_info[index];
                                 let box_intersection = self.area.intersection(&info.viewport);
                                 let pixels = box_intersection.get_pixel_range(self.resolution);
 
-                                let opacity_data = OpacityData::new(pixels, vec![]);
+                                // Shift pixelbox to our subframe
+
+                                let opacity_data = self.copy_opacity(
+                                    subcanvas_opacity.as_slice(),
+                                    &subcanvas_size,
+                                    &pixels,
+                                );
+                                let opacity_data = OpacityData::new(index, opacity_data);
                                 let response = ToRendererMsg::Opacity(opacity_data);
 
                                 responder.send(response).unwrap();
                             } else {
                                 // Needs to be placed in queue
+                                todo!()
                             }
                         }
                         Err(_) => {
@@ -106,9 +100,24 @@ impl<'a> CompositorWorker<'a> {
                     }
                 }
                 ToCompositorMsg::RenderResult(res) => {
-                    // Update opacity map if block is in order
+                    // SubRenderResult buffers have the same shape as sent in their previous request
 
-                    // Update next expected volume
+                    if block_info[expected_volume].index == res.block_id {
+                        // Block is expected
+
+                        // Update opacity
+                        self.add_opacity(&mut subcanvas_opacity[..], &res);
+
+                        // Update color
+
+                        // Update next expected volume
+                        expected_volume += 1;
+                    } else {
+                        // Not expected
+                        // Renderer is sending only nonempty results
+                        // and can only render what we allowed in OpacityRequest
+                        panic!("Got RenderResult that is not expected - should not happen");
+                    }
 
                     // Expected volume is updated, can we satisfy request from queue?
 
@@ -126,28 +135,64 @@ impl<'a> CompositorWorker<'a> {
         self.area.get_pixel_range(self.resolution)
     }
 
+    // Return collection of blocks in the subframe
+    // Collection is sorted by distance (asc.)
     fn get_block_info(&self) -> Vec<BlockInfo> {
         let mut relevant_ids = vec![];
         {
             let camera = self.camera.read().unwrap();
 
-            for block in self.blocks {
+            for (i, block) in self.blocks.iter().enumerate() {
                 let viewport = camera.project_box(block.bound_box);
                 let distance = camera.box_distance(&block.bound_box);
-                let info = BlockInfo::new(distance, viewport);
+                let info = BlockInfo::new(i, distance, viewport);
+                if self.area.crosses(&info.viewport) {
+                    relevant_ids.push(info);
+                }
             }
         }
+        relevant_ids.sort_unstable_by(|b1, b2| b1.distance.partial_cmp(&b2.distance).unwrap());
+
         relevant_ids
+    }
+
+    fn copy_opacity(&self, opacity: &[f32], subframe: &PixelBox, pixels: &PixelBox) -> Vec<f32> {
+        let mut v = Vec::with_capacity(pixels.items());
+        let width = pixels.x.end - pixels.x.start;
+        let height = pixels.y.end - pixels.y.start;
+        let subframe_width = subframe.x.end - subframe.x.start;
+
+        let subframe_offset_x = pixels.x.start - subframe.x.start;
+        let subframe_offset_y = pixels.y.start - subframe.y.start;
+
+        let mut line_start = subframe_offset_y * subframe_width + subframe_offset_x;
+        for _ in 0..height {
+            v.extend(&opacity[line_start..line_start + width]);
+            line_start += subframe_width;
+        }
+        v
+    }
+
+    fn add_opacity(&self, subcanvas_opacity: &mut [f32], res: &SubRenderResult) {
+        let width = res.width;
+        let opacities = &res.opacities[..];
+
+        todo!()
     }
 }
 
 pub struct BlockInfo {
+    index: usize,
     distance: f32,
     viewport: ViewportBox,
 }
 
 impl BlockInfo {
-    pub fn new(distance: f32, viewport: ViewportBox) -> Self {
-        Self { distance, viewport }
+    pub fn new(index: usize, distance: f32, viewport: ViewportBox) -> Self {
+        Self {
+            index,
+            distance,
+            viewport,
+        }
     }
 }

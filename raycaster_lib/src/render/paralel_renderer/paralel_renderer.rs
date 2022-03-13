@@ -4,6 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::Sender;
+use nalgebra::vector;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -74,7 +75,10 @@ impl ParalelRenderer {
                     let mut renderers = Vec::with_capacity(4);
                     let mut compositors = Vec::with_capacity(4);
 
-                    let resolution = self.render_options.resolution;
+                    let resolution = vector![
+                        self.render_options.resolution.0,
+                        self.render_options.resolution.1
+                    ];
 
                     for i in 0..4 {
                         // Create render thread

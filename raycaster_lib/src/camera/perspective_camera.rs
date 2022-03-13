@@ -202,7 +202,7 @@ mod test {
 
         let projection = cam.project_box(origin_bbox);
 
-        assert_eq!(projection.lower, point![0.5, 0.5]);
+        assert_eq!(projection.lower, vector![0.5, 0.5]);
     }
 
     #[test]

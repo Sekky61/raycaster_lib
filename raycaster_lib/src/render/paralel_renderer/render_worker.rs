@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -9,12 +9,12 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg};
+use super::messages::{OpacityData, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg};
 
 pub struct RenderWorker<'a> {
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
-    resolution: (usize, usize),
+    resolution: Vector2<usize>,
     compositors: [Sender<ToCompositorMsg>; 4],
     receiver: Receiver<ToRendererMsg>,
     task_receiver: Receiver<RenderTask>,
@@ -25,7 +25,7 @@ impl<'a> RenderWorker<'a> {
     pub fn new(
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
-        resolution: (usize, usize),
+        resolution: Vector2<usize>,
         compositors: [Sender<ToCompositorMsg>; 4],
         receiver: Receiver<ToRendererMsg>,
         task_receiver: Receiver<RenderTask>,
@@ -60,15 +60,18 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn render_block(&self, camera: &PerspectiveCamera, block: &Block) -> SubRenderResult {
+    fn render_block(
+        &self,
+        camera: &PerspectiveCamera,
+        data: &mut OpacityData,
+        block: &Block,
+    ) -> Vec<Vector3<f32>> {
         // get viewport box
         let vpb = camera.project_box(block.bound_box);
 
         // Image size, todo move to property
-        let (img_w, img_h) = self.resolution;
-        let (image_width, image_height) = (img_w as f32, img_h as f32);
-        let step_x = 1.0 / image_width;
-        let step_y = 1.0 / image_height;
+        let res_f = self.resolution.map(|v| v as f32);
+        let step_f = res_f.map(|v| 1.0 / v);
 
         let PixelBox {
             x: x_range,
@@ -80,10 +83,10 @@ impl<'a> RenderWorker<'a> {
         let mut opacities = vec![];
 
         for y in y_range {
-            let y_norm = y as f32 * step_y;
+            let y_norm = y as f32 * step_f.y;
             for x in x_range.clone() {
                 // todo clone here -- maybe use own impl
-                let pixel_coord = (x as f32 * step_x, y_norm);
+                let pixel_coord = (x as f32 * step_f.x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
 
                 let (color, opacity) = self.sample_color(block, ray);
@@ -96,7 +99,7 @@ impl<'a> RenderWorker<'a> {
         }
         let width = x_range.end - x_range.start;
 
-        SubRenderResult::new(width, colors, opacities)
+        colors
     }
 
     fn sample_color(&self, block: &Block, ray: Ray) -> (Vector3<f32>, f32) {
