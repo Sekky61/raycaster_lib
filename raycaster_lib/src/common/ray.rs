@@ -1,4 +1,6 @@
-use nalgebra::{Point3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Scale3, Translation3, Vector3};
+
+use super::BoundBox;
 
 // Todo rename to common / types
 
@@ -19,5 +21,20 @@ impl Ray {
 
     pub fn get_direction(&self) -> Vector3<f32> {
         self.direction
+    }
+
+    pub fn transform_to_volume_space(&self, bound_box: BoundBox, scale: Vector3<f32>) -> Ray {
+        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
+        let lower_vec = bound_box.lower - point![0.0, 0.0, 0.0];
+
+        let transform = Matrix4::identity()
+            .append_translation(&lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
+        let origin = transform.transform_point(&self.origin);
+
+        let direction = self.direction.component_mul(&scale_inv);
+
+        Ray { origin, direction }
     }
 }

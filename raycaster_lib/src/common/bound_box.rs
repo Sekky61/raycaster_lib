@@ -1,5 +1,7 @@
 use nalgebra::{point, Point3, Vector3};
 
+use super::Ray;
+
 #[derive(Debug, Clone, Copy)]
 pub struct BoundBox {
     pub lower: Point3<f32>,
@@ -33,6 +35,30 @@ impl BoundBox {
             && pos.x > self.lower.x
             && pos.y > self.lower.y
             && pos.z > self.lower.z
+    }
+
+    pub fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
+        // t value of intersection with the 6 planes of a bounding box
+        let t0 = (self.lower - ray.origin).component_div(&ray.direction);
+        let t1 = (self.upper - ray.origin).component_div(&ray.direction);
+
+        // [ (min,max) , (min,max) , (min,max) ]
+        let t_minmax = t0.zip_map(&t1, |t0, t1| if t0 < t1 { (t0, t1) } else { (t1, t0) });
+
+        let tmin = f32::max(f32::max(t_minmax.x.0, t_minmax.y.0), t_minmax.z.0);
+        let tmax = f32::min(f32::min(t_minmax.x.1, t_minmax.y.1), t_minmax.z.1);
+
+        // if tmax < 0, ray is intersecting AABB, but the whole AABB is behind us
+        if tmax.is_sign_negative() {
+            return None;
+        }
+
+        // if tmin > tmax, ray doesn't intersect AABB
+        if tmin > tmax {
+            return None;
+        }
+
+        Some((tmin, tmax))
     }
 }
 
