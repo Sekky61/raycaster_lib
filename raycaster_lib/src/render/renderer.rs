@@ -139,91 +139,28 @@ where
     pub fn collect_light(&self, ray: &Ray) -> Vector4<f32> {
         let mut accum = vector![0.0, 0.0, 0.0, 0.0];
 
-        let (t1, _) = match self.volume.intersect(ray) {
-            Some(tup) => tup,
+        let (obj_ray, t) = match self.volume.intersect_transform(ray) {
+            Some(e) => e,
             None => return accum,
         };
 
-        let begin = ray.point_from_t(t1);
+        let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
         let step_size = 1.0;
+        let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized
 
         let mut pos = begin;
 
         let tf = self.volume.get_tf();
+        let light_source = vector![1.0, 1.0, 0.0].normalize();
 
-        loop {
-            let sample = self.volume.sample_at(pos);
-
-            let color = tf(sample);
-
-            pos += step;
-
-            if color.w == 0.0 {
-                if !self.volume.is_in(&pos) {
-                    break;
-                }
-                continue;
-            }
-
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
-            accum += (1.0 - accum.w) * color;
-
-            // relying on branch predictor to "eliminate" branch
-            if self.render_options.ray_termination {
-                // early ray termination
-                if (color.w - 0.99) > 0.0 {
-                    break;
-                }
-            }
-
-            if !self.volume.is_in(&pos) {
-                break;
-            }
-        }
-
-        accum
-    }
-
-    pub fn collect_light_index(&self, ray: &Ray) -> Vector4<f32> {
-        let mut accum = vector![0.0, 0.0, 0.0, 0.0];
-
-        let (t1, _) = match self.volume.intersect(ray) {
-            Some(tup) => tup,
-            None => return accum,
-        };
-
-        let begin = ray.point_from_t(t1);
-        let direction = ray.get_direction();
-
-        let step_size = 1.0;
-
-        let step = direction * step_size; // normalized
-
-        let mut pos = begin;
-
-        let tf = self.volume.get_tf();
-
-        loop {
-            if self.empty_index.sample(pos) == BlockType::Empty {
-                pos += step;
-
-                if !self.volume.is_in(&pos) {
-                    break;
-                }
-                continue;
-            }
-
+        for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
 
             let (sample, grad_samples) = self.volume.sample_at_gradient(pos);
-
-            let light_source = vector![1.0, 1.0, 0.0].normalize();
 
             let color_b = tf(sample);
 
@@ -238,23 +175,16 @@ where
             let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
             let rgb = color_b.xyz() * n_dot_l;
 
-            // if color_b.w > 0.0 {
-            //     println!("color {color_b} -> {rgb} grad {grad}");
-            // }
-
             pos += step;
 
             if color_b.w == 0.0 {
-                if !self.volume.is_in(&pos) {
-                    break;
-                }
                 continue;
             }
 
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum += (1.0 - accum.w) * vector![rgb.x, rgb.y, rgb.z, color_b.w];
+            accum += (1.0 - accum.w) * vector![rgb.x, rgb.y, rgb.z, color_b.w]; // todo dont scale W
 
             // relying on branch predictor to "eliminate" branch
             if self.render_options.ray_termination {
@@ -263,9 +193,72 @@ where
                     break;
                 }
             }
+        }
 
-            if !self.volume.is_in(&pos) {
-                break;
+        accum
+    }
+
+    pub fn collect_light_index(&self, ray: &Ray) -> Vector4<f32> {
+        let mut accum = vector![0.0, 0.0, 0.0, 0.0];
+
+        let (obj_ray, t) = match self.volume.intersect_transform(ray) {
+            Some(e) => e,
+            None => return accum,
+        };
+
+        let begin = obj_ray.origin;
+        let direction = ray.get_direction();
+
+        let step_size = 1.0;
+        let max_n_of_steps = (t / step_size) as usize;
+
+        let step = direction * step_size; // normalized
+
+        let mut pos = begin;
+
+        let tf = self.volume.get_tf();
+        let light_source = vector![1.0, 1.0, 0.0].normalize();
+
+        for _ in 0..max_n_of_steps {
+            if self.empty_index.sample(pos) == BlockType::Empty {
+                pos += step;
+                continue;
+            }
+
+            //let sample = self.volume.sample_at(pos);
+
+            let (sample, grad_samples) = self.volume.sample_at_gradient(pos);
+
+            let color_b = tf(sample);
+
+            let grad = vector![
+                sample - grad_samples.x,
+                sample - grad_samples.y,
+                sample - grad_samples.z
+            ];
+
+            let grad = grad.normalize();
+
+            let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
+            let rgb = color_b.xyz() * n_dot_l;
+
+            pos += step;
+
+            if color_b.w == 0.0 {
+                continue;
+            }
+
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
+
+            accum += (1.0 - accum.w) * vector![rgb.x, rgb.y, rgb.z, color_b.w]; // todo dont scale W
+
+            // relying on branch predictor to "eliminate" branch
+            if self.render_options.ray_termination {
+                // early ray termination
+                if color_b.w > 0.99 {
+                    break;
+                }
             }
         }
 
