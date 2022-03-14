@@ -1,7 +1,7 @@
 use crate::common::{BoundBox, Ray};
 
 use super::TF;
-use nalgebra::{vector, Point3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 // Volume assumes f32 data
 // Volume is axis aligned
@@ -57,6 +57,32 @@ pub trait Volume {
     }
 
     fn get_bound_box(&self) -> BoundBox; // todo ref
+
+    fn get_scale(&self) -> Vector3<f32>; // todo ref
+
+    fn intersect_transform(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        let bbox = self.get_bound_box();
+
+        let (t0, t1) = bbox.intersect(ray)?;
+
+        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&self.get_scale());
+        let lower_vec = bbox.lower - point![0.0, 0.0, 0.0];
+
+        let transform = Matrix4::identity()
+            .append_translation(&-lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
+        let obj_origin = ray.point_from_t(t0);
+
+        let origin = transform.transform_point(&obj_origin);
+
+        let direction = ray.direction.component_mul(&scale_inv);
+        let direction = direction.normalize();
+
+        let obj_ray = Ray::from_3(origin, direction);
+
+        Some((obj_ray, t1 - t0))
+    }
 
     // position is inside volume
     fn is_in(&self, pos: &Point3<f32>) -> bool {

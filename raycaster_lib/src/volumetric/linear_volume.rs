@@ -105,6 +105,10 @@ impl Volume for LinearVolume {
     fn get_bound_box(&self) -> BoundBox {
         self.bound_box
     }
+
+    fn get_scale(&self) -> Vector3<f32> {
+        vector![1.0, 1.0, 1.0]
+    }
 }
 
 impl BuildVolume<u8> for LinearVolume {

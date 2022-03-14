@@ -127,6 +127,10 @@ impl Volume for StreamVolume {
     fn get_bound_box(&self) -> BoundBox {
         self.bound_box
     }
+
+    fn get_scale(&self) -> Vector3<f32> {
+        vector![1.0, 1.0, 1.0]
+    }
 }
 
 #[cfg(test)]
