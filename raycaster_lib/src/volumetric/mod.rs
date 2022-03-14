@@ -54,7 +54,8 @@ mod test {
         }
     }
 
-    #[test] // #[ignore]
+    #[test]
+    #[ignore]
     fn linear_block_matches_skull() {
         let linear: LinearVolume = skull_volume();
         let block: BlockVolume = skull_volume();

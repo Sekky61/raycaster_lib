@@ -28,13 +28,67 @@ impl Ray {
         let lower_vec = bound_box.lower - point![0.0, 0.0, 0.0];
 
         let transform = Matrix4::identity()
-            .append_translation(&lower_vec)
+            .append_translation(&-lower_vec)
             .append_nonuniform_scaling(&scale_inv);
 
-        let origin = transform.transform_point(&self.origin);
+        let int = bound_box.intersect(self);
+        let obj_origin = match int {
+            Some((t0, _t1)) => self.point_from_t(t0),
+            None => self.origin,
+        };
+
+        let origin = transform.transform_point(&obj_origin);
 
         let direction = self.direction.component_mul(&scale_inv);
 
         Ray { origin, direction }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use nalgebra::vector;
+
+    use super::*;
+
+    #[test]
+    fn to_object_space() {
+        let ray = Ray {
+            origin: point![0.0, 0.0, 0.0],
+            direction: vector![1.0, 1.0, 1.0],
+        };
+
+        let bbox = BoundBox::new(point![1.0, 1.0, 1.0], point![5.0, 5.0, 5.0]);
+
+        let scale = vector![2.0, 1.0, 1.0];
+
+        let obj_ray = ray.transform_to_volume_space(bbox, scale);
+
+        assert_eq!(obj_ray.origin, point![0.0, 0.0, 0.0]);
+        assert_eq!(
+            obj_ray.direction.normalize(),
+            vector![0.5, 1.0, 1.0].normalize()
+        );
+    }
+
+    #[test]
+    fn to_object_space_2() {
+        let ray = Ray {
+            origin: point![5.0, 0.5, 0.5],
+            direction: vector![2.0, -0.5, -0.5],
+        };
+
+        let bbox = BoundBox::new(point![6.0, 0.0, 0.0], point![7.0, 1.0, 1.0]);
+
+        let scale = vector![1.0, 1.0, 1.0];
+
+        let obj_ray = ray.transform_to_volume_space(bbox, scale);
+
+        assert_eq!(obj_ray.origin, point![0.0, 0.25, 0.25]);
+        assert_eq!(
+            obj_ray.direction.normalize(),
+            vector![1.0, -0.25, -0.25].normalize()
+        );
     }
 }
