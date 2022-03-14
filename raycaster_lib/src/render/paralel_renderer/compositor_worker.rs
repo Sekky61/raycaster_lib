@@ -84,7 +84,8 @@ impl<'a> CompositorWorker<'a> {
                                     &subcanvas_size,
                                     &pixels,
                                 );
-                                let opacity_data = OpacityData::new(index, opacity_data);
+                                let pixel_range = PixelBox::new(todo!(), todo!());
+                                let opacity_data = OpacityData::new(pixel_range, opacity_data);
                                 let response = ToRendererMsg::Opacity(opacity_data);
 
                                 responder.send(response).unwrap();

@@ -9,7 +9,12 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{OpacityData, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg};
+use super::{
+    compositor_worker::BlockInfo,
+    messages::{
+        OpacityData, OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg,
+    },
+};
 
 pub struct RenderWorker<'a> {
     renderer_id: usize,
@@ -49,8 +54,26 @@ impl<'a> RenderWorker<'a> {
             .expect("Cannot acquire read lock to camera");
 
         loop {
-
             // Wait for task from master thread or finish call
+            let task = self.task_receiver.recv().unwrap();
+            let block_order = task.block_order;
+
+            // Ask for all opacity data
+            for comp in self.compositors.iter() {
+                let op_req = OpacityRequest::new(self.renderer_id, block_order);
+                comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
+            }
+
+            // Wait for all opacity data
+            let opacities = {
+                for _ in 0..self.compositors.len() {
+                    let msg = self.receiver.recv().unwrap();
+                    match msg {
+                        ToRendererMsg::Opacity(d) => todo!(),
+                        ToRendererMsg::EmptyOpacity => todo!(),
+                    }
+                }
+            };
 
             // Get data from compositers
 
@@ -104,5 +127,22 @@ impl<'a> RenderWorker<'a> {
 
     fn sample_color(&self, block: &Block, ray: Ray) -> (Vector3<f32>, f32) {
         todo!()
+    }
+
+    // Return collection of blocks in the subframe
+    // Collection is sorted by distance (asc.)
+    fn get_block_info(&self) -> Vec<(usize, f32)> {
+        let mut relevant_ids = vec![];
+        {
+            let camera = self.camera.read().unwrap();
+
+            for (i, block) in self.blocks.iter().enumerate() {
+                let distance = camera.box_distance(&block.bound_box);
+                relevant_ids.push((i, distance));
+            }
+        }
+        relevant_ids.sort_unstable_by(|b1, b2| b1.1.partial_cmp(&b2.1).unwrap());
+
+        relevant_ids
     }
 }

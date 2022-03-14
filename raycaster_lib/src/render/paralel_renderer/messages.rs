@@ -5,19 +5,26 @@ use nalgebra::Vector3;
 use crate::common::PixelBox;
 
 pub struct RenderTask {
-    block_id: usize,
+    pub block_order: usize,
 }
 
+// todo masterToRendererMsg with finish, camera_changed
+
 impl RenderTask {
-    pub fn new(block_id: usize) -> Self {
-        Self { block_id }
+    pub fn new(block_order: usize) -> Self {
+        Self { block_order }
     }
 }
 
 pub struct OpacityRequest {
     pub from_id: usize, // Id of renderer
     pub order: usize,   // order by distance from the camera
-    pub pixel_range: PixelBox,
+}
+
+impl OpacityRequest {
+    pub fn new(from_id: usize, order: usize) -> Self {
+        Self { from_id, order }
+    }
 }
 
 // todo split color and transmit it at lower priority
@@ -45,16 +52,13 @@ impl SubRenderResult {
 }
 
 pub struct OpacityData {
-    block_id: usize,
+    pixels: PixelBox,
     opacities: Vec<f32>,
 }
 
 impl OpacityData {
-    pub fn new(block_id: usize, opacities: Vec<f32>) -> Self {
-        Self {
-            block_id,
-            opacities,
-        }
+    pub fn new(pixels: PixelBox, opacities: Vec<f32>) -> Self {
+        Self { pixels, opacities }
     }
 }
 
@@ -67,5 +71,4 @@ pub enum ToCompositorMsg {
 pub enum ToRendererMsg {
     Opacity(OpacityData),
     EmptyOpacity,
-    Finish,
 }
