@@ -30,7 +30,7 @@ impl OpacityRequest {
 // todo split color and transmit it at lower priority
 pub struct SubRenderResult {
     pub block_id: usize,
-    pub width: usize,
+    pub pixels: PixelBox,
     pub colors: Vec<Vector3<f32>>,
     pub opacities: Vec<f32>,
 }
@@ -38,13 +38,28 @@ pub struct SubRenderResult {
 impl SubRenderResult {
     pub fn new(
         block_id: usize,
-        width: usize,
+        pixels: PixelBox,
         colors: Vec<Vector3<f32>>,
         opacities: Vec<f32>,
     ) -> Self {
         Self {
             block_id,
-            width,
+            pixels,
+            colors,
+            opacities,
+        }
+    }
+
+    pub fn with_capacity(
+        block_id: usize,
+        pixels: PixelBox,
+        capacity: usize,
+        opacities: Vec<f32>,
+    ) -> Self {
+        let colors = Vec::with_capacity(capacity);
+        Self {
+            block_id,
+            pixels,
             colors,
             opacities,
         }
@@ -52,13 +67,18 @@ impl SubRenderResult {
 }
 
 pub struct OpacityData {
-    pixels: PixelBox,
-    opacities: Vec<f32>,
+    pub from_compositor: usize,
+    pub pixels: PixelBox,
+    pub opacities: Vec<f32>,
 }
 
 impl OpacityData {
-    pub fn new(pixels: PixelBox, opacities: Vec<f32>) -> Self {
-        Self { pixels, opacities }
+    pub fn new(from_compositor: usize, pixels: PixelBox, opacities: Vec<f32>) -> Self {
+        Self {
+            from_compositor,
+            pixels,
+            opacities,
+        }
     }
 }
 

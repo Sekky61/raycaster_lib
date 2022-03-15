@@ -153,6 +153,7 @@ impl ParalelRenderer {
 
                 let (width, height) = self.render_options.resolution;
 
+                // Master loop
                 loop {
                     // Gather input
 

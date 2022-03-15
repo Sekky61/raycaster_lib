@@ -1,7 +1,11 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    borrow::Borrow,
+    sync::{Arc, RwLock},
+};
 
+use crossbeam::select;
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{Vector2, Vector3};
+use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -53,10 +57,13 @@ impl<'a> RenderWorker<'a> {
             .read()
             .expect("Cannot acquire read lock to camera");
 
+        let ordered_ids = self.get_block_info();
+
         loop {
             // Wait for task from master thread or finish call
             let task = self.task_receiver.recv().unwrap();
             let block_order = task.block_order;
+            let (block_id, _) = ordered_ids[block_order];
 
             // Ask for all opacity data
             for comp in self.compositors.iter() {
@@ -64,69 +71,142 @@ impl<'a> RenderWorker<'a> {
                 comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
             }
 
-            // Wait for all opacity data
-            let opacities = {
+            // Wait for all opacity data from compositors
+            let mut color_opacity = {
+                let mut ship_back: [Option<SubRenderResult>; 4] = Default::default(); // todo const generics
                 for _ in 0..self.compositors.len() {
                     let msg = self.receiver.recv().unwrap();
-                    match msg {
-                        ToRendererMsg::Opacity(d) => todo!(),
-                        ToRendererMsg::EmptyOpacity => todo!(),
+                    if let ToRendererMsg::Opacity(d) = msg {
+                        let i = d.from_compositor;
+                        let capacity = d.pixels.items();
+                        let res = SubRenderResult::with_capacity(
+                            block_id,
+                            d.pixels,
+                            capacity,
+                            d.opacities,
+                        );
+                        ship_back[i] = Some(res);
                     }
                 }
+                ship_back
             };
 
-            // Get data from compositers
+            let block = &self.blocks[block_id];
 
             // Render task
+            self.render_block(&camera, &mut color_opacity, block);
+            // Opacities has been mutated
 
             // give data to compositers
+            for (i, res_opt) in color_opacity.into_iter().enumerate() {
+                if let Some(res) = res_opt {
+                    let msg = ToCompositorMsg::RenderResult(res);
+                    self.compositors[i].send(msg).unwrap();
+                }
+            }
         }
     }
 
     fn render_block(
         &self,
         camera: &PerspectiveCamera,
-        data: &mut OpacityData,
+        data: &mut [Option<SubRenderResult>; 4],
         block: &Block,
-    ) -> Vec<Vector3<f32>> {
-        // get viewport box
-        let vpb = camera.project_box(block.bound_box);
-
+    ) {
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);
 
-        let PixelBox {
-            x: x_range,
-            y: y_range,
-        } = vpb.get_pixel_range(self.resolution);
+        for opacity_data in data.iter_mut().flatten() {
+            // flatten skips Nones
+            let opacities = &mut opacity_data.opacities[..];
 
-        // Request opacity data
-        let mut colors = vec![];
-        let mut opacities = vec![];
+            let x_range = opacity_data.pixels.x.clone();
+            let y_range = opacity_data.pixels.y.clone();
 
-        for y in y_range {
-            let y_norm = y as f32 * step_f.y;
-            for x in x_range.clone() {
-                // todo clone here -- maybe use own impl
-                let pixel_coord = (x as f32 * step_f.x, y_norm);
-                let ray = camera.get_ray(pixel_coord);
+            let color_buf = &mut opacity_data.colors;
+            let mut ptr = 0;
 
-                let (color, opacity) = self.sample_color(block, ray);
+            for y in y_range {
+                let y_norm = y as f32 * step_f.y;
+                for x in x_range.clone() {
+                    // todo clone here -- maybe use own impl
+                    let pixel_coord = (x as f32 * step_f.x, y_norm);
+                    let ray = camera.get_ray(pixel_coord);
 
-                colors.push(color);
-                opacities.push(opacity);
+                    // Adds to opacity buffer
+                    let color = self.sample_color(block, &ray, &mut opacities[ptr]);
 
-                // Add to opacity buffer
+                    color_buf.push(color);
+
+                    ptr += 1;
+                }
             }
         }
-        let width = x_range.end - x_range.start;
-
-        colors
     }
 
-    fn sample_color(&self, block: &Block, ray: Ray) -> (Vector3<f32>, f32) {
-        todo!()
+    fn sample_color(&self, block: &Block, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
+        let mut accum = vector![0.0, 0.0, 0.0];
+
+        let (t0, t1) = match block.bound_box.intersect(ray) {
+            Some(t) => t,
+            None => return accum,
+        };
+        let t = t1 - t0;
+
+        let scale_inv = vector![1.0, 1.0, 1.0]; // todo scale
+        let lower_vec = block.bound_box.lower - point![0.0, 0.0, 0.0];
+
+        let transform = Matrix4::identity()
+            .append_translation(&-lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
+        let obj_origin = ray.point_from_t(t0);
+
+        let origin = transform.transform_point(&obj_origin);
+
+        let direction = ray.direction.component_mul(&scale_inv);
+        let direction = direction.normalize();
+
+        let obj_ray = Ray::from_3(origin, direction);
+
+        let begin = obj_ray.origin;
+        let direction = ray.get_direction();
+
+        let step_size = 1.0;
+        let max_n_of_steps = (t / step_size) as usize;
+
+        let step = direction * step_size; // normalized
+
+        let mut pos = begin;
+
+        let tf = |s: f32| vector![s, s, s, 0.1];
+
+        for _ in 0..max_n_of_steps {
+            //let sample = self.volume.sample_at(pos);
+            if *opacity > 0.99 {
+                break;
+            }
+
+            let sample = block.sample_at(pos);
+
+            let color_b = tf(sample);
+
+            pos += step;
+
+            if color_b.w == 0.0 {
+                continue;
+            }
+
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
+
+            *opacity += (1.0 - *opacity) * color_b.w;
+
+            accum += (1.0 - *opacity) * color_b.xyz();
+        }
+
+        accum
     }
 
     // Return collection of blocks in the subframe

@@ -69,6 +69,7 @@ impl<'a> CompositorWorker<'a> {
                         Ok(index) => {
                             // Block is in compositors field
 
+                            // todo move forward, to skip binary search
                             if block_info[expected_volume].index == index {
                                 // Block is up
 
@@ -79,13 +80,13 @@ impl<'a> CompositorWorker<'a> {
 
                                 // Shift pixelbox to our subframe
 
-                                let opacity_data = self.copy_opacity(
+                                let opacity_data = self.get_opacity(
                                     subcanvas_opacity.as_slice(),
                                     &subcanvas_size,
                                     &pixels,
                                 );
-                                let pixel_range = PixelBox::new(todo!(), todo!());
-                                let opacity_data = OpacityData::new(pixel_range, opacity_data);
+                                let opacity_data =
+                                    OpacityData::new(self.compositor_id, pixels, opacity_data);
                                 let response = ToRendererMsg::Opacity(opacity_data);
 
                                 responder.send(response).unwrap();
@@ -108,9 +109,10 @@ impl<'a> CompositorWorker<'a> {
                         // Block is expected
 
                         // Update opacity
-                        self.add_opacity(&mut subcanvas_opacity[..], &res);
+                        self.copy_opacity(&mut subcanvas_opacity[..], &subcanvas_size, &res);
 
                         // Update color
+                        self.add_color(&mut subcanvas_rgb[..], &subcanvas_size, &res);
 
                         // Update next expected volume
                         expected_volume += 1;
@@ -158,7 +160,7 @@ impl<'a> CompositorWorker<'a> {
         relevant_ids
     }
 
-    fn copy_opacity(&self, opacity: &[f32], subframe: &PixelBox, pixels: &PixelBox) -> Vec<f32> {
+    fn get_opacity(&self, opacity: &[f32], subframe: &PixelBox, pixels: &PixelBox) -> Vec<f32> {
         let mut v = Vec::with_capacity(pixels.items());
         let width = pixels.x.end - pixels.x.start;
         let height = pixels.y.end - pixels.y.start;
@@ -175,11 +177,45 @@ impl<'a> CompositorWorker<'a> {
         v
     }
 
-    fn add_opacity(&self, subcanvas_opacity: &mut [f32], res: &SubRenderResult) {
-        let width = res.width;
-        let opacities = &res.opacities[..];
+    fn copy_opacity(&self, subcanvas_opacity: &mut [f32], frame: &PixelBox, res: &SubRenderResult) {
+        let frame_width = frame.x.end - frame.x.start;
+        let line_width = res.pixels.x.end - res.pixels.x.start;
 
-        todo!()
+        let frame_local = (
+            res.pixels.x.start - frame.x.start,
+            res.pixels.y.start - frame.y.start,
+        );
+
+        let mut ptr = frame_local.0 + frame_local.1 * frame_width;
+        let mut res_ptr = 0;
+
+        for _ in res.pixels.y.clone() {
+            subcanvas_opacity[ptr..ptr + line_width]
+                .copy_from_slice(&res.opacities[res_ptr..res_ptr + line_width]);
+
+            ptr += frame_width;
+            res_ptr += line_width;
+        }
+    }
+
+    fn add_color(&self, rgb: &mut [Vector3<f32>], frame: &PixelBox, res: &SubRenderResult) {
+        let frame_width = frame.x.end - frame.x.start;
+        let line_width = res.pixels.x.end - res.pixels.x.start;
+
+        let frame_local = (
+            res.pixels.x.start - frame.x.start,
+            res.pixels.y.start - frame.y.start,
+        );
+
+        let mut ptr = frame_local.0 + frame_local.1 * frame_width;
+        let mut res_ptr = 0;
+
+        for _ in res.pixels.y.clone() {
+            rgb[ptr..ptr + line_width].copy_from_slice(&res.colors[res_ptr..res_ptr + line_width]);
+
+            ptr += frame_width;
+            res_ptr += line_width;
+        }
     }
 }
 
