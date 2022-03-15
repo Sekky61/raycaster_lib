@@ -8,7 +8,7 @@ use native_dialog::FileDialog;
 use render_thread::{
     RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
 };
-use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer};
+use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, SharedString};
 
 use crate::state::State;
 
@@ -35,6 +35,8 @@ pub fn main() {
     let app = App::new();
     let app_thread = app.as_weak();
     let app_render = app_thread.clone();
+    let app_file = app_thread.clone();
+    let app_folder = app_thread.clone();
 
     // IPC
     let shared_img = Arc::new(Mutex::new(vec![0u8; 3 * RENDER_WIDTH_U * RENDER_HEIGHT_U]));
@@ -114,6 +116,12 @@ pub fn main() {
             Some(path) => path,
             None => return,
         };
+
+        // let mut item = slint::re_exports::StandardListViewItem::default();
+        // item.text = SharedString::from("bar");
+        // let list = slint::re_exports::ModelRc::new(item);
+
+        // app_file.unwrap().set_parsers_name_list(list);
 
         state_clone
             .borrow_mut()
