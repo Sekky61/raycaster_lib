@@ -134,7 +134,7 @@ impl RenderThread {
     fn notify_frame_rendered(&mut self) {
         let handle_copy = self.app_weak.clone();
         self.state.can_start_rendering = false;
-        slint::invoke_from_event_loop(move || handle_copy.unwrap().invoke_send_rendered_frame());
+        slint::invoke_from_event_loop(move || handle_copy.unwrap().invoke_send_rendered_frame_st());
     }
 
     // todo dont use bool

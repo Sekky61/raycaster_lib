@@ -1,5 +1,5 @@
 use std::{
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
     thread::JoinHandle,
 };
 
@@ -16,22 +16,67 @@ use crate::{
 use super::messages::{RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
 use super::workers::{CompositorWorker, RenderWorker};
 
+pub struct ParalelRendererFront {
+    renderer: ParalelRenderer,
+    communication_in: (Sender<()>, Receiver<()>),
+    communication_out: (Sender<()>, Receiver<()>),
+}
+
+impl ParalelRendererFront {
+    pub fn new(
+        volume: BlockVolume,
+        camera: Arc<RwLock<PerspectiveCamera>>,
+        render_options: RenderOptions,
+    ) -> Self {
+        let communication_in = crossbeam_channel::unbounded(); // main -> renderer
+        let communication_out = crossbeam_channel::unbounded(); // renderer -> main
+
+        let communication = (communication_out.0.clone(), communication_in.1.clone());
+
+        let renderer = ParalelRenderer::new(volume, camera, render_options, communication);
+        Self {
+            renderer,
+            communication_in,
+            communication_out,
+        }
+    }
+
+    pub fn get_sender_receiver(&self) -> (Sender<()>, Receiver<()>, Arc<Mutex<Vec<u8>>>) {
+        (
+            self.communication_in.0.clone(),
+            self.communication_out.1.clone(),
+            self.renderer.buffer.clone(),
+        )
+    }
+
+    pub fn start_rendering(self) -> JoinHandle<()> {
+        self.renderer.start_rendering()
+    }
+}
+
 pub struct ParalelRenderer {
     volume: BlockVolume,
     camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
+    buffer: Arc<Mutex<Vec<u8>>>,
+    communication: (Sender<()>, Receiver<()>),
 }
 
 impl ParalelRenderer {
     pub fn new(
         volume: BlockVolume,
-        camera: PerspectiveCamera,
+        camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
-    ) -> ParalelRenderer {
-        ParalelRenderer {
+        communication: (Sender<()>, Receiver<()>),
+    ) -> Self {
+        let elements = render_options.resolution.0 * render_options.resolution.1;
+        let buffer = Arc::new(Mutex::new(vec![0; elements]));
+        Self {
             volume,
-            camera: Arc::new(RwLock::new(camera)),
+            camera,
             render_options,
+            buffer,
+            communication,
         }
     }
 
@@ -161,8 +206,10 @@ impl ParalelRenderer {
                 loop {
                     // Gather input
 
+                    // Lock buffer
+                    let mut buffer = self.buffer.lock().unwrap();
+
                     // Render
-                    let mut buffer = vec![0u8; 3 * width * height];
                     self.render(
                         task_sender.clone(),
                         result_receiver.clone(),

@@ -1,14 +1,24 @@
 use std::{
-    sync::{Arc, Mutex},
-    time::Instant,
+    sync::{Arc, Mutex, RwLock},
+    time::{Duration, Instant},
 };
 
-use nalgebra::vector;
+use nalgebra::{point, vector};
 use native_dialog::FileDialog;
+use raycaster_lib::{
+    camera::PerspectiveCamera,
+    premade::{
+        parse::{from_file, skull_parser},
+        transfer_functions::skull_tf,
+    },
+    render::{ParalelRendererFront, RenderOptions},
+};
 use render_thread::{
     RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
 };
-use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, SharedString};
+use slint::{
+    re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, SharedString, Timer, TimerMode,
+};
 
 use crate::state::State;
 
@@ -34,7 +44,9 @@ pub fn main() {
     // Main App object and handles
     let app = App::new();
     let app_thread = app.as_weak();
-    let app_render = app_thread.clone();
+    let app_render_st = app_thread.clone();
+    let app_render_mt = app_thread.clone();
+    let app_poll = app_thread.clone();
     let app_file = app_thread.clone();
     let app_folder = app_thread.clone();
 
@@ -47,6 +59,22 @@ pub fn main() {
     let renderer_sender = render_thread.get_sender();
     let render_thread_handle = render_thread.start();
 
+    let par_ren = volume_setup();
+    let (render_send, render_recv, buffer) = par_ren.get_sender_receiver();
+    par_ren.start_rendering();
+
+    let timer = Timer::default();
+    timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
+        match render_recv.try_recv() {
+            Ok(_) => {
+                // New Frame
+                let a = app_poll.clone();
+                slint::invoke_from_event_loop(move || a.unwrap().invoke_send_rendered_frame_st());
+            }
+            Err(_) => todo!(),
+        }
+    });
+
     // State
     // Wrapped for access in closures
     let state = State::new_shared(renderer_sender);
@@ -54,8 +82,8 @@ pub fn main() {
     // Callback
     // Invoked when new frame is rendered
     let state_clone = state.clone();
-    app.on_send_rendered_frame(move || {
-        let app = app_render.unwrap();
+    app.on_send_rendered_frame_st(move || {
+        let app = app_render_st.unwrap();
 
         let mut state_ref = state_clone.borrow_mut();
 
@@ -72,6 +100,30 @@ pub fn main() {
             // mutex drop
         }
         state_ref.render_thread_send_message(RenderThreadMessage::StartRendering);
+        let image = Image::from_rgb8(pixel_buffer);
+        app.set_render_target(image);
+
+        // Frame time
+        let elapsed = state_ref.timer.elapsed();
+        app.set_frame_time(elapsed.as_millis().try_into().unwrap());
+        state_ref.timer = Instant::now();
+    });
+
+    // Invoked when new frame is rendered
+    let state_clone = state.clone();
+    app.on_send_rendered_frame_mt(move || {
+        let app = app_render_mt.unwrap();
+
+        let mut state_ref = state_clone.borrow_mut();
+
+        let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(RENDER_WIDTH, RENDER_HEIGHT);
+
+        {
+            let mut lock = buffer.lock().unwrap();
+            let slice = lock.as_mut_slice();
+            pixel_buffer.make_mut_bytes().clone_from_slice(slice);
+            // mutex drop
+        }
         let image = Image::from_rgb8(pixel_buffer);
         app.set_render_target(image);
 
@@ -168,4 +220,17 @@ pub fn main() {
         Ok(_) => (),
         Err(_) => eprintln!("Render thread fialed"),
     }
+}
+
+fn volume_setup() -> ParalelRendererFront {
+    let position = point![300.0, 300.0, 300.0];
+    let direction = position - point![34.0, 128.0, 128.0];
+    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+
+    let camera = PerspectiveCamera::new(position, direction);
+    let camera = Arc::new(RwLock::new(camera));
+
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+
+    ParalelRendererFront::new(volume, camera, render_options)
 }

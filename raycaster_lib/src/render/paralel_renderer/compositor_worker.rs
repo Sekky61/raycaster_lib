@@ -133,7 +133,7 @@ impl<'a> CompositorWorker<'a> {
 
                     subcanvas_rgb
                         .iter_mut()
-                        .map(|v| *v = Vector3::<f32>::zeros());
+                        .for_each(|v| *v = Vector3::<f32>::zeros());
                 }
                 ToCompositorMsg::Finish => return,
             }
