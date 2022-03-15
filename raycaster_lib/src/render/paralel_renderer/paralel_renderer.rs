@@ -3,7 +3,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use crossbeam_channel::Sender;
+use crossbeam_channel::{Receiver, Sender};
 use nalgebra::vector;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     volumetric::BlockVolume,
 };
 
-use super::messages::{RenderTask, ToCompositorMsg, ToRendererMsg};
+use super::messages::{RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
 use super::workers::{CompositorWorker, RenderWorker};
 
 pub struct ParalelRenderer {
@@ -42,7 +42,7 @@ impl ParalelRenderer {
                 let volume = &self.volume;
 
                 // inlined function because borrow checker defeated me (scope cannot leave closure)
-                let (render_handles, comp_handles, task_sender) = {
+                let (render_handles, comp_handles, task_sender, result_receiver) = {
                     // Send to compositor, compositor recieves message
                     let ren_to_comp = [
                         crossbeam_channel::unbounded(),
@@ -115,10 +115,13 @@ impl ParalelRenderer {
 
                     let compositor_areas = ParalelRenderer::generate_compositor_areas(4);
 
+                    let (result_sender, result_receiver) = crossbeam_channel::unbounded();
+
                     for i in 0..4 {
                         // Create compositor thread
 
                         let receiver = ren_to_comp[i].1.clone(); // Receiver
+                        let result_sender = result_sender.clone();
                         let all_renderers = renderer_send.clone();
                         let camera_ref = self.camera.clone();
                         let area = compositor_areas[i];
@@ -139,6 +142,7 @@ impl ParalelRenderer {
                                 resolution,
                                 all_renderers,
                                 message_receiver,
+                                result_sender,
                                 blocks_ref,
                             );
 
@@ -148,7 +152,7 @@ impl ParalelRenderer {
                         compositors.push(handle);
                     }
 
-                    (renderers, compositors, task_sender)
+                    (renderers, compositors, task_sender, result_receiver)
                 };
 
                 let (width, height) = self.render_options.resolution;
@@ -159,7 +163,11 @@ impl ParalelRenderer {
 
                     // Render
                     let mut buffer = vec![0u8; 3 * width * height];
-                    self.render(task_sender.clone(), &mut buffer[..]);
+                    self.render(
+                        task_sender.clone(),
+                        result_receiver.clone(),
+                        &mut buffer[..],
+                    );
 
                     // Send result
                 }
@@ -168,7 +176,12 @@ impl ParalelRenderer {
         })
     }
 
-    fn render(&self, task_sender: Sender<RenderTask>, buffer: &mut [u8]) {
+    fn render(
+        &self,
+        task_sender: Sender<RenderTask>,
+        result_receiver: Receiver<ToMasterMsg>,
+        buffer: &mut [u8],
+    ) {
         let resolution = self.render_options.resolution;
 
         // Read lock until end of function
@@ -198,9 +211,36 @@ impl ParalelRenderer {
         }
 
         // Get subcanvases from compositors and save them to buffer
+        for _ in 0..4 {
+            let msg = result_receiver.recv().unwrap();
+            match msg {
+                ToMasterMsg::Subframe(res) => {
+                    self.copy_subframe(buffer, res);
+                }
+            }
+        }
     }
 
     fn generate_compositor_areas(arg: usize) -> Vec<ViewportBox> {
         todo!()
+    }
+
+    fn copy_subframe(&self, buffer: &mut [u8], res: SubFrameResult) {
+        let SubFrameResult {
+            data,
+            offset,
+            width,
+        } = res;
+
+        let data = &data[..];
+
+        let mut ptr = offset;
+        let mut ptr_data = 0;
+        while ptr_data < buffer.len() {
+            buffer[ptr..ptr + width].copy_from_slice(&data[ptr_data..ptr_data + width]);
+
+            ptr += self.render_options.resolution.0;
+            ptr_data += width;
+        }
     }
 }

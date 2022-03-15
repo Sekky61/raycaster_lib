@@ -12,7 +12,7 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{OpacityData, SubRenderResult, ToCompositorMsg, ToRendererMsg};
+use super::messages::{OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
 
 pub struct CompositorWorker<'a> {
     compositor_id: usize,
@@ -21,6 +21,7 @@ pub struct CompositorWorker<'a> {
     resolution: Vector2<usize>, // Resolution of full image
     renderers: [Sender<ToRendererMsg>; 4],
     receiver: Receiver<ToCompositorMsg>,
+    result_sender: Sender<ToMasterMsg>,
     blocks: &'a [Block],
 }
 
@@ -32,6 +33,7 @@ impl<'a> CompositorWorker<'a> {
         resolution: Vector2<usize>,
         renderers: [Sender<ToRendererMsg>; 4],
         receiver: Receiver<ToCompositorMsg>,
+        result_sender: Sender<ToMasterMsg>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -41,6 +43,7 @@ impl<'a> CompositorWorker<'a> {
             resolution,
             renderers,
             receiver,
+            result_sender,
             blocks,
         }
     }
@@ -126,6 +129,11 @@ impl<'a> CompositorWorker<'a> {
                     // Expected volume is updated, can we satisfy request from queue?
 
                     // Got all results? Convert to RGB bytes and send to master thread for output
+                    let byte_canvas = self.convert_to_bytes(&subcanvas_rgb[..]);
+
+                    subcanvas_rgb
+                        .iter_mut()
+                        .map(|v| *v = Vector3::<f32>::zeros());
                 }
                 ToCompositorMsg::Finish => return,
             }
@@ -216,6 +224,14 @@ impl<'a> CompositorWorker<'a> {
             ptr += frame_width;
             res_ptr += line_width;
         }
+    }
+
+    fn convert_to_bytes(&self, subcanvas_rgb: &[Vector3<f32>]) -> Vec<u8> {
+        let mut v = Vec::with_capacity(3 * subcanvas_rgb.len());
+        subcanvas_rgb.iter().for_each(|rgb| {
+            rgb.iter().for_each(|&val| v.push(val as u8));
+        });
+        v
     }
 }
 

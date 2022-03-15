@@ -82,10 +82,20 @@ impl OpacityData {
     }
 }
 
+pub struct SubFrameResult {
+    pub data: Vec<u8>,
+    pub offset: usize,
+    pub width: usize,
+}
+
 pub enum ToCompositorMsg {
     OpacityRequest(OpacityRequest),
     RenderResult(SubRenderResult),
     Finish,
+}
+
+pub enum ToMasterMsg {
+    Subframe(SubFrameResult),
 }
 
 pub enum ToRendererMsg {
