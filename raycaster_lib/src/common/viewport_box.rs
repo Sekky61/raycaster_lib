@@ -11,6 +11,10 @@ pub struct ViewportBox {
 }
 
 impl ViewportBox {
+    pub fn from_points(lower: Vector2<f32>, upper: Vector2<f32>) -> Self {
+        Self { lower, upper }
+    }
+
     // Maximum viewport, flipped
     pub fn new() -> Self {
         Self {

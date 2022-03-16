@@ -65,13 +65,10 @@ pub fn main() {
 
     let timer = Timer::default();
     timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
-        match render_recv.try_recv() {
-            Ok(_) => {
-                // New Frame
-                let a = app_poll.clone();
-                slint::invoke_from_event_loop(move || a.unwrap().invoke_send_rendered_frame_st());
-            }
-            Err(_) => todo!(),
+        if render_recv.try_recv().is_ok() {
+            // New Frame
+            let a = app_poll.clone();
+            slint::invoke_from_event_loop(move || a.unwrap().invoke_send_rendered_frame_st());
         }
     });
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::vector;
+use nalgebra::{point, vector};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -268,8 +268,17 @@ impl ParalelRenderer {
         }
     }
 
-    fn generate_compositor_areas(arg: usize) -> Vec<ViewportBox> {
-        todo!()
+    // Segment viewport into n subframes
+    fn generate_compositor_areas(n: usize) -> Vec<ViewportBox> {
+        if n == 4 {
+            let box1 = ViewportBox::from_points(vector![0.0, 0.0], vector![0.5, 0.5]);
+            let box2 = ViewportBox::from_points(vector![0.5, 0.0], vector![1.0, 0.5]);
+            let box3 = ViewportBox::from_points(vector![0.0, 0.5], vector![0.5, 1.0]);
+            let box4 = ViewportBox::from_points(vector![0.5, 0.5], vector![1.0, 1.0]);
+            return vec![box1, box2, box3, box4];
+        } else {
+            todo!()
+        }
     }
 
     fn copy_subframe(&self, buffer: &mut [u8], res: SubFrameResult) {
