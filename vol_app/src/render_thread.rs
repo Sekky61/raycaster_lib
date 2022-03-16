@@ -17,12 +17,6 @@ use raycaster_lib::{
 
 use crate::App; // todo
 
-pub const RENDER_WIDTH_U: usize = 700;
-pub const RENDER_HEIGHT_U: usize = 700;
-
-pub const RENDER_WIDTH: u32 = RENDER_WIDTH_U as u32;
-pub const RENDER_HEIGHT: u32 = RENDER_HEIGHT_U as u32;
-
 pub struct State {
     pub can_start_rendering: bool,
     pub left_mouse_held: bool,

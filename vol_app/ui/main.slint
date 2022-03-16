@@ -15,8 +15,7 @@ App := Window {
     property<[StandardListViewItem]> parsers_name_list : [{text: "parser1"}, {text: "parser2"}];
 
     property<image> render_target;
-    callback send_rendered_frame_st();
-    callback send_rendered_frame_mt();
+    callback new_rendered_frame();
 
     callback render_area_mp(MousePos) -> MousePos;
 
