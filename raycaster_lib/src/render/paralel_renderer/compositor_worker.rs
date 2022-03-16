@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     ops::Range,
     sync::{Arc, RwLock},
 };
@@ -60,6 +61,7 @@ impl<'a> CompositorWorker<'a> {
         let block_info = self.get_block_info();
 
         let mut expected_volume = 0; // pointer into block_info, todo peekable iter
+        let mut queue = VecDeque::new();
 
         loop {
             // Receive requests
@@ -73,29 +75,21 @@ impl<'a> CompositorWorker<'a> {
                             // Block is in compositors field
 
                             // todo move forward, to skip binary search
-                            if block_info[expected_volume].index == index {
+                            if expected_volume == index {
                                 // Block is up
 
                                 let info = &block_info[index];
-                                let box_intersection =
-                                    self.area.intersection_unchecked(&info.viewport);
-                                let pixels = box_intersection.get_pixel_range(self.resolution);
 
-                                // Shift pixelbox to our subframe
-
-                                let opacity_data = self.get_opacity(
-                                    subcanvas_opacity.as_slice(),
+                                let response = self.handle_request(
+                                    info,
+                                    &subcanvas_opacity[..],
                                     &subcanvas_size,
-                                    &pixels,
                                 );
-                                let opacity_data =
-                                    OpacityData::new(self.compositor_id, pixels, opacity_data);
-                                let response = ToRendererMsg::Opacity(opacity_data);
 
                                 responder.send(response).unwrap();
                             } else {
                                 // Needs to be placed in queue
-                                todo!()
+                                queue.push_back(req);
                             }
                         }
                         Err(_) => {
@@ -127,6 +121,16 @@ impl<'a> CompositorWorker<'a> {
                     }
 
                     // Expected volume is updated, can we satisfy request from queue?
+                    if let Some(b) = queue.back() {
+                        if block_info[expected_volume].index == b.order {
+                            let r = queue.pop_back().unwrap();
+                            let responder = &self.renderers[r.from_id];
+                            let info = &block_info[expected_volume];
+                            let response =
+                                self.handle_request(info, &subcanvas_opacity[..], &subcanvas_size);
+                            responder.send(response).unwrap();
+                        }
+                    }
 
                     // Got all results? Convert to RGB bytes and send to master thread for output
                     let byte_canvas = self.convert_to_bytes(&subcanvas_rgb[..]);
@@ -232,6 +236,22 @@ impl<'a> CompositorWorker<'a> {
             rgb.iter().for_each(|&val| v.push(val as u8));
         });
         v
+    }
+
+    fn handle_request(
+        &self,
+        info: &BlockInfo,
+        opacities: &[f32],
+        subcanvas_size: &PixelBox,
+    ) -> ToRendererMsg {
+        let box_intersection = self.area.intersection_unchecked(&info.viewport);
+        let pixels = box_intersection.get_pixel_range(self.resolution);
+
+        // Shift pixelbox to our subframe
+
+        let opacity_data = self.get_opacity(opacities, subcanvas_size, &pixels);
+        let opacity_data = OpacityData::new(self.compositor_id, pixels, opacity_data);
+        ToRendererMsg::Opacity(opacity_data)
     }
 }
 
