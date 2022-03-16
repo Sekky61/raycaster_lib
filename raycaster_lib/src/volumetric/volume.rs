@@ -5,7 +5,7 @@ use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 // Volume assumes f32 data
 // Volume is axis aligned
-pub trait Volume {
+pub trait Volume: Send {
     // get data dimensions
     fn get_size(&self) -> Vector3<usize>;
 

@@ -48,6 +48,10 @@ impl PerspectiveCamera {
         }
     }
 
+    pub fn get_dir(&self) -> Vector3<f32> {
+        self.direction
+    }
+
     // In degrees
     pub fn change_fov(&mut self, vertical_fov: f32) {
         self.fov_y = vertical_fov;

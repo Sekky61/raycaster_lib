@@ -23,16 +23,17 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     let camera = PerspectiveCamera::new(position, direction);
     let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
-    let mut renderer = Renderer::<LinearVolume, PerspectiveCamera>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let ren_opts = RenderOptions {
         resolution: (width, height),
         ray_termination: true,
         empty_index: false,
-    });
+    };
+
+    let mut renderer = Renderer::<LinearVolume>::new(volume, ren_opts);
 
     let mut buffer = vec![0; 3 * width * height];
 
-    renderer.render_to_buffer(buffer.as_mut_slice());
+    renderer.render_to_buffer(&camera, buffer.as_mut_slice());
 
     buffer
 }

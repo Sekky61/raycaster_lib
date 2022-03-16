@@ -38,10 +38,6 @@ impl CameraBuffer {
         Self { buffer }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.buffer.is_empty()
-    }
-
     pub fn add_movement(&mut self, movement: CameraMovement) {
         self.buffer.push_back(movement);
     }
@@ -63,19 +59,10 @@ pub struct State {
 impl State {
     pub fn new(app: Weak<App>) -> State {
         let renderer_front = RendererFront::new();
-        let app_poll = app.clone();
-        let render_recv = renderer_front.get_receiver();
-        let timer = Timer::default();
-        timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
-            if render_recv.try_recv().is_ok() {
-                // New Frame
-                let a = app_poll.clone();
-                slint::invoke_from_event_loop(move || a.unwrap().invoke_new_rendered_frame());
-            }
-        });
+
         State {
             app,
-            renderer_front: RendererFront::new(),
+            renderer_front,
             is_rendering: false,
             camera_buffer: CameraBuffer::new(),
             left_mouse_held: false,
@@ -201,6 +188,7 @@ impl State {
         let camera = self.renderer_front.get_camera_handle().unwrap();
         {
             let mut camera = camera.write().unwrap();
+            println!("Cam {}", camera.get_dir());
             while let Some(movement) = self.camera_buffer.buffer.pop_front() {
                 match movement {
                     CameraMovement::PositionOrtho(d) => camera.change_pos(d),

@@ -4,7 +4,7 @@ pub use perspective_camera::PerspectiveCamera;
 
 use crate::common::{BoundBox, Ray, ViewportBox};
 
-pub trait Camera {
+pub trait Camera: Send {
     // pixel_coord: normalized pixel coords. Range <0;1>^2
     fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray;
 

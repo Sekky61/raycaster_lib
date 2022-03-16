@@ -9,7 +9,7 @@ use nalgebra::{point, vector};
 use crate::{
     camera::{Camera, PerspectiveCamera},
     common::ViewportBox,
-    render::{RenderOptions, RendererMessage},
+    render::{render_front::RenderThread, RenderOptions, RendererMessage},
     volumetric::BlockVolume,
 };
 
@@ -24,15 +24,39 @@ pub struct ParalelRenderer {
     communication: (Sender<()>, Receiver<RendererMessage>),
 }
 
+impl RenderThread for ParalelRenderer {
+    fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>> {
+        self.buffer.clone()
+    }
+
+    fn get_camera(&self) -> Arc<RwLock<PerspectiveCamera>> {
+        self.camera.clone()
+    }
+
+    fn start(self) -> JoinHandle<()> {
+        self.start_rendering()
+    }
+
+    fn set_communication(&mut self, communication: (Sender<()>, Receiver<RendererMessage>)) {
+        self.communication = communication;
+    }
+}
+
 impl ParalelRenderer {
     pub fn new(
         volume: BlockVolume,
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
-        communication: (Sender<()>, Receiver<RendererMessage>),
     ) -> Self {
         let elements = render_options.resolution.0 * render_options.resolution.1;
-        let buffer = Arc::new(Mutex::new(vec![0; elements]));
+        let buffer = Arc::new(Mutex::new(vec![0; elements * 3]));
+
+        // Dummy channels
+        // Replaced once started
+        let (sender_void, _) = crossbeam_channel::unbounded();
+        let never = crossbeam_channel::never();
+        let communication = (sender_void, never);
+
         Self {
             volume,
             camera,

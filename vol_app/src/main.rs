@@ -1,9 +1,8 @@
 use std::{
     sync::{Arc, RwLock},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
-use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{point, vector};
 use native_dialog::FileDialog;
 use raycaster_lib::{
@@ -12,9 +11,12 @@ use raycaster_lib::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
-    render::{ParalelRenderer, RenderOptions, RendererMessage},
+    render::{
+        ParalelRenderer, RenderOptions, RenderSingleThread, RenderThread, Renderer, RendererMessage,
+    },
+    volumetric::{Block, BlockVolume},
 };
-use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer};
+use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
 use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
 
 use crate::state::State;
@@ -40,16 +42,33 @@ pub fn main() {
     // Main App object and handles
     let app = App::new();
     let app_weak = app.as_weak();
+    let app_poll = app_weak.clone();
 
     // State
     // Wrapped for access in closures
     let state = State::new_shared(app_weak);
     {
         // Create renderer and tart render thread
-        let state_mut = state.borrow_mut();
-        let renderer = volume_setup(state_mut.renderer_front.get_communication_render_side());
+        let mut state_mut = state.borrow_mut();
+        let renderer = volume_setup_linear();
         state_mut.renderer_front.start_rendering(renderer);
+        state_mut.render_thread_send_message(RendererMessage::StartRendering); // Initial command
     }
+
+    let timer = {
+        let state_mut = state.borrow_mut();
+        let app_poll = app_poll;
+        let render_recv = state_mut.renderer_front.get_receiver();
+        let timer = Timer::default();
+        timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
+            if render_recv.try_recv().is_ok() {
+                // New Frame
+                let a = app_poll.clone();
+                slint::invoke_from_event_loop(move || a.unwrap().invoke_new_rendered_frame());
+            }
+        });
+        timer
+    };
 
     // Callback
     // Invoked when new frame is rendered
@@ -160,9 +179,9 @@ pub fn main() {
     state.borrow_mut().renderer_front.finish();
 }
 
-fn volume_setup(communication: (Sender<()>, Receiver<RendererMessage>)) -> ParalelRenderer {
+fn volume_setup_paralel() -> ParalelRenderer {
     let position = point![300.0, 300.0, 300.0];
-    let direction = position - point![34.0, 128.0, 128.0];
+    let direction = point![34.0, 128.0, 128.0] - position;
     let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
@@ -170,5 +189,19 @@ fn volume_setup(communication: (Sender<()>, Receiver<RendererMessage>)) -> Paral
 
     let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
 
-    ParalelRenderer::new(volume, camera, render_options, communication)
+    ParalelRenderer::new(volume, camera, render_options)
+}
+
+fn volume_setup_linear() -> RenderSingleThread<BlockVolume> {
+    let position = point![300.0, 300.0, 300.0];
+    let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
+    let volume: BlockVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+
+    let camera = PerspectiveCamera::new(position, direction);
+    println!("Cam {}", camera.get_dir());
+    let camera = Arc::new(RwLock::new(camera));
+
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+
+    RenderSingleThread::new(volume, camera, render_options)
 }
