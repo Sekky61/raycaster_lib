@@ -115,9 +115,7 @@ where
                     let camera = self.camera.read().unwrap();
 
                     // Render
-                    println!("Render bro");
                     renderer.render(&camera, &mut buffer[..]);
-                    println!("Render done bro");
                 }
 
                 // Send result
@@ -167,6 +165,11 @@ where
 
         let (image_width, image_height) = (img_w as f32, img_h as f32);
 
+        // Clear
+        for byte in buffer.iter_mut() {
+            *byte = 0;
+        }
+
         let step_x = 1.0 / image_width;
         let step_y = 1.0 / image_height;
 
@@ -190,7 +193,8 @@ where
         let end_x = min(start_x + lim_x, img_w);
         let end_y = min(start_y + lim_y, img_h);
 
-        println!("{:?} xx {:?}", start_x..end_x, start_y..end_y);
+        let width_bytes_skip = 3 * (img_w - (end_x - start_x));
+        let mut index = (start_x + img_w * start_y) * 3;
 
         for y in (start_y..end_y).rev() {
             let y_norm = y as f32 * step_y;
@@ -207,10 +211,6 @@ where
 
                 let opacity = ray_color.w;
 
-                let index = (x + img_w * y) * 3;
-
-                // let render_bound_box = true;
-
                 // if render_bound_box {
                 //     if x == start_x || x == end_x - 1 || y == end_y - 1 || y == start_y {
                 //         buffer[index] = 255;
@@ -224,7 +224,9 @@ where
                 buffer[index] = (ray_color.x * opacity) as u8;
                 buffer[index + 1] = (ray_color.y * opacity) as u8;
                 buffer[index + 2] = (ray_color.z * opacity) as u8;
+                index += 3;
             }
+            index += width_bytes_skip;
         }
     }
 
@@ -311,6 +313,7 @@ where
         let light_source = vector![1.0, 1.0, 0.0].normalize();
 
         for _ in 0..max_n_of_steps {
+            // todo try sampling on integer coords
             if self.empty_index.sample(pos) == BlockType::Empty {
                 pos += step;
                 continue;

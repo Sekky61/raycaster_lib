@@ -12,7 +12,7 @@ pub enum RendererMessage {
     ShutDown,
 }
 
-// Interface for renderer
+// Interface for renderers running in different thread
 pub trait RenderThread {
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>>;
 

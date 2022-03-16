@@ -182,7 +182,6 @@ impl State {
         let camera = self.renderer_front.get_camera_handle().unwrap();
         {
             let mut camera = camera.write().unwrap();
-            println!("Cam {}", camera.get_dir());
             while let Some(movement) = self.camera_buffer.buffer.pop_front() {
                 match movement {
                     CameraMovement::PositionOrtho(d) => camera.change_pos(d),
