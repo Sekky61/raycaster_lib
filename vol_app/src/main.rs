@@ -11,10 +11,8 @@ use raycaster_lib::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
-    render::{
-        ParalelRenderer, RenderOptions, RenderSingleThread, RenderThread, Renderer, RendererMessage,
-    },
-    volumetric::{Block, BlockVolume},
+    render::{ParalelRenderer, RenderOptions, RenderSingleThread, RendererMessage},
+    volumetric::BlockVolume,
 };
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
 use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
@@ -55,7 +53,7 @@ pub fn main() {
         state_mut.render_thread_send_message(RendererMessage::StartRendering); // Initial command
     }
 
-    let timer = {
+    let _timer = {
         let state_mut = state.borrow_mut();
         let app_poll = app_poll;
         let render_recv = state_mut.renderer_front.get_receiver();
@@ -198,7 +196,6 @@ fn volume_setup_linear() -> RenderSingleThread<BlockVolume> {
     let volume: BlockVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
-    println!("Cam {}", camera.get_dir());
     let camera = Arc::new(RwLock::new(camera));
 
     let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);

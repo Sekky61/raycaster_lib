@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use nalgebra::Vector3;
 
 use crate::common::PixelBox;
@@ -88,6 +86,16 @@ pub struct SubFrameResult {
     pub width: usize,
 }
 
+impl SubFrameResult {
+    pub fn new(data: Vec<u8>, offset: usize, width: usize) -> Self {
+        Self {
+            data,
+            offset,
+            width,
+        }
+    }
+}
+
 pub enum ToCompositorMsg {
     OpacityRequest(OpacityRequest),
     RenderResult(SubRenderResult),
@@ -101,4 +109,5 @@ pub enum ToMasterMsg {
 pub enum ToRendererMsg {
     Opacity(OpacityData),
     EmptyOpacity,
+    Finish,
 }

@@ -23,10 +23,7 @@ impl StreamVolume {
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let index = self.map_offset + self.get_3d_index(x, y, z);
         let buf: &[u8] = self.file_map.as_ref();
-        match buf.get(index) {
-            Some(v) => Some(*v as f32),
-            None => None,
-        }
+        buf.get(index).map(|v| *v as f32)
     }
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {

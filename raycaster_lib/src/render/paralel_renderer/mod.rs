@@ -1,9 +1,9 @@
 mod compositor_worker;
 mod messages;
-mod paralel_renderer;
+mod master_thread;
 mod render_worker;
 
-pub use paralel_renderer::ParalelRenderer;
+pub use master_thread::ParalelRenderer;
 
 mod workers {
     pub use super::compositor_worker::CompositorWorker;

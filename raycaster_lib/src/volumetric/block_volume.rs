@@ -20,22 +20,6 @@ pub struct BlockVolume {
 }
 
 impl BlockVolume {
-    // block 3d index -> 2d index
-    fn get_block_offset(&self, x: usize, y: usize, z: usize) -> usize {
-        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP; // todo bug here for low coords
-        (z % jump_per_block)
-            + (y % jump_per_block) * BLOCK_SIDE
-            + (x % jump_per_block) * BLOCK_SIDE * BLOCK_SIDE
-    }
-
-    // return: voxel 3d index -> block 2d index
-    fn get_block_index(&self, x: usize, y: usize, z: usize) -> usize {
-        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
-        (z / jump_per_block)
-            + (y / jump_per_block) * self.block_size.z
-            + (x / jump_per_block) * self.block_size.y * self.block_size.z
-    }
-
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
@@ -219,7 +203,7 @@ impl BuildVolume<u8> for BlockVolume {
                 for z in (0..size.z).step_by(step_size) {
                     let block_start = point![x, y, z];
                     let block_data = get_block_data(slice, size, block_start);
-                    let block_bound_box = get_bound_box(position, scale, block_size, block_start);
+                    let block_bound_box = get_bound_box(position, scale, block_start);
                     let block = Block::from_data(block_data, block_bound_box);
                     blocks.push(block);
                 }
@@ -246,7 +230,6 @@ impl BuildVolume<u8> for BlockVolume {
 fn get_bound_box(
     vol_position: Point3<f32>,
     vol_scale: Vector3<f32>,
-    block_size: Vector3<usize>,
     block_start: Point3<usize>,
 ) -> BoundBox {
     let block_lower = vector![

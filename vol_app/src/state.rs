@@ -1,16 +1,10 @@
-use std::{
-    cell::RefCell,
-    collections::VecDeque,
-    path::PathBuf,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::{cell::RefCell, collections::VecDeque, path::PathBuf, rc::Rc, time::Instant};
 
 use nalgebra::{vector, Vector2, Vector3};
 use raycaster_lib::render::{RendererFront, RendererMessage};
 use slint::{
     re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
-    Timer, TimerMode, Weak,
+    Weak,
 };
 
 use super::App;

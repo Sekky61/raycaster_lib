@@ -5,17 +5,17 @@ fn render_linear(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
-        empty_index: false,
-    });
+        empty_index: true,
+    };
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
 
     c.bench_function("render linear 512x512", |b| {
-        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
+        b.iter(|| renderer.render_to_buffer(&camera, buffer.as_mut_slice()));
     });
 }
 
@@ -23,17 +23,17 @@ fn render_linear_ei(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-    });
+    };
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
 
     c.bench_function("render linear 512x512 empty index", |b| {
-        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
+        b.iter(|| renderer.render_to_buffer(&camera, buffer.as_mut_slice()));
     });
 }
 
@@ -41,17 +41,17 @@ fn render_block(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
-        empty_index: false,
-    });
+        empty_index: true,
+    };
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
 
     c.bench_function("render block 512x512", |b| {
-        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
+        b.iter(|| renderer.render_to_buffer(&camera, buffer.as_mut_slice()));
     });
 }
 
@@ -59,17 +59,17 @@ fn render_block_ei(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
 
-    let mut renderer = Renderer::<BlockVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-    });
+    };
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     let mut buffer = vec![0; 3 * WIDTH * HEIGHT];
 
     c.bench_function("render block 512x512 empty index", |b| {
-        b.iter(|| renderer.render_to_buffer(buffer.as_mut_slice()));
+        b.iter(|| renderer.render_to_buffer(&camera, buffer.as_mut_slice()));
     });
 }
 

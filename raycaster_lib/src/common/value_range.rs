@@ -51,6 +51,12 @@ impl ValueRange {
     }
 }
 
+impl Default for ValueRange {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
 

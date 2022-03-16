@@ -1,6 +1,5 @@
 use std::{
     collections::VecDeque,
-    ops::Range,
     sync::{Arc, RwLock},
 };
 
@@ -10,6 +9,7 @@ use nalgebra::{Vector2, Vector3};
 use crate::{
     camera::{Camera, PerspectiveCamera},
     common::{PixelBox, ViewportBox},
+    render::paralel_renderer::messages::SubFrameResult,
     volumetric::Block,
 };
 
@@ -136,6 +136,11 @@ impl<'a> CompositorWorker<'a> {
                     // Got all results? Convert to RGB bytes and send to master thread for output
                     let byte_canvas = self.convert_to_bytes(&subcanvas_rgb[..]);
 
+                    // Send byte canvas to master
+                    let res = SubFrameResult::new(byte_canvas, todo!(), todo!());
+                    self.result_sender.send(ToMasterMsg::Subframe(res)).unwrap();
+
+                    // Reset color buffer
                     subcanvas_rgb
                         .iter_mut()
                         .for_each(|v| *v = Vector3::<f32>::zeros());

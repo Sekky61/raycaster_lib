@@ -1,23 +1,16 @@
-use std::{
-    borrow::Borrow,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
-use crossbeam::select;
 use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::{PixelBox, Ray},
+    common::Ray,
     volumetric::Block,
 };
 
-use super::{
-    compositor_worker::BlockInfo,
-    messages::{
-        OpacityData, OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg,
-    },
+use super::messages::{
+    OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg,
 };
 
 pub struct RenderWorker<'a> {

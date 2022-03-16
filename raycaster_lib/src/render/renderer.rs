@@ -5,7 +5,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector, Point3, Vector3, Vector4};
+use nalgebra::{vector, Vector4};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -95,13 +95,17 @@ where
         }
     }
 
-    pub fn start_rendering(mut self) -> JoinHandle<()> {
+    pub fn start_rendering(self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             let mut renderer = Renderer::new(self.volume, self.render_options);
             // Master loop
             loop {
                 // Gather input
                 let msg = self.communication.1.recv().unwrap();
+                match msg {
+                    RendererMessage::StartRendering => (),
+                    RendererMessage::ShutDown => break,
+                }
 
                 {
                     // Lock buffer

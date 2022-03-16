@@ -31,10 +31,7 @@ impl LinearVolume {
 
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let val = self.data.get(self.get_3d_index(x, y, z));
-        match val {
-            Some(&v) => Some(v),
-            None => None,
-        }
+        val.copied()
     }
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::{point, vector};
+use nalgebra::vector;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
@@ -66,14 +66,21 @@ impl ParalelRenderer {
         }
     }
 
-    pub fn start_rendering(mut self) -> JoinHandle<()> {
+    pub fn start_rendering(self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             // Scope assures threads will be joined before exiting the scope
             crossbeam::scope(|s| {
                 let volume = &self.volume;
 
                 // inlined function because borrow checker defeated me (scope cannot leave closure)
-                let (render_handles, comp_handles, task_sender, result_receiver) = {
+                let (
+                    render_handles,
+                    comp_handles,
+                    task_sender,
+                    result_receiver,
+                    compositor_send,
+                    renderer_send,
+                ) = {
                     // Send to compositor, compositor recieves message
                     let ren_to_comp = [
                         crossbeam_channel::unbounded(),
@@ -183,15 +190,24 @@ impl ParalelRenderer {
                         compositors.push(handle);
                     }
 
-                    (renderers, compositors, task_sender, result_receiver)
+                    (
+                        renderers,
+                        compositors,
+                        task_sender,
+                        result_receiver,
+                        compositor_send,
+                        renderer_send,
+                    )
                 };
-
-                let (width, height) = self.render_options.resolution;
 
                 // Master loop
                 loop {
                     // Gather input
                     let msg = self.communication.1.recv().unwrap();
+                    match msg {
+                        RendererMessage::StartRendering => (),
+                        RendererMessage::ShutDown => break,
+                    }
 
                     // Lock buffer
                     let mut buffer = self.buffer.lock().unwrap();
@@ -206,6 +222,21 @@ impl ParalelRenderer {
                     // Send result
                     self.communication.0.send(()).unwrap();
                 }
+
+                // Send finish messages and join threads
+                for se in compositor_send {
+                    se.send(ToCompositorMsg::Finish).unwrap();
+                }
+                for se in renderer_send {
+                    se.send(ToRendererMsg::Finish).unwrap();
+                }
+
+                for h in render_handles {
+                    h.join().unwrap();
+                }
+                for h in comp_handles {
+                    h.join().unwrap();
+                }
             })
             .unwrap();
         })
@@ -217,8 +248,6 @@ impl ParalelRenderer {
         result_receiver: Receiver<ToMasterMsg>,
         buffer: &mut [u8],
     ) {
-        let resolution = self.render_options.resolution;
-
         // Read lock until end of function
         let camera = self
             .camera
@@ -239,7 +268,7 @@ impl ParalelRenderer {
         // for Load balancing
         for (block_id, distance) in block_order {
             // Find out if block is empty, in which case dont send it
-            let block = &self.volume.data[block_id];
+            let block = &self.volume.data[block_id]; // TODO
 
             // Send task
             task_sender.send(RenderTask::new(block_id)).unwrap();

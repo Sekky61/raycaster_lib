@@ -7,12 +7,13 @@ fn get_ui_from_usize(c: &mut Criterion) {
     let volume = get_volume();
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
-    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-    });
+    };
+
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     c.bench_function("get blocktype from usize position", |b| {
         b.iter(|| {
@@ -24,15 +25,16 @@ fn get_ui_from_usize(c: &mut Criterion) {
 fn get_ui_from_float(c: &mut Criterion) {
     return;
 
-    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
     let volume = get_volume();
+    let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
-    let mut renderer = Renderer::<LinearVolume, _>::new(volume, camera);
-    renderer.set_render_options(RenderOptions {
+    let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
         ray_termination: true,
         empty_index: true,
-    });
+    };
+
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
     c.bench_function("get blocktype from float position", |b| {
         b.iter(|| {

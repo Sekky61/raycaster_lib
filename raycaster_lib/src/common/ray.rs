@@ -1,4 +1,4 @@
-use nalgebra::{point, vector, Matrix4, Point3, Scale3, Translation3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 use super::BoundBox;
 
