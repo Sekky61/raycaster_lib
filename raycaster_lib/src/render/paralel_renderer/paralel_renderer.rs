@@ -205,6 +205,7 @@ impl ParalelRenderer {
                 // Master loop
                 loop {
                     // Gather input
+                    let msg = self.communication.1.recv().unwrap();
 
                     // Lock buffer
                     let mut buffer = self.buffer.lock().unwrap();
@@ -217,6 +218,7 @@ impl ParalelRenderer {
                     );
 
                     // Send result
+                    self.communication.0.send(()).unwrap();
                 }
             })
             .unwrap();

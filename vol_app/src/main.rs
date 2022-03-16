@@ -11,7 +11,7 @@ use raycaster_lib::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
-    render::{ParalelRendererFront, RenderOptions},
+    render::{ParalelRendererFront, RenderOptions, RendererMessage},
 };
 use render_thread::{
     RenderThread, RenderThreadMessage, RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U,
@@ -62,6 +62,7 @@ pub fn main() {
     let par_ren = volume_setup();
     let (render_send, render_recv, buffer) = par_ren.get_sender_receiver();
     par_ren.start_rendering();
+    render_send.send(()); // starts first render
 
     let timer = Timer::default();
     timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
@@ -74,7 +75,7 @@ pub fn main() {
 
     // State
     // Wrapped for access in closures
-    let state = State::new_shared(renderer_sender);
+    let state = State::new_shared();
 
     // Callback
     // Invoked when new frame is rendered
@@ -90,13 +91,13 @@ pub fn main() {
             let mut lock = shared_img.lock().unwrap();
             let slice = lock.as_mut_slice();
             pixel_buffer.make_mut_bytes().clone_from_slice(slice);
-            // TODO measure performance
+            // TODO measure performance, move to renderer
             for v in slice {
                 *v = 0;
             }
             // mutex drop
         }
-        state_ref.render_thread_send_message(RenderThreadMessage::StartRendering);
+        state_ref.is_rendering = false;
         let image = Image::from_rgb8(pixel_buffer);
         app.set_render_target(image);
 
@@ -132,25 +133,31 @@ pub fn main() {
 
     // React to mouse move in render area
     let state_clone = state.clone();
+    let c = render_send.clone();
     app.on_render_area_move_event(move |mouse_pos| {
         state_clone
             .borrow_mut()
             .handle_mouse_pos(vector![mouse_pos.x, mouse_pos.y]);
+        c.send(()).unwrap();
     });
 
     // React to mouse event (click) in render area
     let state_clone = state.clone();
+    let c = render_send.clone();
     app.on_render_area_pointer_event(move |pe| {
         state_clone.borrow_mut().handle_pointer_event(pe);
+        c.send(()).unwrap();
     });
 
     let state_clone = state.clone();
+    let c = render_send.clone();
     app.on_render_key_pressed(move |ke| {
         let ch = match ke.text.as_str().chars().next() {
             Some(ch) => ch,
             None => return EventResult::accept,
         };
         state_clone.borrow_mut().handle_key_press(ch);
+        c.send(()).unwrap();
         EventResult::accept
     });
 

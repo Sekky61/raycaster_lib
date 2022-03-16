@@ -15,6 +15,7 @@ use crate::{
 
 use super::messages::{OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
 
+// todo just add reference to renderer?
 pub struct CompositorWorker<'a> {
     compositor_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
