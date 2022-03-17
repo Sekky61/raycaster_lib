@@ -11,7 +11,7 @@ use raycaster_lib::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
-    render::{ParalelRenderer, RenderOptions, RenderSingleThread, RendererMessage},
+    render::{ParalelRenderer, RenderOptions, RendererMessage, SerialRenderer},
     volumetric::BlockVolume,
 };
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
@@ -45,7 +45,7 @@ pub fn main() {
     // State
     // Wrapped for access in closures
     let state = State::new_shared(app_weak);
-    let mt = true; // Use multithreaded renderer
+    let mt = false; // Use multithreaded renderer
     {
         // Create renderer and tart render thread
         let mut state_mut = state.borrow_mut();
@@ -196,7 +196,7 @@ fn volume_setup_paralel() -> ParalelRenderer {
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear() -> RenderSingleThread<BlockVolume> {
+fn volume_setup_linear() -> SerialRenderer<BlockVolume> {
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
     let volume: BlockVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
@@ -206,5 +206,5 @@ fn volume_setup_linear() -> RenderSingleThread<BlockVolume> {
 
     let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
 
-    RenderSingleThread::new(volume, camera, render_options)
+    SerialRenderer::new(volume, camera, render_options)
 }
