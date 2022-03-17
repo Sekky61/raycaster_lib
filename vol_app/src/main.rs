@@ -45,11 +45,17 @@ pub fn main() {
     // State
     // Wrapped for access in closures
     let state = State::new_shared(app_weak);
+    let mt = true; // Use multithreaded renderer
     {
         // Create renderer and tart render thread
         let mut state_mut = state.borrow_mut();
-        let renderer = volume_setup_linear();
-        state_mut.renderer_front.start_rendering(renderer);
+        if mt {
+            let renderer = volume_setup_paralel();
+            state_mut.renderer_front.start_rendering(renderer);
+        } else {
+            let renderer = volume_setup_linear();
+            state_mut.renderer_front.start_rendering(renderer);
+        }
         state_mut.render_thread_send_message(RendererMessage::StartRendering); // Initial command
     }
 

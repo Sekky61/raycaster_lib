@@ -5,9 +5,17 @@ members = [
     "vol_app"
 ]
 
-# firegraph
+# By default, run demo app
+default-members = ["vol_app"]
+
 [profile.release]
-debug = true
+debug = true # firegraph
+debug-assertions = true
 
 [profile.bench]
 debug = true
+
+[profile.release-full]
+inherits = "release"
+lto = true
+codegen-units = 1

@@ -271,6 +271,7 @@ impl ParalelRenderer {
             let block = &self.volume.data[block_id]; // TODO
 
             // Send task
+            println!("Master: send task {block_id}");
             task_sender.send(RenderTask::new(block_id)).unwrap();
         }
 

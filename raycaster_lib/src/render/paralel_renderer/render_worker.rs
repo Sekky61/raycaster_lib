@@ -58,11 +58,19 @@ impl<'a> RenderWorker<'a> {
             let block_order = task.block_order;
             let (block_id, _) = ordered_ids[block_order];
 
+            #[cfg(debug_assertions)]
+            println!(
+                "Render {}: got task order {block_order} block id {block_id}",
+                self.renderer_id
+            );
+
             // Ask for all opacity data
             for comp in self.compositors.iter() {
                 let op_req = OpacityRequest::new(self.renderer_id, block_order);
                 comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
             }
+            #[cfg(debug_assertions)]
+            println!("Render {}: requested {block_order}", self.renderer_id);
 
             // Wait for all opacity data from compositors
             let mut color_opacity = {
@@ -84,11 +92,20 @@ impl<'a> RenderWorker<'a> {
                 ship_back
             };
 
+            #[cfg(debug_assertions)]
+            println!(
+                "Render {}: received opacities {block_order}",
+                self.renderer_id
+            );
+
             let block = &self.blocks[block_id];
 
             // Render task
             self.render_block(&camera, &mut color_opacity, block);
             // Opacities has been mutated
+
+            #[cfg(debug_assertions)]
+            println!("Render {}: rendered {block_order}", self.renderer_id);
 
             // give data to compositers
             for (i, res_opt) in color_opacity.into_iter().enumerate() {
@@ -97,6 +114,9 @@ impl<'a> RenderWorker<'a> {
                     self.compositors[i].send(msg).unwrap();
                 }
             }
+
+            #[cfg(debug_assertions)]
+            println!("Render {}: sent back {block_order}", self.renderer_id);
         }
     }
 

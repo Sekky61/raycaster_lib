@@ -71,6 +71,12 @@ impl<'a> CompositorWorker<'a> {
                 ToCompositorMsg::OpacityRequest(req) => {
                     let responder = &self.renderers[req.from_id];
 
+                    #[cfg(debug_assertions)]
+                    println!(
+                        "Comp {}: received request {}",
+                        self.compositor_id, req.order
+                    );
+
                     match block_info.binary_search_by(|item| item.index.cmp(&req.order)) {
                         Ok(index) => {
                             // Block is in compositors field
@@ -88,8 +94,16 @@ impl<'a> CompositorWorker<'a> {
                                 );
 
                                 responder.send(response).unwrap();
+                                #[cfg(debug_assertions)]
+                                println!(
+                                    "Comp {}: responding immed. {}",
+                                    self.compositor_id, req.order
+                                );
                             } else {
                                 // Needs to be placed in queue
+                                #[cfg(debug_assertions)]
+                                println!("Comp {}: queuing {}", self.compositor_id, req.order);
+
                                 queue.push_back(req);
                             }
                         }
@@ -97,11 +111,20 @@ impl<'a> CompositorWorker<'a> {
                             // Block is not in compositors field
                             let response = ToRendererMsg::EmptyOpacity;
                             responder.send(response).unwrap();
+
+                            #[cfg(debug_assertions)]
+                            println!(
+                                "Comp {}: responding empty {}",
+                                self.compositor_id, req.order
+                            );
                         }
                     }
                 }
                 ToCompositorMsg::RenderResult(res) => {
                     // SubRenderResult buffers have the same shape as sent in their previous request
+
+                    #[cfg(debug_assertions)]
+                    println!("Comp {}: got result {}", self.compositor_id, res.block_id);
 
                     if block_info[expected_volume].index == res.block_id {
                         // Block is expected
@@ -130,6 +153,12 @@ impl<'a> CompositorWorker<'a> {
                             let response =
                                 self.handle_request(info, &subcanvas_opacity[..], &subcanvas_size);
                             responder.send(response).unwrap();
+
+                            #[cfg(debug_assertions)]
+                            println!(
+                                "Comp {}: sending from queue {}",
+                                self.compositor_id, r.order
+                            );
                         }
                     }
 
@@ -139,6 +168,9 @@ impl<'a> CompositorWorker<'a> {
                     // Send byte canvas to master
                     let res = SubFrameResult::new(byte_canvas, todo!(), todo!());
                     self.result_sender.send(ToMasterMsg::Subframe(res)).unwrap();
+
+                    #[cfg(debug_assertions)]
+                    println!("Comp {}: sent canvas", self.compositor_id);
 
                     // Reset color buffer
                     subcanvas_rgb
