@@ -1,3 +1,5 @@
+// #![feature(generic_const_exprs)]
+
 pub mod camera;
 pub mod color;
 mod common;

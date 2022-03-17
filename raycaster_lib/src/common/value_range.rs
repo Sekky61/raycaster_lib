@@ -49,6 +49,10 @@ impl ValueRange {
     pub fn contains(&self, val: f32) -> bool {
         self.low <= val && val <= self.high
     }
+
+    pub fn limits(&self) -> (f32, f32) {
+        (self.low, self.high)
+    }
 }
 
 impl Default for ValueRange {
