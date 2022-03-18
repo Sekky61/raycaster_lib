@@ -25,10 +25,10 @@ impl ViewportBox {
 
     // todo params as vector
     pub fn add_point(&mut self, x: f32, y: f32) {
-        self.upper.x = f32::max(self.upper.x, x);
-        self.upper.y = f32::max(self.upper.y, y);
-        self.lower.x = f32::min(self.lower.x, x);
-        self.lower.y = f32::min(self.lower.y, y);
+        self.upper.x = f32::clamp(f32::max(self.upper.x, x), 0.0, 1.0);
+        self.upper.y = f32::clamp(f32::max(self.upper.y, y), 0.0, 1.0);
+        self.lower.x = f32::clamp(f32::min(self.lower.x, x), 0.0, 1.0);
+        self.lower.y = f32::clamp(f32::min(self.lower.y, y), 0.0, 1.0);
     }
 
     pub fn size(&self) -> Vector2<f32> {

@@ -1,5 +1,7 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
+use crate::common::blockify;
+
 use super::Volume;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -27,11 +29,11 @@ pub struct EmptyIndex<const S: usize> {
 }
 
 impl<const S: usize> EmptyIndex<S> {
-    const dem: f32 = 1.0 / (S as f32);
+    const DEM: f32 = 1.0 / (S as f32);
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndex<S> {
         let vol_size = volume.get_size();
-        let index_size = (vol_size + vector![S - 2, S - 2, S - 2]) / S;
+        let index_size = blockify(vol_size, S, 1);
         println!(
             "Generating index, vol [{},{},{}] size [{},{},{}]",
             vol_size.x, vol_size.y, vol_size.z, index_size.x, index_size.y, index_size.z
@@ -60,7 +62,7 @@ impl<const S: usize> EmptyIndex<S> {
     }
 
     fn pos_to_index(&self, pos: Point3<f32>) -> usize {
-        let scaled_down = pos * EmptyIndex::<S>::dem;
+        let scaled_down = pos * EmptyIndex::<S>::DEM;
         let x = scaled_down.x as usize;
         let y = scaled_down.y as usize;
         let z = scaled_down.z as usize;

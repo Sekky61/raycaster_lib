@@ -72,6 +72,7 @@ impl PerspectiveCamera {
 
     pub fn set_direction(&mut self, direction: Vector3<f32>) {
         self.direction = direction.normalize();
+        self.recalc_plane();
     }
 
     pub fn change_pos(&mut self, delta: Vector3<f32>) {
@@ -136,14 +137,14 @@ impl Camera for PerspectiveCamera {
     fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
         let mut viewbox = ViewportBox::new();
 
+        let dun = self.du.normalize() / self.img_plane_size.x;
+        let dvn = self.dv.normalize() / self.img_plane_size.y;
+        let neg_dir = -self.direction;
+
         for point in bound_box {
             let v = point - self.position;
             let n = v.normalize();
             let neg_n = -n;
-            let neg_dir = -self.direction;
-
-            let dun = self.du.normalize() / self.img_plane_size.x;
-            let dvn = self.dv.normalize() / self.img_plane_size.y;
 
             let den = neg_n.dot(&neg_dir);
             if den != 0.0 {
@@ -171,6 +172,11 @@ mod test {
 
     use super::*;
 
+    fn compare_float(actual: f32, expected: f32, error: f32) {
+        let err = f32::abs(actual - expected);
+        assert!(err < error * f32::EPSILON);
+    }
+
     #[test]
     fn camera_du_dv() {
         let cam_pos = point![0.0, 0.0, 0.0];
@@ -189,15 +195,14 @@ mod test {
 
     #[test]
     fn project_origin() {
-        let cam_pos = point![-10.0, 0.0, 0.0];
-        let cam_target = point![0.0, 0.0, 0.0];
-        let cam = PerspectiveCamera::new(cam_pos, cam_target - cam_pos);
-
-        assert_eq!(cam.direction.normalize(), vector![1.0, 0.0, 0.0]);
-
         let origin = point![0.0, 0.0, 0.0];
 
-        assert_eq!(cam_pos + 10.0 * cam.direction.normalize(), origin);
+        let cam_pos = point![-10.0, 7.7, -9.6];
+        let cam_target = origin;
+        let cam_dir = cam_target - cam_pos;
+        let cam = PerspectiveCamera::new(cam_pos, cam_dir);
+
+        assert_eq!(cam.direction, cam_dir.normalize());
 
         let origin_bbox = BoundBox::new(origin, origin);
 
@@ -206,7 +211,35 @@ mod test {
 
         let projection = cam.project_box(origin_bbox);
 
-        assert_eq!(projection.lower, vector![0.5, 0.5]);
+        compare_float(projection.lower.x, 0.5, 4.0);
+        compare_float(projection.lower.y, 0.5, 4.0);
+
+        compare_float(projection.upper.x, 0.5, 4.0);
+        compare_float(projection.upper.y, 0.5, 4.0);
+    }
+
+    #[test]
+    fn project_corner() {
+        let cam_pos = point![-10.0, 0.0, 0.0];
+        let cam_target = point![0.0, 0.0, 0.0];
+        let cam = PerspectiveCamera::new(cam_pos, cam_target - cam_pos);
+
+        assert_eq!(cam.direction.normalize(), vector![1.0, 0.0, 0.0]);
+
+        // Viewing angle of 60deg, 30deg from the center
+        let top = 10.0 * f32::sqrt(3.0) / 3.0;
+
+        let point = point![0.0, top, top];
+
+        let bbox = BoundBox::new(point, point);
+
+        let projection = cam.project_box(bbox);
+
+        compare_float(projection.lower.x, 1.0, 4.0);
+        compare_float(projection.lower.y, 1.0, 4.0);
+
+        compare_float(projection.upper.x, 1.0, 4.0);
+        compare_float(projection.upper.y, 1.0, 4.0);
     }
 
     #[test]

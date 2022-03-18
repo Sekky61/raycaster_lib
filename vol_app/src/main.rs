@@ -12,7 +12,7 @@ use raycaster_lib::{
         transfer_functions::skull_tf,
     },
     render::{ParalelRenderer, RenderOptions, RendererMessage, SerialRenderer},
-    volumetric::BlockVolume,
+    volumetric::{BlockVolume, LinearVolume},
 };
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
 use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
@@ -196,10 +196,13 @@ fn volume_setup_paralel() -> ParalelRenderer {
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear() -> SerialRenderer<BlockVolume> {
+fn volume_setup_linear() -> SerialRenderer<LinearVolume> {
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
-    let volume: BlockVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+
+    //let direction = vector![-0.721, -0.148, -0.676];
+
+    let volume: LinearVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));

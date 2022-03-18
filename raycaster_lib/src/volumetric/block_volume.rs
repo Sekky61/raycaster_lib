@@ -1,13 +1,13 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::common::{BoundBox, ValueRange};
+use crate::common::{blockify, BoundBox, ValueRange};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
     Volume, TF,
 };
 
-const BLOCK_SIDE: usize = 3;
+const BLOCK_SIDE: usize = 4;
 const BLOCK_OVERLAP: usize = 1;
 const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
@@ -194,7 +194,9 @@ impl BuildVolume<u8> for BlockVolume {
         let mut blocks = vec![];
 
         let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
-        let block_size = size.map(|v| (v / step_size) as usize);
+        //let block_size = size.map(|v| ((v - 1) / step_size) as usize);
+
+        let block_size = blockify(size, BLOCK_SIDE, BLOCK_OVERLAP);
 
         let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
@@ -270,4 +272,99 @@ pub fn get_block_data(
 
 fn get_3d_index(size: Vector3<usize>, pos: Point3<usize>) -> usize {
     pos.z + pos.y * size.z + pos.x * size.y * size.z
+}
+
+#[cfg(test)]
+mod test {
+
+    use nalgebra::{point, vector};
+
+    use crate::test_helpers::skull_volume;
+
+    use super::*;
+
+    // Copy of block indexing for testing (no constants)
+    fn get_indexes(
+        block_side: usize,
+        block_overlap: usize,
+        blocks_size: Vector3<usize>,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) -> (usize, usize) {
+        let jump_per_block = block_side - block_overlap;
+        //assert_ne!(jump_per_block, 0);
+        let block_offset = (z % jump_per_block)
+            + (y % jump_per_block) * block_side
+            + (x % jump_per_block) * block_side * block_side;
+        let block_index = (z / jump_per_block)
+            + (y / jump_per_block) * blocks_size.z
+            + (x / jump_per_block) * blocks_size.y * blocks_size.z;
+        (block_index, block_offset)
+    }
+
+    // #[test]
+    // #[ignore]
+    // fn construction() {
+    //     // Assumes BLOCK_SIDE == 3
+    //     let mut data = [0.0; 3 * 3 * 3];
+    //     data[2] = 1.9;
+    //     data[9] = 1.8;
+    //     data[20] = 0.0;
+    //     let bbox = BoundBox::new(point![0.0, 0.0, 0.0], point![1.0, 1.0, 1.0]);
+    //     let block = Block::from_data(data, bbox);
+
+    //     assert_eq!(block.value_range.limits(), (0.0, 1.9));
+    // }
+
+    #[test]
+    fn block_indexing_3() {
+        let block_size = vector![5, 5, 5];
+
+        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 0), (0, 0));
+        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 1), (0, 1));
+        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 2), (1, 0));
+    }
+
+    #[test]
+    fn block_indexing_7() {
+        let block_size = vector![5, 5, 5];
+
+        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 0), (0, 0));
+        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 1), (0, 1));
+        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 2), (0, 2));
+        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 6), (1, 0));
+        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 7), (1, 1));
+        assert_eq!(
+            get_indexes(7, 1, block_size, 0, 7, 7),
+            (block_size.z + 1, 7 + 1)
+        );
+
+        assert_eq!(
+            get_indexes(7, 1, block_size, 4, 3, 2),
+            (0, 7 * 7 * 4 + 7 * 3 + 2)
+        );
+    }
+
+    #[test]
+    fn getting_block_data() {
+        // Assumes BLOCK_SIDE == 4
+        let v: Vec<u8> = (0..=255).into_iter().cycle().take(10 * 10 * 10).collect();
+        let vol_data = &v[..];
+
+        let size = vector![10, 10, 10];
+
+        let c = get_block_data(vol_data, size, point![0, 0, 0]);
+        assert_eq!(c[0..4], [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(c[4..8], [10.0, 11.0, 12.0, 13.0]);
+        assert_eq!(c[8], 20.0);
+
+        assert_eq!(c[(4 * 4)..((4 * 4) + 4)], [100.0, 101.0, 102.0, 103.0]);
+    }
+
+    #[test]
+    fn block_order() {
+        // Assumes BLOCK_SIDE == 4
+        let volume: BlockVolume = skull_volume();
+    }
 }

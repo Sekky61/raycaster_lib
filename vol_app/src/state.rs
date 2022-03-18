@@ -123,12 +123,12 @@ impl State {
             (false, false) => (),
             (true, false) => {
                 // move on the plane described by camera position and normal
-                let delta = vector![drag_diff.x * -0.2, drag_diff.y * -0.2];
+                let delta = vector![drag_diff.x * -0.2, drag_diff.y * 0.2];
                 self.new_camera_movement(CameraMovement::PositionPlane(delta))
             }
             (false, true) => {
                 // change camera direction
-                let delta = vector![drag_diff.x * 0.01, drag_diff.y * 0.01];
+                let delta = vector![drag_diff.x * 0.01, drag_diff.y * -0.01];
                 self.new_camera_movement(CameraMovement::Direction(delta))
             }
             (true, true) => {

@@ -211,6 +211,7 @@ impl<'a> CompositorWorker<'a> {
     }
 
     fn get_opacity(&self, opacity: &[f32], subframe: &PixelBox, pixels: &PixelBox) -> Vec<f32> {
+        // todo check for same issues from single thread
         let mut v = Vec::with_capacity(pixels.items());
         let width = pixels.x.end - pixels.x.start;
         let height = pixels.y.end - pixels.y.start;

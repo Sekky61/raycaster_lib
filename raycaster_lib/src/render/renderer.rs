@@ -69,8 +69,8 @@ where
         start_pixel.x = f32::floor(start_pixel.x * image_width);
         start_pixel.y = f32::floor(start_pixel.y * image_height);
 
-        let start_x = start_pixel.x as usize;
-        let start_y = start_pixel.y as usize;
+        let start_x = (tile.lower.x * image_width) as usize;
+        let start_y = ((1.0 - tile.upper.y) * image_height) as usize;
 
         let lim_x = tile_pixel_size.x as usize;
         let lim_y = tile_pixel_size.y as usize;
@@ -81,8 +81,8 @@ where
         let width_bytes_skip = 3 * (img_w - (end_x - start_x));
         let mut index = (start_x + img_w * start_y) * 3;
 
-        for y in (start_y..end_y).rev() {
-            let y_norm = y as f32 * step_y;
+        for y in start_y..end_y {
+            let y_norm = 1.0 - (y as f32 * step_y);
             for x in start_x..end_x {
                 let pixel_coord = (x as f32 * step_x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
@@ -96,14 +96,13 @@ where
 
                 let opacity = ray_color.w;
 
-                // if render_bound_box {
-                //     if x == start_x || x == end_x - 1 || y == end_y - 1 || y == start_y {
-                //         buffer[index] = 255;
-                //         buffer[index + 1] = 255;
-                //         buffer[index + 2] = 255;
-                //         continue;
-                //     }
-                // }
+                if x == start_x || x == end_x - 1 || y == end_y - 1 || y == start_y {
+                    buffer[index] = 255;
+                    buffer[index + 1] = 255;
+                    buffer[index + 2] = 255;
+                    index += 3;
+                    continue;
+                }
 
                 // expects black background
                 buffer[index] = (ray_color.x * opacity) as u8;
