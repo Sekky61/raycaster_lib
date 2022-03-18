@@ -2815,18 +2815,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "slint_app"
-version = "0.1.0"
-dependencies = [
- "crossbeam-channel",
- "nalgebra",
- "native-dialog",
- "raycaster_lib",
- "slint",
- "slint-build",
-]
-
-[[package]]
 name = "slotmap"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3334,6 +3322,26 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
+
+[[package]]
+name = "vol_app"
+version = "0.1.0"
+dependencies = [
+ "crossbeam-channel",
+ "nalgebra",
+ "native-dialog",
+ "raycaster_lib",
+ "slint",
+ "slint-build",
+]
+
+[[package]]
+name = "vol_gen"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+ "raycaster_lib",
+]
 
 [[package]]
 name = "volatile-register"

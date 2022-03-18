@@ -2,11 +2,12 @@
 
 members = [
     "raycaster_lib",
-    "vol_app"
+    "vol_app",
+    "vol_gen"
 ]
 
 # By default, run demo app
-default-members = ["vol_app"]
+#default-members = ["vol_app"]
 
 [profile.release]
 debug = true # firegraph
