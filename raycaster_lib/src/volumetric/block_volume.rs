@@ -7,7 +7,7 @@ use super::{
     Volume, TF,
 };
 
-const BLOCK_SIDE: usize = 4;
+const BLOCK_SIDE: usize = 16;
 const BLOCK_OVERLAP: usize = 1;
 const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
@@ -200,10 +200,10 @@ impl BuildVolume<u8> for BlockVolume {
 
         let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
-        for x in (0..size.x).step_by(step_size) {
-            for y in (0..size.y).step_by(step_size) {
-                for z in (0..size.z).step_by(step_size) {
-                    let block_start = point![x, y, z];
+        for x in 0..block_size.x {
+            for y in 0..block_size.y {
+                for z in 0..block_size.z {
+                    let block_start = step_size * point![x, y, z];
                     let block_data = get_block_data(slice, size, block_start);
                     let block_bound_box = get_bound_box(position, scale, block_start);
                     let block = Block::from_data(block_data, block_bound_box);
@@ -213,11 +213,17 @@ impl BuildVolume<u8> for BlockVolume {
         }
 
         println!(
-            "Built {} blocks of dims {} {}",
+            "Built {} blocks of dims {BLOCK_SIDE} blocks ({},{},{}) -> ({},{},{})",
             blocks.len(),
-            BLOCK_SIDE,
-            BLOCK_DATA_LEN
+            size.x,
+            size.y,
+            size.z,
+            block_size.x,
+            block_size.y,
+            block_size.z,
         );
+
+        println!("{size}");
 
         Ok(BlockVolume {
             bound_box,

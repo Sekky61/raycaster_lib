@@ -191,18 +191,18 @@ fn volume_setup_paralel() -> ParalelRenderer {
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
 
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear() -> SerialRenderer<LinearVolume> {
+fn volume_setup_linear() -> SerialRenderer<BlockVolume> {
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
 
     //let direction = vector![-0.721, -0.148, -0.676];
 
-    let volume: LinearVolume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
