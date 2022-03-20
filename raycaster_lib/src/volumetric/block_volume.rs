@@ -7,7 +7,7 @@ use super::{
     Volume, TF,
 };
 
-const BLOCK_SIDE: usize = 16;
+const BLOCK_SIDE: usize = 64;
 const BLOCK_OVERLAP: usize = 1;
 const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
 
@@ -187,7 +187,7 @@ impl BuildVolume<u8> for BlockVolume {
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
-        let vol_dims = (vol_dims - vector![0.1, 0.1, 0.1]).component_mul(&scale); // todo workaround
+        let vol_dims = (vol_dims - vector![0.01, 0.01, 0.01]).component_mul(&scale); // todo workaround
 
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
@@ -222,8 +222,6 @@ impl BuildVolume<u8> for BlockVolume {
             block_size.y,
             block_size.z,
         );
-
-        println!("{size}");
 
         Ok(BlockVolume {
             bound_box,

@@ -100,6 +100,12 @@ impl<'a> RenderWorker<'a> {
 
             let block = &self.blocks[block_id];
 
+            #[cfg(debug_assertions)]
+            println!(
+                "Render {}: rendering block order {block_order} (id {block_id})",
+                self.renderer_id
+            );
+
             // Render task
             self.render_block(&camera, &mut color_opacity, block);
             // Opacities has been mutated
@@ -141,7 +147,7 @@ impl<'a> RenderWorker<'a> {
             let mut ptr = 0;
 
             for y in y_range {
-                let y_norm = y as f32 * step_f.y;
+                let y_norm = 1.0 - (y as f32 * step_f.y);
                 for x in x_range.clone() {
                     // todo clone here -- maybe use own impl
                     let pixel_coord = (x as f32 * step_f.x, y_norm);
@@ -149,6 +155,8 @@ impl<'a> RenderWorker<'a> {
 
                     // Adds to opacity buffer
                     let color = self.sample_color(block, &ray, &mut opacities[ptr]);
+
+                    // todo multiply color with opacity
 
                     color_buf.push(color);
 

@@ -266,13 +266,13 @@ impl ParalelRenderer {
         //
         // Sent in order of camera distance (asc)
         // for Load balancing
-        for (block_id, distance) in block_order {
+        for order in 0..self.volume.data.len() {
             // Find out if block is empty, in which case dont send it
-            let block = &self.volume.data[block_id]; // TODO
+            let block = &self.volume.data[block_order[order].0]; // TODO
 
             // Send task
-            println!("Master: send task {block_id}");
-            task_sender.send(RenderTask::new(block_id)).unwrap();
+            println!("Master: send task {order}");
+            task_sender.send(RenderTask::new(order)).unwrap();
         }
 
         // Get subcanvases from compositors and save them to buffer

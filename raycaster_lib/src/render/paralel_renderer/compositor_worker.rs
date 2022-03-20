@@ -9,7 +9,7 @@ use nalgebra::{Vector2, Vector3};
 use crate::{
     camera::{Camera, PerspectiveCamera},
     common::{PixelBox, ViewportBox},
-    render::paralel_renderer::messages::SubFrameResult,
+    render::paralel_renderer::messages::{OpacityRequest, SubFrameResult},
     volumetric::Block,
 };
 
@@ -61,8 +61,15 @@ impl<'a> CompositorWorker<'a> {
         // Only subvolumes that appear in my subcanvas
         let block_info = self.get_block_info();
 
+        #[cfg(debug_assertions)]
+        println!(
+            "Comp {}: list of relevant blocks: {:?}",
+            self.compositor_id,
+            &block_info[..]
+        );
+
         let mut expected_volume = 0; // pointer into block_info, todo peekable iter
-        let mut queue = VecDeque::new();
+        let mut queue: VecDeque<OpacityRequest> = VecDeque::new(); // todo maybe map, items can be removed... or just dont remove items
 
         loop {
             // Receive requests
@@ -77,7 +84,7 @@ impl<'a> CompositorWorker<'a> {
                         self.compositor_id, req.order
                     );
 
-                    match block_info.binary_search_by(|item| item.index.cmp(&req.order)) {
+                    match block_info.binary_search_by(|item| item.order.cmp(&req.order)) {
                         Ok(index) => {
                             // Block is in compositors field
 
@@ -104,7 +111,11 @@ impl<'a> CompositorWorker<'a> {
                                 #[cfg(debug_assertions)]
                                 println!("Comp {}: queuing {}", self.compositor_id, req.order);
 
-                                queue.push_back(req);
+                                let q_index = queue.binary_search_by(|re| re.order.cmp(&req.order));
+                                match q_index {
+                                    Ok(i) => panic!("Already in queue"),
+                                    Err(ins_i) => queue.insert(ins_i, req),
+                                }
                             }
                         }
                         Err(_) => {
@@ -144,25 +155,45 @@ impl<'a> CompositorWorker<'a> {
                         panic!("Got RenderResult that is not expected - should not happen");
                     }
 
-                    // Expected volume is updated, can we satisfy request from queue?
-                    if let Some(b) = queue.back() {
-                        if block_info[expected_volume].index == b.order {
-                            let r = queue.pop_back().unwrap();
-                            let responder = &self.renderers[r.from_id];
-                            let info = &block_info[expected_volume];
-                            let response =
-                                self.handle_request(info, &subcanvas_opacity[..], &subcanvas_size);
-                            responder.send(response).unwrap();
+                    #[cfg(debug_assertions)]
+                    println!(
+                        "Comp {}: checking queue looking for {expected_volume} - {:?}",
+                        self.compositor_id, queue
+                    );
 
-                            #[cfg(debug_assertions)]
-                            println!(
-                                "Comp {}: sending from queue {}",
-                                self.compositor_id, r.order
-                            );
-                        }
+                    // Expected volume is updated, can we satisfy request from queue?
+                    // Note that we cannot start more than one
+                    if let Ok(q_index) =
+                        queue.binary_search_by(|req| req.order.cmp(&expected_volume))
+                    {
+                        let req = queue[q_index];
+
+                        queue.remove(q_index);
+
+                        //let r = queue.pop_front().unwrap();
+                        let responder = &self.renderers[req.from_id];
+                        let info = &block_info[expected_volume];
+                        let response =
+                            self.handle_request(info, &subcanvas_opacity[..], &subcanvas_size);
+                        responder.send(response).unwrap();
+
+                        #[cfg(debug_assertions)]
+                        println!(
+                            "Comp {}: responding from queue {}",
+                            self.compositor_id, req.order
+                        );
+                    } else {
+                        #[cfg(debug_assertions)]
+                        println!("Comp {}: nothing from queue satisfied", self.compositor_id);
                     }
 
-                    // Got all results? Convert to RGB bytes and send to master thread for output
+                    if expected_volume != block_info.len() {
+                        continue;
+                    }
+
+                    // Got all results
+
+                    // Convert to RGB bytes and send to master thread for output
                     let byte_canvas = self.convert_to_bytes(&subcanvas_rgb[..]);
 
                     // Send byte canvas to master
@@ -199,13 +230,21 @@ impl<'a> CompositorWorker<'a> {
             for (i, block) in self.blocks.iter().enumerate() {
                 let viewport = camera.project_box(block.bound_box);
                 let distance = camera.box_distance(&block.bound_box);
-                let info = BlockInfo::new(i, distance, viewport);
-                if self.area.crosses(&info.viewport) {
-                    relevant_ids.push(info);
-                }
+                let info = BlockInfo::new(i, 0, distance, viewport);
+                relevant_ids.push(info);
             }
         }
         relevant_ids.sort_unstable_by(|b1, b2| b1.distance.partial_cmp(&b2.distance).unwrap());
+
+        relevant_ids = relevant_ids
+            .into_iter()
+            .enumerate()
+            .map(|(i, mut info)| {
+                info.order = i;
+                info
+            })
+            .filter(|info| self.area.crosses(&info.viewport))
+            .collect();
 
         relevant_ids
     }
@@ -296,16 +335,24 @@ impl<'a> CompositorWorker<'a> {
 
 pub struct BlockInfo {
     index: usize,
+    order: usize,
     distance: f32,
     viewport: ViewportBox,
 }
 
 impl BlockInfo {
-    pub fn new(index: usize, distance: f32, viewport: ViewportBox) -> Self {
+    pub fn new(index: usize, order: usize, distance: f32, viewport: ViewportBox) -> Self {
         Self {
             index,
+            order,
             distance,
             viewport,
         }
+    }
+}
+
+impl std::fmt::Debug for BlockInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("B ord {}", self.order))
     }
 }

@@ -14,9 +14,16 @@ impl RenderTask {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct OpacityRequest {
     pub from_id: usize, // Id of renderer
     pub order: usize,   // order by distance from the camera
+}
+
+impl std::fmt::Debug for OpacityRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("OR ord {}", self.order))
+    }
 }
 
 impl OpacityRequest {
