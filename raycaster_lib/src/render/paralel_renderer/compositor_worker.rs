@@ -13,7 +13,9 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
+use super::messages::{
+    OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
+};
 
 // todo just add reference to renderer?
 pub struct CompositorWorker<'a> {
@@ -22,9 +24,12 @@ pub struct CompositorWorker<'a> {
     area: ViewportBox,
     pixels: PixelBox,
     resolution: Vector2<usize>, // Resolution of full image
+    // Comp x renderer comms
     renderers: [Sender<ToRendererMsg>; 4],
     receiver: Receiver<ToCompositorMsg>,
+    // Comp x master comms
     result_sender: Sender<ToMasterMsg>,
+    command_receiver: Receiver<ToWorkerMsg>,
     blocks: &'a [Block],
 }
 
@@ -39,6 +44,7 @@ impl<'a> CompositorWorker<'a> {
         renderers: [Sender<ToRendererMsg>; 4],
         receiver: Receiver<ToCompositorMsg>,
         result_sender: Sender<ToMasterMsg>,
+        command_receiver: Receiver<ToWorkerMsg>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -50,6 +56,7 @@ impl<'a> CompositorWorker<'a> {
             renderers,
             receiver,
             result_sender,
+            command_receiver,
             blocks,
         }
     }
@@ -84,7 +91,7 @@ impl<'a> CompositorWorker<'a> {
 
                     #[cfg(debug_assertions)]
                     println!(
-                        "Comp {}: received request {}",
+                        "Comp {}: received request order {}",
                         self.compositor_id, req.order
                     );
 
@@ -103,13 +110,16 @@ impl<'a> CompositorWorker<'a> {
                                 responder.send(response).unwrap();
                                 #[cfg(debug_assertions)]
                                 println!(
-                                    "Comp {}: responding immed. {}",
+                                    "Comp {}: responding immed. order {}",
                                     self.compositor_id, req.order
                                 );
                             } else {
                                 // Needs to be placed in queue
                                 #[cfg(debug_assertions)]
-                                println!("Comp {}: queuing {}", self.compositor_id, req.order);
+                                println!(
+                                    "Comp {}: queuing order {}",
+                                    self.compositor_id, req.order
+                                );
 
                                 let q_index = queue.binary_search_by(|re| re.order.cmp(&req.order));
                                 match q_index {
@@ -214,7 +224,6 @@ impl<'a> CompositorWorker<'a> {
                             .for_each(|v| *v = Vector3::<f32>::zeros());
                     }
                 }
-                ToCompositorMsg::Finish => return,
             }
         }
     }

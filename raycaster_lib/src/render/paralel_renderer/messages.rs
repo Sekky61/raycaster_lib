@@ -14,6 +14,13 @@ impl RenderTask {
     }
 }
 
+pub enum ToWorkerMsg {
+    StopRendering,
+    GoIdle,
+    GoLive, // Go to active state, mainly seize camera and recalc distances
+    Finish,
+}
+
 #[derive(Clone, Copy)]
 pub struct OpacityRequest {
     pub from_id: usize, // Id of renderer
@@ -106,7 +113,6 @@ impl SubFrameResult {
 pub enum ToCompositorMsg {
     OpacityRequest(OpacityRequest),
     RenderResult(SubRenderResult),
-    Finish,
 }
 
 pub enum ToMasterMsg {
@@ -116,5 +122,4 @@ pub enum ToMasterMsg {
 pub enum ToRendererMsg {
     Opacity(OpacityData),
     EmptyOpacity,
-    Finish,
 }

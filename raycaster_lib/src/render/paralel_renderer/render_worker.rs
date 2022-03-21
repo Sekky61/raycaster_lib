@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use crossbeam::select;
 use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
@@ -10,20 +11,30 @@ use crate::{
 };
 
 use super::messages::{
-    OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg,
+    OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg,
 };
+
+enum Run {
+    Stop,
+    Continue,
+    Render,
+}
 
 pub struct RenderWorker<'a> {
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     resolution: Vector2<usize>,
+    // Comp x renderer comms
     compositors: [Sender<ToCompositorMsg>; 4],
     receiver: Receiver<ToRendererMsg>,
+    // Master x renderer comms
     task_receiver: Receiver<RenderTask>,
+    command_receiver: Receiver<ToWorkerMsg>,
     blocks: &'a [Block],
 }
 
 impl<'a> RenderWorker<'a> {
+    #[must_use]
     pub fn new(
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
@@ -31,6 +42,7 @@ impl<'a> RenderWorker<'a> {
         compositors: [Sender<ToCompositorMsg>; 4],
         receiver: Receiver<ToRendererMsg>,
         task_receiver: Receiver<RenderTask>,
+        command_receiver: Receiver<ToWorkerMsg>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -40,11 +52,34 @@ impl<'a> RenderWorker<'a> {
             compositors,
             receiver,
             task_receiver,
+            command_receiver,
             blocks,
         }
     }
 
     pub fn run(&self) {
+        // TODO do this for compositor as well
+        let mut command = None;
+        loop {
+            let msg = match command.take() {
+                Some(cmd) => cmd,
+                None => self.command_receiver.recv().unwrap(),
+            };
+            let cont = match msg {
+                ToWorkerMsg::GoIdle => Run::Continue,
+                ToWorkerMsg::StopRendering => Run::Continue,
+                ToWorkerMsg::GoLive => Run::Render,
+                ToWorkerMsg::Finish => Run::Stop,
+            };
+            command = match cont {
+                Run::Stop => break,
+                Run::Continue => None,
+                Run::Render => Some(self.active_state()),
+            }
+        }
+    }
+
+    fn active_state(&self) -> ToWorkerMsg {
         let camera = self
             .camera
             .read()
@@ -54,7 +89,11 @@ impl<'a> RenderWorker<'a> {
 
         loop {
             // Wait for task from master thread or finish call
-            let task = self.task_receiver.recv().unwrap(); // TODO drop camera after frame rendered!
+            let task = select! {
+                recv(self.task_receiver) -> msg => msg.unwrap(),
+                recv(self.command_receiver) -> msg => return msg.unwrap(),
+            };
+
             let block_order = task.block_order;
             let (block_id, _) = ordered_ids[block_order];
 
@@ -70,7 +109,7 @@ impl<'a> RenderWorker<'a> {
                 comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
             }
             #[cfg(debug_assertions)]
-            println!("Render {}: requested {block_order}", self.renderer_id);
+            println!("Render {}: requested order {block_order}", self.renderer_id);
 
             // Wait for all opacity data from compositors
             let mut color_opacity = {

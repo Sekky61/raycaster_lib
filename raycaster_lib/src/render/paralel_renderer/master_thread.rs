@@ -13,7 +13,9 @@ use crate::{
     volumetric::BlockVolume,
 };
 
-use super::messages::{RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg};
+use super::messages::{
+    RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
+};
 use super::workers::{CompositorWorker, RenderWorker};
 
 pub struct ParalelRenderer {
@@ -80,6 +82,7 @@ impl ParalelRenderer {
                     result_receiver,
                     compositor_send,
                     renderer_send,
+                    command_send,
                 ) = {
                     // Send to compositor, compositor recieves message
                     let ren_to_comp = [
@@ -110,6 +113,27 @@ impl ParalelRenderer {
 
                     let (task_sender, task_receiver) = crossbeam_channel::unbounded();
 
+                    let command = [
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                        crossbeam_channel::unbounded(),
+                    ];
+                    let command_send: [Sender<ToWorkerMsg>; 8] = [
+                        command[0].0.clone(),
+                        command[1].0.clone(),
+                        command[2].0.clone(),
+                        command[3].0.clone(),
+                        command[4].0.clone(),
+                        command[5].0.clone(),
+                        command[6].0.clone(),
+                        command[7].0.clone(),
+                    ];
+
                     let mut renderers = Vec::with_capacity(4);
                     let mut compositors = Vec::with_capacity(4);
 
@@ -121,6 +145,7 @@ impl ParalelRenderer {
                     for i in 0..4 {
                         // Create render thread
                         let receiver = comp_to_ren[i].1.clone(); // Receiver
+                        let command_receiver = command[i].1.clone(); // Receiver of commands
                         let all_compositors = compositor_send.clone();
                         let task_receiver = task_receiver.clone();
                         let blocks_ref = &volume.data[..];
@@ -142,6 +167,7 @@ impl ParalelRenderer {
                                 all_compositors,
                                 message_receiver,
                                 task_receiver,
+                                command_receiver,
                                 blocks_ref,
                             );
 
@@ -159,6 +185,7 @@ impl ParalelRenderer {
                         // Create compositor thread
 
                         let receiver = ren_to_comp[i].1.clone(); // Receiver
+                        let command_receiver = command[4 + i].1.clone(); // Receiver of commands | NOTICE 4+i
                         let result_sender = result_sender.clone();
                         let all_renderers = renderer_send.clone();
                         let camera_ref = self.camera.clone();
@@ -182,6 +209,7 @@ impl ParalelRenderer {
                                 all_renderers,
                                 message_receiver,
                                 result_sender,
+                                command_receiver,
                                 blocks_ref,
                             );
 
@@ -198,6 +226,7 @@ impl ParalelRenderer {
                         result_receiver,
                         compositor_send,
                         renderer_send,
+                        command_send,
                     )
                 };
 
@@ -215,6 +244,11 @@ impl ParalelRenderer {
                     #[cfg(debug_assertions)]
                     println!("Master : start rendering");
 
+                    // Send go live messages
+                    for worker in command_send.iter() {
+                        worker.send(ToWorkerMsg::GoLive).unwrap();
+                    }
+
                     // Lock buffer
                     let mut buffer = self.buffer.lock().unwrap();
 
@@ -225,6 +259,12 @@ impl ParalelRenderer {
                         &mut buffer[..],
                     );
 
+                    // Send idle messages
+                    // Renderers need to let go of camera
+                    for worker in command_send.iter() {
+                        worker.send(ToWorkerMsg::GoIdle).unwrap();
+                    }
+
                     // Send result
                     self.communication.0.send(()).unwrap();
 
@@ -233,11 +273,8 @@ impl ParalelRenderer {
                 }
 
                 // Send finish messages and join threads
-                for se in compositor_send {
-                    se.send(ToCompositorMsg::Finish).unwrap();
-                }
-                for se in renderer_send {
-                    se.send(ToRendererMsg::Finish).unwrap();
+                for worker in command_send.iter() {
+                    worker.send(ToWorkerMsg::Finish).unwrap();
                 }
 
                 for h in render_handles {
