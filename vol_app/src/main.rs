@@ -95,6 +95,8 @@ pub fn main() {
         let image = Image::from_rgb8(pixel_buffer);
         app.set_render_target(image);
 
+        println!("Frame displayed");
+
         // Frame time
         let elapsed = state_ref.timer.elapsed();
         app.set_frame_time(elapsed.as_millis().try_into().unwrap());
@@ -104,6 +106,7 @@ pub fn main() {
     // React to mouse move in render area
     let state_clone = state.clone();
     app.on_render_area_move_event(move |mouse_pos| {
+        println!("MOVEEEEE");
         state_clone
             .borrow_mut()
             .handle_mouse_pos(vector![mouse_pos.x, mouse_pos.y]);

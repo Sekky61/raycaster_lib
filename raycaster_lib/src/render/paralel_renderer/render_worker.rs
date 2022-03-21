@@ -54,7 +54,7 @@ impl<'a> RenderWorker<'a> {
 
         loop {
             // Wait for task from master thread or finish call
-            let task = self.task_receiver.recv().unwrap();
+            let task = self.task_receiver.recv().unwrap(); // TODO drop camera after frame rendered!
             let block_order = task.block_order;
             let (block_id, _) = ordered_ids[block_order];
 
@@ -81,7 +81,7 @@ impl<'a> RenderWorker<'a> {
                         let i = d.from_compositor;
                         let capacity = d.pixels.items();
                         let res = SubRenderResult::with_capacity(
-                            block_id,
+                            block_order,
                             d.pixels,
                             capacity,
                             d.opacities,
@@ -201,7 +201,7 @@ impl<'a> RenderWorker<'a> {
 
         let mut pos = begin;
 
-        let tf = |s: f32| vector![s, s, s, 0.1];
+        let tf = |s: f32| vector![s, s, s, 0.5];
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);

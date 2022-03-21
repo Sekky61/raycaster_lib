@@ -73,7 +73,8 @@ impl State {
     }
 
     pub fn render_thread_send_message(&self, msg: RendererMessage) {
-        self.renderer_front.send_message(msg)
+        self.renderer_front.send_message(msg);
+        println!("Sent order!!");
     }
 
     fn new_camera_movement(&mut self, movement: CameraMovement) {

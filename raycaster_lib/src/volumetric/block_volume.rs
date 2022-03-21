@@ -243,9 +243,11 @@ fn get_bound_box(
         block_start.y as f32,
         block_start.z as f32
     ];
+
+    let block_dims = vector![BLOCK_SIDE - 1, BLOCK_SIDE - 1, BLOCK_SIDE - 1].cast::<f32>();
+    let block_dims = block_dims.component_mul(&vol_scale) - vector![0.01, 0.01, 0.01]; // todo workaround
+
     let block_pos = vol_position + block_lower.component_mul(&vol_scale);
-    let block_dims =
-        vector![BLOCK_SIDE as f32, BLOCK_SIDE as f32, BLOCK_SIDE as f32].component_mul(&vol_scale);
 
     BoundBox::from_position_dims(block_pos, block_dims)
 }

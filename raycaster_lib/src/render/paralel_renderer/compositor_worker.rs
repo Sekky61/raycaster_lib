@@ -20,6 +20,7 @@ pub struct CompositorWorker<'a> {
     compositor_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     area: ViewportBox,
+    pixels: PixelBox,
     resolution: Vector2<usize>, // Resolution of full image
     renderers: [Sender<ToRendererMsg>; 4],
     receiver: Receiver<ToCompositorMsg>,
@@ -28,10 +29,12 @@ pub struct CompositorWorker<'a> {
 }
 
 impl<'a> CompositorWorker<'a> {
+    #[must_use]
     pub fn new(
         compositor_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
         area: ViewportBox,
+        pixels: PixelBox,
         resolution: Vector2<usize>,
         renderers: [Sender<ToRendererMsg>; 4],
         receiver: Receiver<ToCompositorMsg>,
@@ -42,6 +45,7 @@ impl<'a> CompositorWorker<'a> {
             compositor_id,
             camera,
             area,
+            pixels,
             resolution,
             renderers,
             receiver,
@@ -52,8 +56,7 @@ impl<'a> CompositorWorker<'a> {
 
     pub fn run(&self) {
         // Subcanvas
-        let subcanvas_size = self.calc_resolution();
-        let subcanvas_items = subcanvas_size.items();
+        let subcanvas_items = self.pixels.items();
         let mut subcanvas_rgb = vec![Vector3::<f32>::zeros(); subcanvas_items]; // todo RGB
         let mut subcanvas_opacity = vec![0.0; subcanvas_items];
 
@@ -68,7 +71,8 @@ impl<'a> CompositorWorker<'a> {
             &block_info[..]
         );
 
-        let mut expected_volume = 0; // pointer into block_info, todo peekable iter
+        let mut expected_volume_index = 0;
+        let mut expected_volume_order = block_info[expected_volume_index].order; // pointer into block_info, todo peekable iter
         let mut queue: VecDeque<OpacityRequest> = VecDeque::new(); // todo maybe map, items can be removed... or just dont remove items
 
         loop {
@@ -89,16 +93,12 @@ impl<'a> CompositorWorker<'a> {
                             // Block is in compositors field
 
                             // todo move forward, to skip binary search
-                            if expected_volume == index {
+                            if expected_volume_index == index {
                                 // Block is up
 
                                 let info = &block_info[index];
 
-                                let response = self.handle_request(
-                                    info,
-                                    &subcanvas_opacity[..],
-                                    &subcanvas_size,
-                                );
+                                let response = self.handle_request(info, &subcanvas_opacity[..]);
 
                                 responder.send(response).unwrap();
                                 #[cfg(debug_assertions)]
@@ -125,7 +125,7 @@ impl<'a> CompositorWorker<'a> {
 
                             #[cfg(debug_assertions)]
                             println!(
-                                "Comp {}: responding empty {}",
+                                "Comp {}: responding empty order {}",
                                 self.compositor_id, req.order
                             );
                         }
@@ -135,19 +135,22 @@ impl<'a> CompositorWorker<'a> {
                     // SubRenderResult buffers have the same shape as sent in their previous request
 
                     #[cfg(debug_assertions)]
-                    println!("Comp {}: got result {}", self.compositor_id, res.block_id);
+                    println!(
+                        "Comp {}: got result order {}",
+                        self.compositor_id, res.order
+                    );
 
-                    if block_info[expected_volume].index == res.block_id {
+                    if expected_volume_order == res.order {
                         // Block is expected
 
                         // Update opacity
-                        self.copy_opacity(&mut subcanvas_opacity[..], &subcanvas_size, &res);
+                        self.copy_opacity(&mut subcanvas_opacity[..], &self.pixels, &res);
 
                         // Update color
-                        self.add_color(&mut subcanvas_rgb[..], &subcanvas_size, &res);
+                        self.add_color(&mut subcanvas_rgb[..], &self.pixels, &res);
 
                         // Update next expected volume
-                        expected_volume += 1;
+                        expected_volume_index += 1;
                     } else {
                         // Not expected
                         // Renderer is sending only nonempty results
@@ -155,16 +158,31 @@ impl<'a> CompositorWorker<'a> {
                         panic!("Got RenderResult that is not expected - should not happen");
                     }
 
+                    if expected_volume_index == block_info.len() {
+                        // Got all results
+                        self.send_subcanvas(&subcanvas_rgb);
+
+                        // Reset color buffer
+                        subcanvas_rgb
+                            .iter_mut()
+                            .for_each(|v| *v = Vector3::<f32>::zeros());
+
+                        continue;
+                    }
+
+                    // Now we can be sure index is valid
+                    expected_volume_order = block_info[expected_volume_index].order;
+
                     #[cfg(debug_assertions)]
                     println!(
-                        "Comp {}: checking queue looking for {expected_volume} - {:?}",
+                        "Comp {}: checking queue looking for order {expected_volume_order} - {:?}",
                         self.compositor_id, queue
                     );
 
                     // Expected volume is updated, can we satisfy request from queue?
                     // Note that we cannot start more than one
                     if let Ok(q_index) =
-                        queue.binary_search_by(|req| req.order.cmp(&expected_volume))
+                        queue.binary_search_by(|req| req.order.cmp(&expected_volume_order))
                     {
                         let req = queue[q_index];
 
@@ -172,9 +190,8 @@ impl<'a> CompositorWorker<'a> {
 
                         //let r = queue.pop_front().unwrap();
                         let responder = &self.renderers[req.from_id];
-                        let info = &block_info[expected_volume];
-                        let response =
-                            self.handle_request(info, &subcanvas_opacity[..], &subcanvas_size);
+                        let info = &block_info[expected_volume_index];
+                        let response = self.handle_request(info, &subcanvas_opacity[..]);
                         responder.send(response).unwrap();
 
                         #[cfg(debug_assertions)]
@@ -187,30 +204,34 @@ impl<'a> CompositorWorker<'a> {
                         println!("Comp {}: nothing from queue satisfied", self.compositor_id);
                     }
 
-                    if expected_volume != block_info.len() {
-                        continue;
+                    if expected_volume_index == block_info.len() {
+                        // Got all results
+                        self.send_subcanvas(&subcanvas_rgb);
+
+                        // Reset color buffer
+                        subcanvas_rgb
+                            .iter_mut()
+                            .for_each(|v| *v = Vector3::<f32>::zeros());
                     }
-
-                    // Got all results
-
-                    // Convert to RGB bytes and send to master thread for output
-                    let byte_canvas = self.convert_to_bytes(&subcanvas_rgb[..]);
-
-                    // Send byte canvas to master
-                    let res = SubFrameResult::new(byte_canvas, todo!(), todo!());
-                    self.result_sender.send(ToMasterMsg::Subframe(res)).unwrap();
-
-                    #[cfg(debug_assertions)]
-                    println!("Comp {}: sent canvas", self.compositor_id);
-
-                    // Reset color buffer
-                    subcanvas_rgb
-                        .iter_mut()
-                        .for_each(|v| *v = Vector3::<f32>::zeros());
                 }
                 ToCompositorMsg::Finish => return,
             }
         }
+    }
+
+    fn send_subcanvas(&self, subcanvas_rgb: &[Vector3<f32>]) {
+        // Convert to RGB bytes and send to master thread for output
+        let byte_canvas = self.convert_to_bytes(subcanvas_rgb);
+
+        let offset = self.resolution.x * self.pixels.y.start + self.pixels.x.start;
+        let width = self.pixels.x.end - self.pixels.x.start;
+
+        // Send byte canvas to master
+        let res = SubFrameResult::new(byte_canvas, offset, width);
+        self.result_sender.send(ToMasterMsg::Subframe(res)).unwrap();
+
+        #[cfg(debug_assertions)]
+        println!("Comp {}: sent canvas", self.compositor_id);
     }
 
     // Resolution of subcanvas
@@ -249,20 +270,22 @@ impl<'a> CompositorWorker<'a> {
         relevant_ids
     }
 
-    fn get_opacity(&self, opacity: &[f32], subframe: &PixelBox, pixels: &PixelBox) -> Vec<f32> {
+    // Copy rectangle of opacity data
+    fn get_opacity(&self, opacity: &[f32], subframe: &PixelBox) -> Vec<f32> {
         // todo check for same issues from single thread
-        let mut v = Vec::with_capacity(pixels.items());
-        let width = pixels.x.end - pixels.x.start;
-        let height = pixels.y.end - pixels.y.start;
+        let pixels = &self.pixels;
+        let mut v = Vec::with_capacity(subframe.items());
         let subframe_width = subframe.x.end - subframe.x.start;
+        let subframe_height = subframe.y.end - subframe.y.start;
+        let width = self.pixels.x.end - self.pixels.x.start;
 
-        let subframe_offset_x = pixels.x.start - subframe.x.start;
-        let subframe_offset_y = pixels.y.start - subframe.y.start;
+        let subframe_offset_x = subframe.x.start - pixels.x.start;
+        let subframe_offset_y = subframe.y.start - pixels.y.start;
 
-        let mut line_start = subframe_offset_y * subframe_width + subframe_offset_x;
-        for _ in 0..height {
-            v.extend(&opacity[line_start..line_start + width]);
-            line_start += subframe_width;
+        let mut line_start = subframe_offset_y * width + subframe_offset_x;
+        for _ in 0..subframe_height {
+            v.extend(&opacity[line_start..line_start + subframe_width]);
+            line_start += width;
         }
         v
     }
@@ -316,18 +339,13 @@ impl<'a> CompositorWorker<'a> {
         v
     }
 
-    fn handle_request(
-        &self,
-        info: &BlockInfo,
-        opacities: &[f32],
-        subcanvas_size: &PixelBox,
-    ) -> ToRendererMsg {
+    fn handle_request(&self, info: &BlockInfo, opacities: &[f32]) -> ToRendererMsg {
         let box_intersection = self.area.intersection_unchecked(&info.viewport);
         let pixels = box_intersection.get_pixel_range(self.resolution);
 
         // Shift pixelbox to our subframe
 
-        let opacity_data = self.get_opacity(opacities, subcanvas_size, &pixels);
+        let opacity_data = self.get_opacity(opacities, &pixels);
         let opacity_data = OpacityData::new(self.compositor_id, pixels, opacity_data);
         ToRendererMsg::Opacity(opacity_data)
     }

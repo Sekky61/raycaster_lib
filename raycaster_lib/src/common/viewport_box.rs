@@ -83,6 +83,7 @@ impl ViewportBox {
     }
 }
 
+#[derive(Clone)]
 pub struct PixelBox {
     pub x: Range<usize>,
     pub y: Range<usize>,
@@ -96,6 +97,8 @@ impl PixelBox {
     pub fn items(&self) -> usize {
         (self.x.end - self.x.start) * (self.y.end - self.y.start)
     }
+
+    // todo width, height, offset
 }
 
 #[cfg(test)]

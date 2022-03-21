@@ -8,7 +8,7 @@ use nalgebra::vector;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::ViewportBox,
+    common::{PixelBox, ViewportBox},
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
     volumetric::BlockVolume,
 };
@@ -151,7 +151,7 @@ impl ParalelRenderer {
                         renderers.push(handle);
                     }
 
-                    let compositor_areas = ParalelRenderer::generate_compositor_areas(4);
+                    let compositor_areas = self.generate_compositor_areas(4);
 
                     let (result_sender, result_receiver) = crossbeam_channel::unbounded();
 
@@ -162,7 +162,7 @@ impl ParalelRenderer {
                         let result_sender = result_sender.clone();
                         let all_renderers = renderer_send.clone();
                         let camera_ref = self.camera.clone();
-                        let area = compositor_areas[i];
+                        let (area, pixels) = compositor_areas[i].clone();
                         let blocks_ref = &volume.data[..];
                         let handle = s.spawn(move |_| {
                             println!("Started compositor {i}");
@@ -177,6 +177,7 @@ impl ParalelRenderer {
                                 compositor_id,
                                 camera_ref,
                                 area,
+                                pixels,
                                 resolution,
                                 all_renderers,
                                 message_receiver,
@@ -203,11 +204,16 @@ impl ParalelRenderer {
                 // Master loop
                 loop {
                     // Gather input
+                    #[cfg(debug_assertions)]
+                    println!("Master : waiting for input");
                     let msg = self.communication.1.recv().unwrap();
                     match msg {
                         RendererMessage::StartRendering => (),
                         RendererMessage::ShutDown => break,
                     }
+
+                    #[cfg(debug_assertions)]
+                    println!("Master : start rendering");
 
                     // Lock buffer
                     let mut buffer = self.buffer.lock().unwrap();
@@ -221,6 +227,9 @@ impl ParalelRenderer {
 
                     // Send result
                     self.communication.0.send(()).unwrap();
+
+                    #[cfg(debug_assertions)]
+                    println!("Master : result sent");
                 }
 
                 // Send finish messages and join threads
@@ -275,25 +284,45 @@ impl ParalelRenderer {
             task_sender.send(RenderTask::new(order)).unwrap();
         }
 
+        #[cfg(debug_assertions)]
+        println!("Master : sent all tasks");
+
         // Get subcanvases from compositors and save them to buffer
-        for _ in 0..4 {
+        for i in 1..=4 {
             let msg = result_receiver.recv().unwrap();
             match msg {
                 ToMasterMsg::Subframe(res) => {
                     self.copy_subframe(buffer, res);
+
+                    #[cfg(debug_assertions)]
+                    println!("Master : copied subframe ({}/{})", i, 4);
                 }
             }
         }
     }
 
     // Segment viewport into n subframes
-    fn generate_compositor_areas(n: usize) -> Vec<ViewportBox> {
+    // Calc pixel sizes and offsets
+    fn generate_compositor_areas(&self, n: usize) -> Vec<(ViewportBox, PixelBox)> {
         if n == 4 {
             let box1 = ViewportBox::from_points(vector![0.0, 0.0], vector![0.5, 0.5]);
             let box2 = ViewportBox::from_points(vector![0.5, 0.0], vector![1.0, 0.5]);
             let box3 = ViewportBox::from_points(vector![0.0, 0.5], vector![0.5, 1.0]);
             let box4 = ViewportBox::from_points(vector![0.5, 0.5], vector![1.0, 1.0]);
-            return vec![box1, box2, box3, box4];
+            let res_vec = vector![
+                self.render_options.resolution.0,
+                self.render_options.resolution.1
+            ];
+            let box1_pix = box1.get_pixel_range(res_vec);
+            let box2_pix = box2.get_pixel_range(res_vec);
+            let box3_pix = box3.get_pixel_range(res_vec);
+            let box4_pix = box4.get_pixel_range(res_vec);
+            return vec![
+                (box1, box1_pix),
+                (box2, box2_pix),
+                (box3, box3_pix),
+                (box4, box4_pix),
+            ];
         } else {
             todo!()
         }
@@ -310,7 +339,7 @@ impl ParalelRenderer {
 
         let mut ptr = offset;
         let mut ptr_data = 0;
-        while ptr_data < buffer.len() {
+        while (ptr_data + width) <= data.len() {
             buffer[ptr..ptr + width].copy_from_slice(&data[ptr_data..ptr_data + width]);
 
             ptr += self.render_options.resolution.0;
