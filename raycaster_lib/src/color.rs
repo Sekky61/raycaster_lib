@@ -1,4 +1,3 @@
-
 use nalgebra::{vector, Vector4};
 
 pub type RGBA = Vector4<f32>;
@@ -14,3 +13,5 @@ pub fn zero() -> RGBA {
 pub fn mono(v: f32, opacity: f32) -> RGBA {
     vector![v, v, v, opacity]
 }
+
+// TODO RGB type, convert to bytes function

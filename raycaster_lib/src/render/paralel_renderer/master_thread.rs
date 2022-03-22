@@ -10,7 +10,7 @@ use crate::{
     camera::{Camera, PerspectiveCamera},
     common::{PixelBox, ViewportBox},
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
-    volumetric::BlockVolume,
+    volumetric::{BlockVolume, Volume},
 };
 
 use super::messages::{
@@ -142,6 +142,8 @@ impl ParalelRenderer {
                         self.render_options.resolution.1
                     ];
 
+                    let tf = volume.get_tf();
+
                     for i in 0..4 {
                         // Create render thread
                         let receiver = comp_to_ren[i].1.clone(); // Receiver
@@ -163,6 +165,7 @@ impl ParalelRenderer {
                             let render_worker = RenderWorker::new(
                                 renderer_id,
                                 camera_ref,
+                                tf,
                                 resolution,
                                 all_compositors,
                                 message_receiver,

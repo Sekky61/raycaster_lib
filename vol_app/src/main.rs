@@ -106,7 +106,6 @@ pub fn main() {
     // React to mouse move in render area
     let state_clone = state.clone();
     app.on_render_area_move_event(move |mouse_pos| {
-        println!("MOVEEEEE");
         state_clone
             .borrow_mut()
             .handle_mouse_pos(vector![mouse_pos.x, mouse_pos.y]);

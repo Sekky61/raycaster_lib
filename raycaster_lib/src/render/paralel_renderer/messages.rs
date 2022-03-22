@@ -2,6 +2,8 @@ use nalgebra::Vector3;
 
 use crate::common::PixelBox;
 
+// Todo combine Vec and pixelbox to newtype
+
 pub struct RenderTask {
     pub block_order: usize,
 }
@@ -41,6 +43,7 @@ impl OpacityRequest {
 
 // todo split color and transmit it at lower priority
 pub struct SubRenderResult {
+    // todo remove pixels field, use order
     pub order: usize,
     pub pixels: PixelBox,
     pub colors: Vec<Vector3<f32>>,
@@ -95,6 +98,7 @@ impl OpacityData {
 }
 
 pub struct SubFrameResult {
+    // todo remove offset and width, use from_id field
     pub data: Vec<u8>,
     pub offset: usize,
     pub width: usize,

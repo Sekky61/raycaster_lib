@@ -79,7 +79,6 @@ impl State {
 
     fn new_camera_movement(&mut self, movement: CameraMovement) {
         self.camera_buffer.add_movement(movement);
-        println!("Adding cam movement, isrendering: {}", self.is_rendering);
         if !self.is_rendering {
             self.apply_cam_change();
             self.start_render();

@@ -369,6 +369,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn block_order() {
         // Assumes BLOCK_SIDE == 4
         let volume: BlockVolume = skull_volume();

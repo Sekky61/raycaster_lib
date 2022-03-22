@@ -7,7 +7,7 @@ use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 use crate::{
     camera::{Camera, PerspectiveCamera},
     common::Ray,
-    volumetric::Block,
+    volumetric::{Block, TF},
 };
 
 use super::messages::{
@@ -23,6 +23,7 @@ enum Run {
 pub struct RenderWorker<'a> {
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
+    tf: TF,
     resolution: Vector2<usize>,
     // Comp x renderer comms
     compositors: [Sender<ToCompositorMsg>; 4],
@@ -38,6 +39,7 @@ impl<'a> RenderWorker<'a> {
     pub fn new(
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
+        tf: TF,
         resolution: Vector2<usize>,
         compositors: [Sender<ToCompositorMsg>; 4],
         receiver: Receiver<ToRendererMsg>,
@@ -48,6 +50,7 @@ impl<'a> RenderWorker<'a> {
         Self {
             renderer_id,
             camera,
+            tf,
             resolution,
             compositors,
             receiver,
@@ -58,7 +61,6 @@ impl<'a> RenderWorker<'a> {
     }
 
     pub fn run(&self) {
-        // TODO do this for compositor as well
         let mut command = None;
         loop {
             let msg = match command.take() {
@@ -240,7 +242,7 @@ impl<'a> RenderWorker<'a> {
 
         let mut pos = begin;
 
-        let tf = |s: f32| vector![s, s, s, 0.5];
+        let tf = self.tf;
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
