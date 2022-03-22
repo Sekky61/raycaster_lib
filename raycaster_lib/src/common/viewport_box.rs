@@ -1,4 +1,7 @@
-use std::ops::Range;
+use std::{
+    cmp::{max, min},
+    ops::Range,
+};
 
 use nalgebra::{vector, Vector2};
 
@@ -94,11 +97,50 @@ impl PixelBox {
         Self { x, y }
     }
 
-    pub fn items(&self) -> usize {
-        (self.x.end - self.x.start) * (self.y.end - self.y.start)
+    pub fn width(&self) -> usize {
+        self.x.end - self.x.start
     }
 
-    // todo width, height, offset
+    pub fn height(&self) -> usize {
+        self.y.end - self.y.start
+    }
+
+    pub fn items(&self) -> usize {
+        self.width() * self.height()
+    }
+
+    // True if rectangles share any area (in other words, if bounds cross)
+    // Touching boundboxes do not cross
+    pub fn crosses(&self, other: &PixelBox) -> bool {
+        let outside = self.x.end <= other.x.start
+            || self.x.start >= other.x.end
+            || self.y.end <= other.y.start
+            || self.y.start >= other.y.end;
+        !outside
+    }
+
+    // Touching boundboxes do not intersect
+    pub fn intersection(&self, other: &PixelBox) -> Option<PixelBox> {
+        let result = self.intersection_unchecked(other);
+        if result.x.start >= result.x.end || result.y.start >= result.y.end {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    pub fn intersection_unchecked(&self, other: &PixelBox) -> PixelBox {
+        let lower_x = max(self.x.start, other.x.start);
+        let lower_y = max(self.x.start, other.x.start);
+
+        let upper_x = min(self.x.end, other.x.end);
+        let upper_y = min(self.y.end, other.y.end);
+
+        PixelBox {
+            x: lower_x..upper_x,
+            y: lower_y..upper_y,
+        }
+    }
 }
 
 #[cfg(test)]
