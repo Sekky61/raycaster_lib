@@ -3,7 +3,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender};
 
 use crate::{camera::PerspectiveCamera, volumetric::Volume};
 
@@ -55,8 +55,8 @@ where
 
         // Dummy channels
         // Replaced once started
-        let (sender_void, _) = crossbeam_channel::unbounded();
-        let never = crossbeam_channel::never();
+        let (sender_void, _) = crossbeam::channel::unbounded();
+        let never = crossbeam::channel::never();
         let communication = (sender_void, never);
 
         Self {

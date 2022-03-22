@@ -3,7 +3,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender};
 
 use crate::camera::PerspectiveCamera;
 
@@ -33,8 +33,8 @@ pub struct RendererFront {
 
 impl RendererFront {
     pub fn new() -> Self {
-        let communication_in = crossbeam_channel::unbounded(); // main -> renderer
-        let communication_out = crossbeam_channel::unbounded(); // renderer -> main
+        let communication_in = crossbeam::channel::unbounded(); // main -> renderer
+        let communication_out = crossbeam::channel::unbounded(); // renderer -> main
         Self {
             handle: None,
             buffer: None,

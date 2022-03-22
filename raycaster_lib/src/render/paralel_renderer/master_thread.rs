@@ -3,7 +3,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender};
 use nalgebra::vector;
 
 use crate::{
@@ -13,10 +13,13 @@ use crate::{
     volumetric::{BlockVolume, Volume},
 };
 
-use super::messages::{
-    RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
-};
 use super::workers::{CompositorWorker, RenderWorker};
+use super::{
+    communication::CommsBuilder,
+    messages::{
+        RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
+    },
+};
 
 pub struct ParalelRenderer {
     volume: BlockVolume,
@@ -55,8 +58,8 @@ impl ParalelRenderer {
 
         // Dummy channels
         // Replaced once started
-        let (sender_void, _) = crossbeam_channel::unbounded();
-        let never = crossbeam_channel::never();
+        let (sender_void, _) = crossbeam::channel::unbounded();
+        let never = crossbeam::channel::never();
         let communication = (sender_void, never);
 
         Self {
@@ -75,64 +78,9 @@ impl ParalelRenderer {
                 let volume = &self.volume;
 
                 // inlined function because borrow checker defeated me (scope cannot leave closure)
-                let (
-                    render_handles,
-                    comp_handles,
-                    task_sender,
-                    result_receiver,
-                    compositor_send,
-                    renderer_send,
-                    command_send,
-                ) = {
-                    // Send to compositor, compositor recieves message
-                    let ren_to_comp = [
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                    ];
-                    let compositor_send: [Sender<ToCompositorMsg>; 4] = [
-                        ren_to_comp[0].0.clone(),
-                        ren_to_comp[1].0.clone(),
-                        ren_to_comp[2].0.clone(),
-                        ren_to_comp[3].0.clone(),
-                    ];
-                    // Send to renderer, renderer recieves message
-                    let comp_to_ren = [
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                    ];
-                    let renderer_send: [Sender<ToRendererMsg>; 4] = [
-                        comp_to_ren[0].0.clone(),
-                        comp_to_ren[1].0.clone(),
-                        comp_to_ren[2].0.clone(),
-                        comp_to_ren[3].0.clone(),
-                    ];
-
-                    let (task_sender, task_receiver) = crossbeam_channel::unbounded();
-
-                    let command = [
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                        crossbeam_channel::unbounded(),
-                    ];
-                    let command_send: [Sender<ToWorkerMsg>; 8] = [
-                        command[0].0.clone(),
-                        command[1].0.clone(),
-                        command[2].0.clone(),
-                        command[3].0.clone(),
-                        command[4].0.clone(),
-                        command[5].0.clone(),
-                        command[6].0.clone(),
-                        command[7].0.clone(),
-                    ];
+                let (master_comms, ren_handles, comp_handles) = {
+                    // R = 4 C = 4 RC = 8
+                    let comms = CommsBuilder::<4, 4, 8>::new();
 
                     let mut renderers = Vec::with_capacity(4);
                     let mut compositors = Vec::with_capacity(4);
@@ -146,19 +94,13 @@ impl ParalelRenderer {
 
                     for i in 0..4 {
                         // Create render thread
-                        let receiver = comp_to_ren[i].1.clone(); // Receiver
-                        let command_receiver = command[i].1.clone(); // Receiver of commands
-                        let all_compositors = compositor_send.clone();
-                        let task_receiver = task_receiver.clone();
+                        let ren_comms = comms.renderer(i);
                         let blocks_ref = &volume.data[..];
                         let camera_ref = self.camera.clone();
                         let handle = s.spawn(move |_| {
                             println!("Started renderer {i}");
                             // Force move into closure
                             let renderer_id = i;
-                            let all_compositors = all_compositors; // Senders for all compositors
-                            let task_receiver = task_receiver;
-                            let message_receiver = receiver;
                             let blocks_ref = blocks_ref;
                             let camera_ref = camera_ref;
 
@@ -167,10 +109,7 @@ impl ParalelRenderer {
                                 camera_ref,
                                 tf,
                                 resolution,
-                                all_compositors,
-                                message_receiver,
-                                task_receiver,
-                                command_receiver,
+                                ren_comms,
                                 blocks_ref,
                             );
 
@@ -182,15 +121,10 @@ impl ParalelRenderer {
 
                     let compositor_areas = self.generate_compositor_areas(4);
 
-                    let (result_sender, result_receiver) = crossbeam_channel::unbounded();
-
                     for i in 0..4 {
                         // Create compositor thread
 
-                        let receiver = ren_to_comp[i].1.clone(); // Receiver
-                        let command_receiver = command[4 + i].1.clone(); // Receiver of commands | NOTICE 4+i
-                        let result_sender = result_sender.clone();
-                        let all_renderers = renderer_send.clone();
+                        let comp_comms = comms.compositor(i);
                         let camera_ref = self.camera.clone();
                         let (area, pixels) = compositor_areas[i].clone();
                         let blocks_ref = &volume.data[..];
@@ -198,8 +132,6 @@ impl ParalelRenderer {
                             println!("Started compositor {i}");
                             // Force move into closure
                             let compositor_id = i;
-                            let all_renderers = all_renderers; // Senders for all compositors
-                            let message_receiver = receiver;
                             let blocks_ref = blocks_ref;
                             let area = area;
 
@@ -209,10 +141,7 @@ impl ParalelRenderer {
                                 area,
                                 pixels,
                                 resolution,
-                                all_renderers,
-                                message_receiver,
-                                result_sender,
-                                command_receiver,
+                                comp_comms,
                                 blocks_ref,
                             );
 
@@ -222,15 +151,7 @@ impl ParalelRenderer {
                         compositors.push(handle);
                     }
 
-                    (
-                        renderers,
-                        compositors,
-                        task_sender,
-                        result_receiver,
-                        compositor_send,
-                        renderer_send,
-                        command_send,
-                    )
+                    (comms.master(), renderers, compositors)
                 };
 
                 // Master loop
@@ -248,7 +169,7 @@ impl ParalelRenderer {
                     println!("Master : start rendering");
 
                     // Send go live messages
-                    for worker in command_send.iter() {
+                    for worker in master_comms.command_sender.iter() {
                         worker.send(ToWorkerMsg::GoLive).unwrap();
                     }
 
@@ -256,15 +177,13 @@ impl ParalelRenderer {
                     let mut buffer = self.buffer.lock().unwrap();
 
                     // Render
-                    self.render(
-                        task_sender.clone(),
-                        result_receiver.clone(),
-                        &mut buffer[..],
-                    );
+                    let task_sender = master_comms.task_sender.clone();
+                    let result_receiver = master_comms.result_receiver.clone();
+                    self.render(task_sender, result_receiver, &mut buffer[..]);
 
                     // Send idle messages
                     // Renderers need to let go of camera
-                    for worker in command_send.iter() {
+                    for worker in master_comms.command_sender.iter() {
                         worker.send(ToWorkerMsg::GoIdle).unwrap();
                     }
 
@@ -276,11 +195,11 @@ impl ParalelRenderer {
                 }
 
                 // Send finish messages and join threads
-                for worker in command_send.iter() {
+                for worker in master_comms.command_sender.iter() {
                     worker.send(ToWorkerMsg::Finish).unwrap();
                 }
 
-                for h in render_handles {
+                for h in ren_handles {
                     h.join().unwrap();
                 }
                 for h in comp_handles {

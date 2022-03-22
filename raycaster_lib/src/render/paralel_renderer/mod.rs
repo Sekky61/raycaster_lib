@@ -1,6 +1,7 @@
+mod communication;
 mod compositor_worker;
-mod messages;
 mod master_thread;
+mod messages;
 mod render_worker;
 
 pub use master_thread::ParalelRenderer;

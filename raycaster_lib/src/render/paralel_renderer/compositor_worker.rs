@@ -3,8 +3,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use crossbeam::channel::{Receiver, Sender};
 use crossbeam::select;
-use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{Vector2, Vector3};
 
 use crate::{
@@ -14,8 +14,11 @@ use crate::{
     volumetric::Block,
 };
 
-use super::messages::{
-    OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
+use super::{
+    communication::CompWorkerComms,
+    messages::{
+        OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
+    },
 };
 
 enum Run {
@@ -31,12 +34,7 @@ pub struct CompositorWorker<'a> {
     area: ViewportBox, // todo remove, count in pixels
     pixels: PixelBox,
     resolution: Vector2<usize>, // Resolution of full image
-    // Comp x renderer comms
-    renderers: [Sender<ToRendererMsg>; 4],
-    receiver: Receiver<ToCompositorMsg>,
-    // Comp x master comms
-    result_sender: Sender<ToMasterMsg>,
-    command_receiver: Receiver<ToWorkerMsg>,
+    comms: CompWorkerComms<4>,  // todo generic
     blocks: &'a [Block],
 }
 
@@ -48,10 +46,7 @@ impl<'a> CompositorWorker<'a> {
         area: ViewportBox,
         pixels: PixelBox,
         resolution: Vector2<usize>,
-        renderers: [Sender<ToRendererMsg>; 4],
-        receiver: Receiver<ToCompositorMsg>,
-        result_sender: Sender<ToMasterMsg>,
-        command_receiver: Receiver<ToWorkerMsg>,
+        comms: CompWorkerComms<4>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -60,10 +55,7 @@ impl<'a> CompositorWorker<'a> {
             area,
             pixels,
             resolution,
-            renderers,
-            receiver,
-            result_sender,
-            command_receiver,
+            comms,
             blocks,
         }
     }
@@ -73,7 +65,7 @@ impl<'a> CompositorWorker<'a> {
         loop {
             let msg = match command.take() {
                 Some(cmd) => cmd,
-                None => self.command_receiver.recv().unwrap(),
+                None => self.comms.command_receiver.recv().unwrap(),
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
@@ -113,12 +105,12 @@ impl<'a> CompositorWorker<'a> {
         loop {
             // Receive requests
             let request = select! {
-                recv(self.receiver) -> msg => msg.unwrap(),
-                recv(self.command_receiver) -> msg => return msg.unwrap(),
+                recv(self.comms.receiver) -> msg => msg.unwrap(),
+                recv(self.comms.command_receiver) -> msg => return msg.unwrap(),
             };
             match request {
                 ToCompositorMsg::OpacityRequest(req) => {
-                    let responder = &self.renderers[req.from_id];
+                    let responder = &self.comms.renderers[req.from_id];
 
                     #[cfg(debug_assertions)]
                     println!(
@@ -230,7 +222,7 @@ impl<'a> CompositorWorker<'a> {
                         queue.remove(q_index);
 
                         //let r = queue.pop_front().unwrap();
-                        let responder = &self.renderers[req.from_id];
+                        let responder = &self.comms.renderers[req.from_id];
                         let info = &block_info[expected_volume_index];
                         let response = self.handle_request(info, &subcanvas_opacity[..]);
                         responder.send(response).unwrap();
@@ -268,7 +260,10 @@ impl<'a> CompositorWorker<'a> {
 
         // Send byte canvas to master
         let res = SubFrameResult::new(byte_canvas, offset, width);
-        self.result_sender.send(ToMasterMsg::Subframe(res)).unwrap();
+        self.comms
+            .result_sender
+            .send(ToMasterMsg::Subframe(res))
+            .unwrap();
 
         #[cfg(debug_assertions)]
         println!("Comp {}: sent canvas", self.compositor_id);

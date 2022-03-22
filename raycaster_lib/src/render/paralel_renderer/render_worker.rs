@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
+use crossbeam::channel::{Receiver, Sender};
 use crossbeam::select;
-use crossbeam_channel::{Receiver, Sender};
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
 use crate::{
@@ -10,8 +10,11 @@ use crate::{
     volumetric::{Block, TF},
 };
 
-use super::messages::{
-    OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg,
+use super::{
+    communication::RenderWorkerComms,
+    messages::{
+        OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg,
+    },
 };
 
 enum Run {
@@ -25,12 +28,7 @@ pub struct RenderWorker<'a> {
     camera: Arc<RwLock<PerspectiveCamera>>,
     tf: TF,
     resolution: Vector2<usize>,
-    // Comp x renderer comms
-    compositors: [Sender<ToCompositorMsg>; 4],
-    receiver: Receiver<ToRendererMsg>,
-    // Master x renderer comms
-    task_receiver: Receiver<RenderTask>,
-    command_receiver: Receiver<ToWorkerMsg>,
+    comms: RenderWorkerComms<4>, // todo generic
     blocks: &'a [Block],
 }
 
@@ -41,10 +39,7 @@ impl<'a> RenderWorker<'a> {
         camera: Arc<RwLock<PerspectiveCamera>>,
         tf: TF,
         resolution: Vector2<usize>,
-        compositors: [Sender<ToCompositorMsg>; 4],
-        receiver: Receiver<ToRendererMsg>,
-        task_receiver: Receiver<RenderTask>,
-        command_receiver: Receiver<ToWorkerMsg>,
+        comms: RenderWorkerComms<4>,
         blocks: &'a [Block],
     ) -> Self {
         Self {
@@ -52,10 +47,7 @@ impl<'a> RenderWorker<'a> {
             camera,
             tf,
             resolution,
-            compositors,
-            receiver,
-            task_receiver,
-            command_receiver,
+            comms,
             blocks,
         }
     }
@@ -65,7 +57,7 @@ impl<'a> RenderWorker<'a> {
         loop {
             let msg = match command.take() {
                 Some(cmd) => cmd,
-                None => self.command_receiver.recv().unwrap(),
+                None => self.comms.command_receiver.recv().unwrap(),
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
@@ -92,8 +84,8 @@ impl<'a> RenderWorker<'a> {
         loop {
             // Wait for task from master thread or finish call
             let task = select! {
-                recv(self.task_receiver) -> msg => msg.unwrap(),
-                recv(self.command_receiver) -> msg => return msg.unwrap(),
+                recv(self.comms.task_receiver) -> msg => msg.unwrap(),
+                recv(self.comms.command_receiver) -> msg => return msg.unwrap(),
             };
 
             let block_order = task.block_order;
@@ -106,7 +98,7 @@ impl<'a> RenderWorker<'a> {
             );
 
             // Ask for all opacity data
-            for comp in self.compositors.iter() {
+            for comp in self.comms.compositors.iter() {
                 let op_req = OpacityRequest::new(self.renderer_id, block_order);
                 comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
             }
@@ -116,8 +108,8 @@ impl<'a> RenderWorker<'a> {
             // Wait for all opacity data from compositors
             let mut color_opacity = {
                 let mut ship_back: [Option<SubRenderResult>; 4] = Default::default(); // todo const generics
-                for _ in 0..self.compositors.len() {
-                    let msg = self.receiver.recv().unwrap();
+                for _ in 0..self.comms.compositors.len() {
+                    let msg = self.comms.receiver.recv().unwrap();
                     if let ToRendererMsg::Opacity(d) = msg {
                         let i = d.from_compositor;
                         let capacity = d.pixels.items();
@@ -158,7 +150,7 @@ impl<'a> RenderWorker<'a> {
             for (i, res_opt) in color_opacity.into_iter().enumerate() {
                 if let Some(res) = res_opt {
                     let msg = ToCompositorMsg::RenderResult(res);
-                    self.compositors[i].send(msg).unwrap();
+                    self.comms.compositors[i].send(msg).unwrap();
                 }
             }
 
