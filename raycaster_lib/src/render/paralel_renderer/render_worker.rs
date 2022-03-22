@@ -1,6 +1,5 @@
 use std::sync::{Arc, RwLock};
 
-use crossbeam::channel::{Receiver, Sender};
 use crossbeam::select;
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
@@ -12,9 +11,7 @@ use crate::{
 
 use super::{
     communication::RenderWorkerComms,
-    messages::{
-        OpacityRequest, RenderTask, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg,
-    },
+    messages::{OpacityRequest, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg},
 };
 
 enum Run {

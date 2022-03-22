@@ -16,9 +16,7 @@ use crate::{
 use super::workers::{CompositorWorker, RenderWorker};
 use super::{
     communication::CommsBuilder,
-    messages::{
-        RenderTask, SubFrameResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
-    },
+    messages::{RenderTask, SubFrameResult, ToMasterMsg, ToWorkerMsg},
 };
 
 pub struct ParalelRenderer {
@@ -90,30 +88,22 @@ impl ParalelRenderer {
                         self.render_options.resolution.1
                     ];
 
+                    let blocks_ref = &volume.data[..];
+
                     let tf = volume.get_tf();
 
-                    for i in 0..4 {
+                    for id in 0..4 {
                         // Create render thread
-                        let ren_comms = comms.renderer(i);
-                        let blocks_ref = &volume.data[..];
+                        let ren_comms = comms.renderer(id);
                         let camera_ref = self.camera.clone();
                         let handle = s.spawn(move |_| {
-                            println!("Started renderer {i}");
-                            // Force move into closure
-                            let renderer_id = i;
-                            let blocks_ref = blocks_ref;
-                            let camera_ref = camera_ref;
+                            println!("Started renderer {id}");
 
-                            let render_worker = RenderWorker::new(
-                                renderer_id,
-                                camera_ref,
-                                tf,
-                                resolution,
-                                ren_comms,
-                                blocks_ref,
+                            let renderer = RenderWorker::new(
+                                id, camera_ref, tf, resolution, ren_comms, blocks_ref,
                             );
 
-                            render_worker.run();
+                            renderer.run();
                         });
 
                         renderers.push(handle);
@@ -121,28 +111,18 @@ impl ParalelRenderer {
 
                     let compositor_areas = self.generate_compositor_areas(4);
 
-                    for i in 0..4 {
+                    for (id, assigned_area) in compositor_areas.into_iter().enumerate() {
                         // Create compositor thread
 
-                        let comp_comms = comms.compositor(i);
+                        let comp_comms = comms.compositor(id);
                         let camera_ref = self.camera.clone();
-                        let (area, pixels) = compositor_areas[i].clone();
-                        let blocks_ref = &volume.data[..];
+                        let (area, pixels) = assigned_area;
+
                         let handle = s.spawn(move |_| {
-                            println!("Started compositor {i}");
-                            // Force move into closure
-                            let compositor_id = i;
-                            let blocks_ref = blocks_ref;
-                            let area = area;
+                            println!("Started compositor {id}");
 
                             let compositor = CompositorWorker::new(
-                                compositor_id,
-                                camera_ref,
-                                area,
-                                pixels,
-                                resolution,
-                                comp_comms,
-                                blocks_ref,
+                                id, camera_ref, area, pixels, resolution, comp_comms, blocks_ref,
                             );
 
                             compositor.run();
@@ -262,6 +242,7 @@ impl ParalelRenderer {
 
     // Segment viewport into n subframes
     // Calc pixel sizes and offsets
+    // todo return only PixelBox
     fn generate_compositor_areas(&self, n: usize) -> Vec<(ViewportBox, PixelBox)> {
         if n == 4 {
             let box1 = ViewportBox::from_points(vector![0.0, 0.0], vector![0.5, 0.5]);

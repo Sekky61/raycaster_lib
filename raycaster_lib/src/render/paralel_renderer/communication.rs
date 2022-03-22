@@ -5,6 +5,7 @@ use super::messages::{RenderTask, ToCompositorMsg, ToMasterMsg, ToRendererMsg, T
 
 type Channel<T> = (Sender<T>, Receiver<T>);
 
+#[derive(Clone)]
 pub struct CompWorkerComms<const R: usize> {
     // Comp x renderer comms
     pub renderers: ArrayVec<Sender<ToRendererMsg>, R>,
@@ -14,23 +15,7 @@ pub struct CompWorkerComms<const R: usize> {
     pub command_receiver: Receiver<ToWorkerMsg>,
 }
 
-impl<const R: usize> CompWorkerComms<R> {
-    #[must_use]
-    pub fn new(
-        renderers: ArrayVec<Sender<ToRendererMsg>, R>,
-        receiver: Receiver<ToCompositorMsg>,
-        result_sender: Sender<ToMasterMsg>,
-        command_receiver: Receiver<ToWorkerMsg>,
-    ) -> Self {
-        Self {
-            renderers,
-            receiver,
-            result_sender,
-            command_receiver,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct RenderWorkerComms<const C: usize> {
     // Comp x renderer comms
     pub compositors: ArrayVec<Sender<ToCompositorMsg>, C>,
@@ -40,44 +25,14 @@ pub struct RenderWorkerComms<const C: usize> {
     pub command_receiver: Receiver<ToWorkerMsg>,
 }
 
-impl<const C: usize> RenderWorkerComms<C> {
-    #[must_use]
-    pub fn new(
-        compositors: ArrayVec<Sender<ToCompositorMsg>, C>,
-        receiver: Receiver<ToRendererMsg>,
-        task_receiver: Receiver<RenderTask>,
-        command_receiver: Receiver<ToWorkerMsg>,
-    ) -> Self {
-        Self {
-            compositors,
-            receiver,
-            task_receiver,
-            command_receiver,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct MasterComms<const RC: usize> {
     pub task_sender: Sender<RenderTask>,
     pub result_receiver: Receiver<ToMasterMsg>,
     pub command_sender: ArrayVec<Sender<ToWorkerMsg>, RC>,
 }
 
-impl<const RC: usize> MasterComms<RC> {
-    #[must_use]
-    pub fn new(
-        task_sender: Sender<RenderTask>,
-        result_receiver: Receiver<ToMasterMsg>,
-        command_sender: ArrayVec<Sender<ToWorkerMsg>, RC>,
-    ) -> Self {
-        Self {
-            task_sender,
-            result_receiver,
-            command_sender,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct CommsBuilder<const R: usize, const C: usize, const RC: usize> {
     ren_to_comp: ArrayVec<Channel<ToCompositorMsg>, C>, // Render -> Comp
     comp_to_ren: ArrayVec<Channel<ToRendererMsg>, R>,   // Comp -> Render

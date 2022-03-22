@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crossbeam::channel::{Receiver, Sender};
 use crossbeam::select;
 use nalgebra::{Vector2, Vector3};
 
@@ -146,7 +145,7 @@ impl<'a> CompositorWorker<'a> {
 
                                 let q_index = queue.binary_search_by(|re| re.order.cmp(&req.order));
                                 match q_index {
-                                    Ok(i) => panic!("Already in queue"),
+                                    Ok(_) => panic!("Already in queue"),
                                     Err(ins_i) => queue.insert(ins_i, req),
                                 }
                             }
@@ -269,13 +268,6 @@ impl<'a> CompositorWorker<'a> {
         println!("Comp {}: sent canvas", self.compositor_id);
     }
 
-    // Resolution of subcanvas
-    fn calc_resolution(&self) -> PixelBox {
-        // Should pad to one direction, to distribute bordering pixels
-        // 0,0 -> 0,0 | 1,1 -> width-1,height-1
-        self.area.get_pixel_range(self.resolution)
-    }
-
     // Return collection of blocks in the subframe
     // Collection is sorted by distance (asc.)
     fn get_block_info(&self) -> Vec<BlockInfo> {
@@ -287,7 +279,7 @@ impl<'a> CompositorWorker<'a> {
             for (i, block) in self.blocks.iter().enumerate() {
                 let viewport = camera.project_box(block.bound_box);
                 let distance = camera.box_distance(&block.bound_box);
-                let info = BlockInfo::new(i, 0, distance, viewport);
+                let info = BlockInfo::new(0, distance, viewport);
                 relevant_ids.push(info);
             }
         }
@@ -388,16 +380,14 @@ fn convert_to_bytes(subcanvas_rgb: &[Vector3<f32>]) -> Vec<u8> {
 }
 
 pub struct BlockInfo {
-    index: usize,
     order: usize,
     distance: f32,
     viewport: ViewportBox,
 }
 
 impl BlockInfo {
-    pub fn new(index: usize, order: usize, distance: f32, viewport: ViewportBox) -> Self {
+    pub fn new(order: usize, distance: f32, viewport: ViewportBox) -> Self {
         Self {
-            index,
             order,
             distance,
             viewport,
@@ -417,7 +407,6 @@ mod test {
     use nalgebra::{point, vector};
 
     use super::*;
-    use crate::{common::Ray, test_helpers::*};
 
     #[test]
     fn canvas_to_bytes() {
