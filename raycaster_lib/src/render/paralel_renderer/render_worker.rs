@@ -95,6 +95,7 @@ impl<'a> RenderWorker<'a> {
             );
 
             // Ask for all opacity data
+            // TODO it could be known in which subframes the block is (part of task), eliminating some searches in expected_volumes
             for comp in self.comms.compositors.iter() {
                 let op_req = OpacityRequest::new(self.renderer_id, block_order);
                 comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
@@ -104,19 +105,14 @@ impl<'a> RenderWorker<'a> {
 
             // Wait for all opacity data from compositors
             let mut color_opacity = {
+                // todo return ArrayVec
                 let mut ship_back: [Option<SubRenderResult>; 4] = Default::default(); // todo const generics
                 for _ in 0..self.comms.compositors.len() {
                     let msg = self.comms.receiver.recv().unwrap();
                     if let ToRendererMsg::Opacity(d) = msg {
-                        let i = d.from_compositor;
-                        let capacity = d.pixels.items();
-                        let res = SubRenderResult::with_capacity(
-                            block_order,
-                            d.pixels,
-                            capacity,
-                            d.opacities,
-                        );
-                        ship_back[i] = Some(res);
+                        let comp_id = d.from_compositor;
+                        let res = SubRenderResult::new(block_order, d.pixels, d.opacities);
+                        ship_back[comp_id] = Some(res);
                     }
                 }
                 ship_back
@@ -144,12 +140,14 @@ impl<'a> RenderWorker<'a> {
             println!("Render {}: rendered {block_order}", self.renderer_id);
 
             // give data to compositers
-            for (i, res_opt) in color_opacity.into_iter().enumerate() {
-                if let Some(res) = res_opt {
-                    let msg = ToCompositorMsg::RenderResult(res);
-                    self.comms.compositors[i].send(msg).unwrap();
-                }
-            }
+            color_opacity
+                .into_iter()
+                .enumerate()
+                .filter(|opa| opa.1.is_some())
+                .for_each(|(id, sub)| {
+                    let msg = ToCompositorMsg::RenderResult(sub.unwrap());
+                    self.comms.compositors[id].send(msg).unwrap();
+                });
 
             #[cfg(debug_assertions)]
             println!("Render {}: sent back {block_order}", self.renderer_id);

@@ -51,26 +51,8 @@ pub struct SubRenderResult {
 }
 
 impl SubRenderResult {
-    pub fn new(
-        order: usize,
-        pixels: PixelBox,
-        colors: Vec<Vector3<f32>>,
-        opacities: Vec<f32>,
-    ) -> Self {
-        Self {
-            order,
-            pixels,
-            colors,
-            opacities,
-        }
-    }
-
-    pub fn with_capacity(
-        order: usize,
-        pixels: PixelBox,
-        capacity: usize,
-        opacities: Vec<f32>,
-    ) -> Self {
+    pub fn new(order: usize, pixels: PixelBox, opacities: Vec<f32>) -> Self {
+        let capacity = pixels.items();
         let colors = Vec::with_capacity(capacity);
         Self {
             order,

@@ -116,13 +116,13 @@ impl ParalelRenderer {
 
                         let comp_comms = comms.compositor(id);
                         let camera_ref = self.camera.clone();
-                        let (area, pixels) = assigned_area;
+                        let pixels = assigned_area;
 
                         let handle = s.spawn(move |_| {
                             println!("Started compositor {id}");
 
                             let compositor = CompositorWorker::new(
-                                id, camera_ref, area, pixels, resolution, comp_comms, blocks_ref,
+                                id, camera_ref, pixels, resolution, comp_comms, blocks_ref,
                             );
 
                             compositor.run();
@@ -243,7 +243,7 @@ impl ParalelRenderer {
     // Segment viewport into n subframes
     // Calc pixel sizes and offsets
     // todo return only PixelBox
-    fn generate_compositor_areas(&self, n: usize) -> Vec<(ViewportBox, PixelBox)> {
+    fn generate_compositor_areas(&self, n: usize) -> Vec<PixelBox> {
         if n == 4 {
             let box1 = ViewportBox::from_points(vector![0.0, 0.0], vector![0.5, 0.5]);
             let box2 = ViewportBox::from_points(vector![0.5, 0.0], vector![1.0, 0.5]);
@@ -257,12 +257,7 @@ impl ParalelRenderer {
             let box2_pix = box2.get_pixel_range(res_vec);
             let box3_pix = box3.get_pixel_range(res_vec);
             let box4_pix = box4.get_pixel_range(res_vec);
-            return vec![
-                (box1, box1_pix),
-                (box2, box2_pix),
-                (box3, box3_pix),
-                (box4, box4_pix),
-            ];
+            return vec![box1_pix, box2_pix, box3_pix, box4_pix];
         } else {
             todo!()
         }

@@ -159,6 +159,7 @@ impl Camera for PerspectiveCamera {
         viewbox
     }
 
+    // TODO is lower corner enough for relative distances? Assuming blocks have the same size
     fn box_distance(&self, bound_box: &BoundBox) -> f32 {
         let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower);
         (center - self.position).magnitude()

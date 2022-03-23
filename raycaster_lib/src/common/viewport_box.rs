@@ -41,6 +41,7 @@ impl ViewportBox {
     pub fn get_pixel_range(&self, resolution: Vector2<usize>) -> PixelBox {
         // Approach: floor values down to nearest pixel
         // Two adjacent boxes can share one line of pixels
+        // TODO might be good to ceil values
 
         let res_f = resolution.map(|v| v as f32);
 
@@ -131,7 +132,7 @@ impl PixelBox {
 
     pub fn intersection_unchecked(&self, other: &PixelBox) -> PixelBox {
         let lower_x = max(self.x.start, other.x.start);
-        let lower_y = max(self.x.start, other.x.start);
+        let lower_y = max(self.y.start, other.y.start);
 
         let upper_x = min(self.x.end, other.x.end);
         let upper_y = min(self.y.end, other.y.end);
@@ -238,5 +239,20 @@ mod test {
 
         assert!(!a.crosses(&b));
         assert!(c.is_none());
+    }
+
+    #[test]
+    fn pixelbox_intersection() {
+        let a = PixelBox { x: 0..10, y: 0..20 };
+        let b = PixelBox { x: 4..11, y: 0..5 };
+
+        let c = a.intersection(&b);
+
+        assert!(c.is_some());
+
+        let pb = c.unwrap(); // Does intersect
+
+        assert_eq!(pb.x, 4..10);
+        assert_eq!(pb.y, 0..5);
     }
 }

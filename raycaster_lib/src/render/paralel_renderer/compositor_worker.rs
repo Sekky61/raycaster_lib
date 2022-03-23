@@ -30,7 +30,6 @@ enum Run {
 pub struct CompositorWorker<'a> {
     compositor_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
-    area: ViewportBox, // todo remove, count in pixels
     pixels: PixelBox,
     resolution: Vector2<usize>, // Resolution of full image
     comms: CompWorkerComms<4>,  // todo generic
@@ -42,7 +41,6 @@ impl<'a> CompositorWorker<'a> {
     pub fn new(
         compositor_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
-        area: ViewportBox,
         pixels: PixelBox,
         resolution: Vector2<usize>,
         comms: CompWorkerComms<4>,
@@ -51,7 +49,6 @@ impl<'a> CompositorWorker<'a> {
         Self {
             compositor_id,
             camera,
-            area,
             pixels,
             resolution,
             comms,
@@ -97,8 +94,12 @@ impl<'a> CompositorWorker<'a> {
             &block_info[..]
         );
 
-        let mut expected_volume_index = 0;
-        let mut expected_volume_order = block_info[expected_volume_index].order; // pointer into block_info, todo peekable iter
+        let mut expected_iter = block_info.iter();
+
+        let mut expected_volume = expected_iter.next();
+
+        //let mut expected_volume_index = 0; // todo iterator wrapper
+        //let mut expected_volume_order = block_info[expected_volume_index].order; // pointer into block_info, todo peekable iter
         let mut queue: VecDeque<OpacityRequest> = VecDeque::new(); // todo maybe map, items can be removed... or just dont remove items
 
         loop {
@@ -117,36 +118,53 @@ impl<'a> CompositorWorker<'a> {
                         self.compositor_id, req.order
                     );
 
+                    let expected_info = match expected_volume {
+                        Some(info) => info,
+                        None => {
+                            // All relevant blocks handled, request must not be relevant to me
+                            let response = ToRendererMsg::EmptyOpacity;
+                            responder.send(response).unwrap();
+
+                            #[cfg(debug_assertions)]
+                            println!(
+                                "Comp {}: responding default empty order {}",
+                                self.compositor_id, req.order
+                            );
+                            continue;
+                        }
+                    };
+
+                    if req.order == expected_info.order {
+                        // Block is expected, handle it
+
+                        let response = self.handle_request(expected_info, &subcanvas_opacity[..]);
+
+                        responder.send(response).unwrap();
+                        #[cfg(debug_assertions)]
+                        println!(
+                            "Comp {}: responding immed. order {}",
+                            self.compositor_id, req.order
+                        );
+                        continue;
+                    }
+
+                    // Block was not expected.
+                    // Is it in my subframe?
                     match block_info.binary_search_by(|item| item.order.cmp(&req.order)) {
-                        Ok(index) => {
-                            // Block is in compositors field
+                        Ok(_) => {
+                            // Block is in compositors subframe
+                            // Needs to be placed in queue
 
-                            // todo move forward, to skip binary search
-                            if expected_volume_index == index {
-                                // Block is up
-
-                                let info = &block_info[index];
-
-                                let response = self.handle_request(info, &subcanvas_opacity[..]);
-
-                                responder.send(response).unwrap();
-                                #[cfg(debug_assertions)]
-                                println!(
-                                    "Comp {}: responding immed. order {}",
-                                    self.compositor_id, req.order
-                                );
-                            } else {
-                                // Needs to be placed in queue
-                                #[cfg(debug_assertions)]
-                                println!(
-                                    "Comp {}: queuing order {} because expecting order {expected_volume_order}[{expected_volume_index}]",
-                                    self.compositor_id, req.order
-                                );
-
-                                let q_index = queue.binary_search_by(|re| re.order.cmp(&req.order));
-                                match q_index {
-                                    Ok(_) => panic!("Already in queue"),
-                                    Err(ins_i) => queue.insert(ins_i, req),
+                            let q_index = queue.binary_search_by(|re| re.order.cmp(&req.order));
+                            match q_index {
+                                Ok(_) => panic!("Already in queue"),
+                                Err(ins_i) => {
+                                    queue.insert(ins_i, req);
+                                    #[cfg(debug_assertions)]
+                                    println!(
+                                        "Comp {}: queuing order {} because expecting order {}]",
+                                        self.compositor_id, req.order, expected_info.order
+                                    );
                                 }
                             }
                         }
@@ -172,78 +190,75 @@ impl<'a> CompositorWorker<'a> {
                         self.compositor_id, res.order
                     );
 
-                    if expected_volume_order == res.order {
-                        // Block is expected
+                    let expected_info = match expected_volume {
+                        Some(i) => i,
+                        None => panic!("Got result, expected nothing"),
+                    };
 
-                        // Update opacity
-                        self.copy_opacity(&mut subcanvas_opacity[..], &res);
-
-                        // Update color
-                        self.add_color(&mut subcanvas_rgb[..], &self.pixels, &res);
-
-                        // Update next expected volume
-                        expected_volume_index += 1;
-                    } else {
+                    if expected_info.order != res.order {
                         // Not expected
                         // Renderer is sending only nonempty results
                         // and can only render what we allowed in OpacityRequest
                         panic!("Got RenderResult that is not expected - should not happen");
                     }
 
-                    if expected_volume_index == block_info.len() {
-                        // Got all results
-                        self.send_subcanvas(&subcanvas_rgb);
+                    // Block is expected
 
-                        // Reset color buffer
-                        subcanvas_rgb
-                            .iter_mut()
-                            .for_each(|v| *v = Vector3::<f32>::zeros());
+                    // Update opacity
+                    self.copy_opacity(&mut subcanvas_opacity[..], &res);
 
-                        continue;
-                    }
+                    // Update color
+                    self.add_color(&mut subcanvas_rgb[..], &self.pixels, &res);
 
-                    // Now we can be sure index is valid
-                    expected_volume_order = block_info[expected_volume_index].order;
+                    // Update next expected volume
+                    expected_volume = expected_iter.next();
 
-                    #[cfg(debug_assertions)]
-                    println!(
-                        "Comp {}: checking queue looking for order {expected_volume_order} - {:?}",
-                        self.compositor_id, queue
-                    );
+                    match expected_volume {
+                        Some(block_info) => {
+                            #[cfg(debug_assertions)]
+                            println!(
+                                "Comp {}: checking queue looking for order {} - {:?}",
+                                self.compositor_id, block_info.order, queue
+                            );
 
-                    // Expected volume is updated, can we satisfy request from queue?
-                    // Note that we cannot start more than one
-                    if let Ok(q_index) =
-                        queue.binary_search_by(|req| req.order.cmp(&expected_volume_order))
-                    {
-                        let req = queue[q_index];
+                            // New expected volume is updated, can we satisfy request from queue?
+                            // Note that we cannot start more than one
+                            // TODO queue is (probably) sorted, so just look at top
+                            if let Ok(q_index) =
+                                queue.binary_search_by(|req| req.order.cmp(&block_info.order))
+                            {
+                                let req = queue[q_index];
 
-                        queue.remove(q_index);
+                                queue.remove(q_index);
 
-                        //let r = queue.pop_front().unwrap();
-                        let responder = &self.comms.renderers[req.from_id];
-                        let info = &block_info[expected_volume_index];
-                        let response = self.handle_request(info, &subcanvas_opacity[..]);
-                        responder.send(response).unwrap();
+                                let responder = &self.comms.renderers[req.from_id];
+                                let response =
+                                    self.handle_request(block_info, &subcanvas_opacity[..]);
+                                responder.send(response).unwrap();
 
-                        #[cfg(debug_assertions)]
-                        println!(
-                            "Comp {}: responding from queue {}",
-                            self.compositor_id, req.order
-                        );
-                    } else {
-                        #[cfg(debug_assertions)]
-                        println!("Comp {}: nothing from queue satisfied", self.compositor_id);
-                    }
+                                #[cfg(debug_assertions)]
+                                println!(
+                                    "Comp {}: responding from queue {}",
+                                    self.compositor_id, req.order
+                                );
+                            } else {
+                                #[cfg(debug_assertions)]
+                                println!(
+                                    "Comp {}: nothing from queue satisfied",
+                                    self.compositor_id
+                                );
+                            }
+                        }
+                        None => {
+                            // Got all results
+                            // Send subcanvas to master
+                            self.send_subcanvas(&subcanvas_rgb);
 
-                    if expected_volume_index == block_info.len() {
-                        // Got all results
-                        self.send_subcanvas(&subcanvas_rgb);
+                            // Reset color buffer
+                            self.reset_frame_buffers(&mut subcanvas_rgb, &mut subcanvas_opacity);
 
-                        // Reset color buffer
-                        subcanvas_rgb
-                            .iter_mut()
-                            .for_each(|v| *v = Vector3::<f32>::zeros());
+                            continue;
+                        }
                     }
                 }
             }
@@ -272,43 +287,44 @@ impl<'a> CompositorWorker<'a> {
     // Collection is sorted by distance (asc.)
     fn get_block_info(&self) -> Vec<BlockInfo> {
         // todo sort once on main thread and share results?
-        let mut relevant_ids = vec![];
-        {
-            let camera = self.camera.read().unwrap();
+        let mut distances = Vec::with_capacity(self.blocks.len());
 
-            for (i, block) in self.blocks.iter().enumerate() {
-                let viewport = camera.project_box(block.bound_box);
-                let distance = camera.box_distance(&block.bound_box);
-                let info = BlockInfo::new(0, distance, viewport);
-                relevant_ids.push(info);
+        let camera = self.camera.read().unwrap(); // Lock guard
+
+        for (i, block) in self.blocks.iter().enumerate() {
+            let distance = camera.box_distance(&block.bound_box);
+            distances.push((i, distance));
+        }
+
+        distances.sort_unstable_by(|b1, b2| b1.1.partial_cmp(&b2.1).unwrap());
+
+        let mut relevant_blocks = Vec::with_capacity(self.blocks.len());
+
+        for (order, (id, _)) in distances.into_iter().enumerate() {
+            let block = &self.blocks[id];
+            let viewport = camera.project_box(block.bound_box);
+            let pixels = viewport.get_pixel_range(self.resolution);
+            if let Some(inter) = pixels.intersection(&self.pixels) {
+                // TODO is crosses check faster? probably
+                let info = BlockInfo::new(order, inter);
+                relevant_blocks.push(info);
             }
         }
-        relevant_ids.sort_unstable_by(|b1, b2| b1.distance.partial_cmp(&b2.distance).unwrap());
 
-        relevant_ids = relevant_ids
-            .into_iter()
-            .enumerate()
-            .map(|(i, mut info)| {
-                info.order = i;
-                info
-            })
-            .filter(|info| self.area.crosses(&info.viewport))
-            .collect();
-
-        relevant_ids
+        relevant_blocks
     }
 
     // Copy rectangle of opacity data
+    // parameter subframe is in global frame coords, needs to be shifted
     fn get_opacity(&self, opacity: &[f32], subframe: &PixelBox) -> Vec<f32> {
         // todo check for same issues from single thread
-        let pixels = &self.pixels;
         let mut v = Vec::with_capacity(subframe.items());
-        let subframe_width = subframe.x.end - subframe.x.start;
-        let subframe_height = subframe.y.end - subframe.y.start;
-        let width = self.pixels.x.end - self.pixels.x.start;
+        let subframe_width = subframe.width();
+        let subframe_height = subframe.height();
+        let width = self.pixels.width();
 
-        let subframe_offset_x = subframe.x.start - pixels.x.start;
-        let subframe_offset_y = subframe.y.start - pixels.y.start;
+        let subframe_offset_x = subframe.x.start - self.pixels.x.start;
+        let subframe_offset_y = subframe.y.start - self.pixels.y.start;
 
         let mut line_start = subframe_offset_y * width + subframe_offset_x;
         for _ in 0..subframe_height {
@@ -360,14 +376,23 @@ impl<'a> CompositorWorker<'a> {
     }
 
     fn handle_request(&self, info: &BlockInfo, opacities: &[f32]) -> ToRendererMsg {
-        let box_intersection = self.area.intersection_unchecked(&info.viewport);
-        let pixels = box_intersection.get_pixel_range(self.resolution);
-
-        // Shift pixelbox to our subframe
-
-        let opacity_data = self.get_opacity(opacities, &pixels);
-        let opacity_data = OpacityData::new(self.compositor_id, pixels, opacity_data);
+        let opacity_data = self.get_opacity(opacities, &info.pixels);
+        let opacity_data = OpacityData::new(self.compositor_id, info.pixels.clone(), opacity_data);
         ToRendererMsg::Opacity(opacity_data)
+    }
+
+    fn reset_frame_buffers(
+        &self,
+        subcanvas_rgb: &mut [Vector3<f32>],
+        subcanvas_opacities: &mut [f32],
+    ) {
+        for v in subcanvas_rgb {
+            *v = Vector3::<f32>::zeros();
+        }
+
+        for v in subcanvas_opacities {
+            *v = 0.0;
+        }
     }
 }
 
@@ -379,19 +404,16 @@ fn convert_to_bytes(subcanvas_rgb: &[Vector3<f32>]) -> Vec<u8> {
     v
 }
 
+// Compositor needs to know about order of blocks and viewport box of a block
 pub struct BlockInfo {
     order: usize,
-    distance: f32,
-    viewport: ViewportBox,
+    pixels: PixelBox,
 }
 
 impl BlockInfo {
-    pub fn new(order: usize, distance: f32, viewport: ViewportBox) -> Self {
-        Self {
-            order,
-            distance,
-            viewport,
-        }
+    #[must_use]
+    pub fn new(order: usize, pixels: PixelBox) -> Self {
+        Self { order, pixels }
     }
 }
 
