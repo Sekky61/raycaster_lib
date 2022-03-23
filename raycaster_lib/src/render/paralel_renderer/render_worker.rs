@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use arrayvec::ArrayVec;
 use crossbeam::select;
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
@@ -104,19 +105,15 @@ impl<'a> RenderWorker<'a> {
             println!("Render {}: requested order {block_order}", self.renderer_id);
 
             // Wait for all opacity data from compositors
-            let mut color_opacity = {
-                // todo return ArrayVec
-                let mut ship_back: [Option<SubRenderResult>; 4] = Default::default(); // todo const generics
-                for _ in 0..self.comms.compositors.len() {
-                    let msg = self.comms.receiver.recv().unwrap();
-                    if let ToRendererMsg::Opacity(d) = msg {
-                        let comp_id = d.from_compositor;
-                        let res = SubRenderResult::new(block_order, d.pixels, d.opacities);
-                        ship_back[comp_id] = Some(res);
-                    }
+            let mut color_opacity = ArrayVec::<SubRenderResult, 4>::new(); // todo const generics
+            for _ in 0..self.comms.compositors.len() {
+                let msg = self.comms.receiver.recv().unwrap();
+                if let ToRendererMsg::Opacity(d) = msg {
+                    let comp_id = d.from_compositor;
+                    let res = SubRenderResult::new(comp_id, block_order, d.pixels, d.opacities);
+                    color_opacity.push(res);
                 }
-                ship_back
-            };
+            }
 
             #[cfg(debug_assertions)]
             println!(
@@ -140,14 +137,11 @@ impl<'a> RenderWorker<'a> {
             println!("Render {}: rendered {block_order}", self.renderer_id);
 
             // give data to compositers
-            color_opacity
-                .into_iter()
-                .enumerate()
-                .filter(|opa| opa.1.is_some())
-                .for_each(|(id, sub)| {
-                    let msg = ToCompositorMsg::RenderResult(sub.unwrap());
-                    self.comms.compositors[id].send(msg).unwrap();
-                });
+            color_opacity.into_iter().for_each(|sub| {
+                let id = sub.recipient_id;
+                let msg = ToCompositorMsg::RenderResult(sub);
+                self.comms.compositors[id].send(msg).unwrap();
+            });
 
             #[cfg(debug_assertions)]
             println!("Render {}: sent back {block_order}", self.renderer_id);
@@ -157,14 +151,14 @@ impl<'a> RenderWorker<'a> {
     fn render_block(
         &self,
         camera: &PerspectiveCamera,
-        data: &mut [Option<SubRenderResult>; 4],
+        data: &mut [SubRenderResult],
         block: &Block,
     ) {
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);
 
-        for opacity_data in data.iter_mut().flatten() {
+        for opacity_data in data {
             // flatten skips Nones
             let opacities = &mut opacity_data.opacities[..];
 

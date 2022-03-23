@@ -44,6 +44,7 @@ impl OpacityRequest {
 // todo split color and transmit it at lower priority
 pub struct SubRenderResult {
     // todo remove pixels field, use order
+    pub recipient_id: usize,
     pub order: usize,
     pub pixels: PixelBox,
     pub colors: Vec<Vector3<f32>>,
@@ -51,10 +52,11 @@ pub struct SubRenderResult {
 }
 
 impl SubRenderResult {
-    pub fn new(order: usize, pixels: PixelBox, opacities: Vec<f32>) -> Self {
+    pub fn new(recipient_id: usize, order: usize, pixels: PixelBox, opacities: Vec<f32>) -> Self {
         let capacity = pixels.items();
         let colors = Vec::with_capacity(capacity);
         Self {
+            recipient_id,
             order,
             pixels,
             colors,

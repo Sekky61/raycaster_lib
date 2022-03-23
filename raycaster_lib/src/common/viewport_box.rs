@@ -72,7 +72,9 @@ impl ViewportBox {
         }
     }
 
-    //
+    // Returns intersection of two 2D boxes
+    // If the boxes do not intersect, data is faulty
+    // If you are not sure if boxes intersect, use intersection TODO link
     pub fn intersection_unchecked(&self, other: &ViewportBox) -> ViewportBox {
         let lower = vector![
             f32::max(self.lower.x, other.lower.x),
@@ -87,6 +89,8 @@ impl ViewportBox {
     }
 }
 
+// Implemented with open ended ranges
+// if x = 0..10, the width is 10, tenth pixel is index [9]
 #[derive(Clone)]
 pub struct PixelBox {
     pub x: Range<usize>,
@@ -111,7 +115,6 @@ impl PixelBox {
     }
 
     // True if rectangles share any area (in other words, if bounds cross)
-    // Touching boundboxes do not cross
     pub fn crosses(&self, other: &PixelBox) -> bool {
         let outside = self.x.end <= other.x.start
             || self.x.start >= other.x.end
@@ -141,6 +144,23 @@ impl PixelBox {
             x: lower_x..upper_x,
             y: lower_y..upper_y,
         }
+    }
+
+    // Returns linear offset
+    // Trusts input
+    pub fn offset_in_unchecked(&self, smaller: &PixelBox) -> usize {
+        //  _______
+        // |   __  |
+        // |  |__| |
+        // |_______| | < offset y
+        //  __
+        //   ^offset x
+
+        let offset_x = smaller.x.start - self.x.start;
+        let offset_y = smaller.y.start - self.y.start;
+        let bigger_width = self.width();
+
+        offset_y * bigger_width + offset_x
     }
 }
 
