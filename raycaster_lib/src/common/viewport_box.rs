@@ -275,4 +275,28 @@ mod test {
         assert_eq!(pb.x, 4..10);
         assert_eq!(pb.y, 0..5);
     }
+
+    #[test]
+    fn offset_in() {
+        let a = PixelBox {
+            x: 0..700,
+            y: 0..700,
+        };
+        let b = PixelBox {
+            x: 0..350,
+            y: 350..700,
+        };
+        let c = PixelBox {
+            x: 350..700,
+            y: 350..700,
+        };
+
+        let offset = a.offset_in_unchecked(&b);
+        let expected = 700 * 350;
+        assert_eq!(offset, expected);
+
+        let offset = a.offset_in_unchecked(&c);
+        let expected = 700 * 350 + 350;
+        assert_eq!(offset, expected);
+    }
 }

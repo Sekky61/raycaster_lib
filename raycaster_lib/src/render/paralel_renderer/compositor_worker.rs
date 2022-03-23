@@ -8,7 +8,7 @@ use nalgebra::{Vector2, Vector3};
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::{PixelBox, ViewportBox},
+    common::PixelBox,
     render::paralel_renderer::messages::{OpacityRequest, SubFrameResult},
     volumetric::Block,
 };
@@ -269,11 +269,8 @@ impl<'a> CompositorWorker<'a> {
         // Convert to RGB bytes and send to master thread for output
         let byte_canvas = convert_to_bytes(subcanvas_rgb);
 
-        let offset = self.resolution.x * self.pixels.y.start + self.pixels.x.start;
-        let width = self.pixels.x.end - self.pixels.x.start;
-
         // Send byte canvas to master
-        let res = SubFrameResult::new(byte_canvas, offset, width);
+        let res = SubFrameResult::new(self.compositor_id, byte_canvas);
         self.comms
             .result_sender
             .send(ToMasterMsg::Subframe(res))
@@ -426,7 +423,7 @@ impl std::fmt::Debug for BlockInfo {
 #[cfg(test)]
 mod test {
 
-    use nalgebra::{point, vector};
+    use nalgebra::vector;
 
     use super::*;
 

@@ -82,19 +82,14 @@ impl OpacityData {
 }
 
 pub struct SubFrameResult {
-    // todo remove offset and width, use from_id field
+    pub from_id: usize,
     pub data: Vec<u8>,
-    pub offset: usize,
-    pub width: usize,
 }
 
 impl SubFrameResult {
-    pub fn new(data: Vec<u8>, offset: usize, width: usize) -> Self {
-        Self {
-            data,
-            offset,
-            width,
-        }
+    #[must_use]
+    pub fn new(from_id: usize, data: Vec<u8>) -> Self {
+        Self { from_id, data }
     }
 }
 

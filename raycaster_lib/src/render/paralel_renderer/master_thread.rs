@@ -8,7 +8,7 @@ use nalgebra::vector;
 
 use crate::{
     camera::{Camera, PerspectiveCamera},
-    common::{PixelBox, ViewportBox},
+    common::PixelBox,
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
     volumetric::{BlockVolume, Volume},
 };
@@ -24,6 +24,7 @@ pub struct ParalelRenderer {
     camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
     buffer: Arc<Mutex<Vec<u8>>>,
+    compositor_canvases: Vec<PixelBox>,
     communication: (Sender<()>, Receiver<RendererMessage>),
 }
 
@@ -60,11 +61,15 @@ impl ParalelRenderer {
         let never = crossbeam::channel::never();
         let communication = (sender_void, never);
 
+        let compositor_canvases =
+            ParalelRenderer::generate_compositor_areas(render_options.resolution, 4);
+
         Self {
             volume,
             camera,
             render_options,
             buffer,
+            compositor_canvases,
             communication,
         }
     }
@@ -109,9 +114,7 @@ impl ParalelRenderer {
                         renderers.push(handle);
                     }
 
-                    let compositor_areas = self.generate_compositor_areas(4);
-
-                    for (id, assigned_area) in compositor_areas.into_iter().enumerate() {
+                    for (id, assigned_area) in self.compositor_canvases.iter().enumerate() {
                         // Create compositor thread
 
                         let comp_comms = comms.compositor(id);
@@ -122,7 +125,12 @@ impl ParalelRenderer {
                             println!("Started compositor {id}");
 
                             let compositor = CompositorWorker::new(
-                                id, camera_ref, pixels, resolution, comp_comms, blocks_ref,
+                                id,
+                                camera_ref,
+                                pixels.clone(),
+                                resolution,
+                                comp_comms,
+                                blocks_ref,
                             );
 
                             compositor.run();
@@ -243,42 +251,38 @@ impl ParalelRenderer {
     // Segment viewport into n subframes
     // Calc pixel sizes and offsets
     // todo return only PixelBox
-    fn generate_compositor_areas(&self, n: usize) -> Vec<PixelBox> {
+    fn generate_compositor_areas(resolution: (usize, usize), n: usize) -> Vec<PixelBox> {
         if n == 4 {
-            let box1 = ViewportBox::from_points(vector![0.0, 0.0], vector![0.5, 0.5]);
-            let box2 = ViewportBox::from_points(vector![0.5, 0.0], vector![1.0, 0.5]);
-            let box3 = ViewportBox::from_points(vector![0.0, 0.5], vector![0.5, 1.0]);
-            let box4 = ViewportBox::from_points(vector![0.5, 0.5], vector![1.0, 1.0]);
-            let res_vec = vector![
-                self.render_options.resolution.0,
-                self.render_options.resolution.1
-            ];
-            let box1_pix = box1.get_pixel_range(res_vec);
-            let box2_pix = box2.get_pixel_range(res_vec);
-            let box3_pix = box3.get_pixel_range(res_vec);
-            let box4_pix = box4.get_pixel_range(res_vec);
-            return vec![box1_pix, box2_pix, box3_pix, box4_pix];
+            let pixels_1 = PixelBox::new(0..350, 0..350);
+            let pixels_2 = PixelBox::new(350..700, 0..350);
+            let pixels_3 = PixelBox::new(0..350, 350..700);
+            let pixels_4 = PixelBox::new(350..700, 350..700);
+            return vec![pixels_1, pixels_2, pixels_3, pixels_4];
         } else {
             todo!()
         }
     }
 
     fn copy_subframe(&self, buffer: &mut [u8], res: SubFrameResult) {
-        let SubFrameResult {
-            data,
-            offset,
-            width,
-        } = res;
+        let SubFrameResult { from_id, data } = res;
 
         let data = &data[..];
 
+        let resolution = self.render_options.resolution;
+        let full_pixelbox = PixelBox::new(0..resolution.0, 0..resolution.1);
+        let comp_pixelbox = &self.compositor_canvases[from_id];
+
+        let offset = full_pixelbox.offset_in_unchecked(comp_pixelbox) * 3;
+        let width = full_pixelbox.width() * 3;
+        let subframe_w = comp_pixelbox.width() * 3;
+
         let mut ptr = offset;
         let mut ptr_data = 0;
-        while (ptr_data + width) <= data.len() {
-            buffer[ptr..ptr + width].copy_from_slice(&data[ptr_data..ptr_data + width]);
+        while (ptr_data + subframe_w) <= data.len() {
+            buffer[ptr..ptr + subframe_w].copy_from_slice(&data[ptr_data..ptr_data + subframe_w]);
 
-            ptr += self.render_options.resolution.0;
-            ptr_data += width;
+            ptr += width;
+            ptr_data += subframe_w;
         }
     }
 }
