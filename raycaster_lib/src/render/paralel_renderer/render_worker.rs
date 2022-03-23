@@ -159,6 +159,7 @@ impl<'a> RenderWorker<'a> {
         let step_f = res_f.map(|v| 1.0 / v);
 
         for opacity_data in data {
+            // todo waiting for opacities can be done here, render and send back immediately
             // flatten skips Nones
             let opacities = &mut opacity_data.opacities[..];
 
@@ -191,39 +192,19 @@ impl<'a> RenderWorker<'a> {
     fn sample_color(&self, block: &Block, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
         let mut accum = vector![0.0, 0.0, 0.0];
 
-        let (t0, t1) = match block.bound_box.intersect(ray) {
-            Some(t) => t,
+        let obj_ray = block.transform_ray(ray);
+
+        let (obj_ray, t) = match obj_ray {
+            Some(r) => r,
             None => return accum,
         };
-        let t = t1 - t0;
-
-        let scale_inv = vector![1.0, 1.0, 1.0]; // todo scale
-        let lower_vec = block.bound_box.lower - point![0.0, 0.0, 0.0];
-
-        let transform = Matrix4::identity()
-            .append_translation(&-lower_vec)
-            .append_nonuniform_scaling(&scale_inv);
-
-        let obj_origin = ray.point_from_t(t0);
-
-        let origin = transform.transform_point(&obj_origin);
-
-        let direction = ray.direction.component_mul(&scale_inv);
-        let direction = direction.normalize();
-
-        let obj_ray = Ray::from_3(origin, direction);
-
-        let begin = obj_ray.origin;
-        let direction = ray.get_direction();
 
         let step_size = 1.0;
         let max_n_of_steps = (t / step_size) as usize;
 
-        let step = direction * step_size; // normalized
+        let step = obj_ray.direction * step_size; // normalized
 
-        let mut pos = begin;
-
-        let tf = self.tf;
+        let mut pos = obj_ray.origin;
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
@@ -233,7 +214,7 @@ impl<'a> RenderWorker<'a> {
 
             let sample = block.sample_at(pos);
 
-            let color_b = tf(sample);
+            let color_b = (self.tf)(sample);
 
             pos += step;
 

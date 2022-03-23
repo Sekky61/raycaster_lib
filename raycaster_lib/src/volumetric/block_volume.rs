@@ -1,6 +1,6 @@
-use nalgebra::{point, vector, Point3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
-use crate::common::{blockify, BoundBox, ValueRange};
+use crate::common::{blockify, BoundBox, Ray, ValueRange};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -46,17 +46,46 @@ impl BlockVolume {
 pub struct Block {
     pub value_range: ValueRange,
     pub bound_box: BoundBox,
+    pub transform: Matrix4<f32>,
     pub data: [f32; BLOCK_DATA_LEN],
 }
 
 impl Block {
-    pub fn from_data(data: [f32; BLOCK_DATA_LEN], bound_box: BoundBox) -> Block {
+    pub fn from_data(
+        data: [f32; BLOCK_DATA_LEN],
+        bound_box: BoundBox,
+        scale: Vector3<f32>,
+    ) -> Block {
         let value_range = ValueRange::from_iter(&data);
+
+        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
+        let lower_vec = point![0.0, 0.0, 0.0] - bound_box.lower; // todo type workaround
+
+        let transform = Matrix4::identity()
+            .append_translation(&lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
         Block {
             data,
             bound_box,
             value_range,
+            transform,
         }
+    }
+
+    // TODO assumes scale == 1
+    pub fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        let (t0, t1) = match self.bound_box.intersect(ray) {
+            Some(t) => t,
+            None => return None,
+        };
+
+        let obj_origin = ray.point_from_t(t0);
+        let obj_origin = self.transform.transform_point(&obj_origin);
+
+        let t = t1 - t0;
+
+        Some((Ray::from_3(obj_origin, ray.direction), t))
     }
 
     fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
@@ -206,7 +235,7 @@ impl BuildVolume<u8> for BlockVolume {
                     let block_start = step_size * point![x, y, z];
                     let block_data = get_block_data(slice, size, block_start);
                     let block_bound_box = get_bound_box(position, scale, block_start);
-                    let block = Block::from_data(block_data, block_bound_box);
+                    let block = Block::from_data(block_data, block_bound_box, scale);
                     blocks.push(block);
                 }
             }

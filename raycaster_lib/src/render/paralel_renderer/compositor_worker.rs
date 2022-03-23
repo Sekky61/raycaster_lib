@@ -162,7 +162,7 @@ impl<'a> CompositorWorker<'a> {
                                     queue.insert(ins_i, req);
                                     #[cfg(debug_assertions)]
                                     println!(
-                                        "Comp {}: queuing order {} because expecting order {}]",
+                                        "Comp {}: queuing order {} because expecting order {}",
                                         self.compositor_id, req.order, expected_info.order
                                     );
                                 }
@@ -238,7 +238,7 @@ impl<'a> CompositorWorker<'a> {
 
                                 #[cfg(debug_assertions)]
                                 println!(
-                                    "Comp {}: responding from queue {}",
+                                    "Comp {}: responding from queue order {}",
                                     self.compositor_id, req.order
                                 );
                             } else {
