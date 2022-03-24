@@ -198,7 +198,7 @@ fn volume_setup_paralel() -> ParalelRenderer {
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear() -> SerialRenderer<BlockVolume> {
+fn volume_setup_linear() -> SerialRenderer<BlockVolume<10>> {
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
 

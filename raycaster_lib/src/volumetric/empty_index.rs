@@ -1,4 +1,4 @@
-use nalgebra::{point, vector, Point3, Vector3};
+use nalgebra::{point, Point3, Vector3};
 
 use crate::common::blockify;
 
@@ -22,6 +22,7 @@ impl BlockType {
     }
 }
 
+// generic argument S is side of block in voxels, not cells
 #[derive(Debug)]
 pub struct EmptyIndex<const S: usize> {
     size: Vector3<usize>,
@@ -128,7 +129,7 @@ mod test {
         #[test]
         fn empty_bigger() {
             let volume: LinearVolume = empty_volume(vector![24, 24, 10]);
-            let empty_index = EmptyIndex::<2>::from_volume(&volume);
+            let empty_index = EmptyIndex::<3>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
             assert_eq!(empty_index.blocks[0], BlockType::Empty);
@@ -147,8 +148,9 @@ mod test {
 
         #[test]
         fn empty_side3() {
-            let volume: LinearVolume = empty_volume(vector![10, 5, 18]);
-            let empty_index = EmptyIndex::<3>::from_volume(&volume);
+            // cell size 3 --> 4 voxels
+            let volume: LinearVolume = empty_volume(vector![10, 5, 19]);
+            let empty_index = EmptyIndex::<4>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
             assert_eq!(empty_index.blocks[4], BlockType::Empty);
@@ -157,8 +159,9 @@ mod test {
 
         #[test]
         fn empty_side6() {
+            // cell size 6 --> 7 voxels
             let volume: LinearVolume = empty_volume(vector![23, 15, 8]);
-            let empty_index = EmptyIndex::<6>::from_volume(&volume);
+            let empty_index = EmptyIndex::<7>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
             assert_eq!(empty_index.blocks[2], BlockType::Empty);
@@ -196,7 +199,7 @@ mod test {
             let volume = volume_dims_nonempty(vector![5, 5, 5], &[1]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
-            assert_eq!(empty_index.blocks.len(), 8);
+            assert_eq!(empty_index.blocks.len(), 4 * 4 * 4);
             assert_eq!(
                 empty_index.sample(point![0.0, 0.0, 0.0]),
                 BlockType::NonEmpty
@@ -217,7 +220,7 @@ mod test {
 
             println!("blocks: {:?}", &empty_index.blocks[..]);
 
-            assert_eq!(empty_index.blocks.len(), 8);
+            assert_eq!(empty_index.blocks.len(), 4 * 4 * 4);
             assert_eq!(
                 empty_index.sample(point![0.0, 0.0, 0.0]),
                 BlockType::NonEmpty

@@ -23,11 +23,11 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
     }
 }
 
-pub fn empty_vol_meta(dims: Vector3<usize>) -> VolumeMetadata<u8> {
-    let data = vec![0; dims.x * dims.y * dims.z];
+pub fn empty_vol_meta(size: Vector3<usize>) -> VolumeMetadata<u8> {
+    let data = vec![0; size.x * size.y * size.z];
     let data_source = DataSource::Vec(data);
     VolumeMetadata {
-        size: Some(dims),
+        size: Some(size),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
         data_offset: Some(0),
         position: Some(point![0.0, 0.0, 0.0]),
@@ -36,11 +36,11 @@ pub fn empty_vol_meta(dims: Vector3<usize>) -> VolumeMetadata<u8> {
     }
 }
 
-pub fn empty_volume<V>(dims: Vector3<usize>) -> V
+pub fn empty_volume<V>(size: Vector3<usize>) -> V
 where
     V: Volume + BuildVolume<u8>,
 {
-    let meta = empty_vol_meta(dims);
+    let meta = empty_vol_meta(size);
     BuildVolume::build(meta).unwrap()
 }
 

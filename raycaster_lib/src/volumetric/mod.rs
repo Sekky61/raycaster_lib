@@ -1,4 +1,5 @@
 //mod block_gen;
+mod block;
 mod block_volume;
 mod empty_index;
 mod linear_volume;
@@ -7,7 +8,8 @@ mod vol_builder;
 mod volume;
 
 pub use crate::color::RGBA;
-pub use block_volume::{Block, BlockVolume};
+pub use block::Block;
+pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
@@ -37,7 +39,7 @@ mod test {
     #[test]
     fn linear_block_matches() {
         let linear: LinearVolume = white_volume();
-        let block: BlockVolume = white_volume();
+        let block: BlockVolume<10> = white_volume();
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();
@@ -59,7 +61,7 @@ mod test {
     #[ignore]
     fn linear_block_matches_skull() {
         let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let block: BlockVolume<10> = skull_volume();
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();
@@ -80,7 +82,7 @@ mod test {
     #[test]
     fn sample_at_subsamples_match() {
         let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let block: BlockVolume<10> = skull_volume();
 
         let sampling_coord = point![0.0, 25.0, 114.0];
         let sampling_spots = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -99,7 +101,7 @@ mod test {
     #[ignore]
     fn linear_block_sample_at_matches() {
         let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let block: BlockVolume<10> = skull_volume();
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();

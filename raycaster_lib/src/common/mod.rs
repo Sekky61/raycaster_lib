@@ -28,7 +28,9 @@ pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<us
     let cells = side - overlap; // cells per block
                                 // (size-1) -- number of cells
                                 // (+cells-1 / cells) -- division with rounding up
-    (size + vector![cells - 2, cells - 2, cells - 2]) / cells
+    let x = size + vector![cells, cells, cells];
+    let y = x - vector![2, 2, 2];
+    y / cells
 }
 
 #[cfg(test)]

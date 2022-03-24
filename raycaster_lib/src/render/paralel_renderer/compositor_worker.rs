@@ -15,6 +15,7 @@ use crate::{
 
 use super::{
     communication::CompWorkerComms,
+    master_thread::PAR_SIDE,
     messages::{
         OpacityData, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
     },
@@ -33,7 +34,7 @@ pub struct CompositorWorker<'a> {
     pixels: PixelBox,
     resolution: Vector2<usize>, // Resolution of full image
     comms: CompWorkerComms<4>,  // todo generic
-    blocks: &'a [Block],
+    blocks: &'a [Block<PAR_SIDE>],
 }
 
 impl<'a> CompositorWorker<'a> {
@@ -44,7 +45,7 @@ impl<'a> CompositorWorker<'a> {
         pixels: PixelBox,
         resolution: Vector2<usize>,
         comms: CompWorkerComms<4>,
-        blocks: &'a [Block],
+        blocks: &'a [Block<PAR_SIDE>],
     ) -> Self {
         Self {
             compositor_id,

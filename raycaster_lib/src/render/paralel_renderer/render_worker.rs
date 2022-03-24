@@ -12,6 +12,7 @@ use crate::{
 
 use super::{
     communication::RenderWorkerComms,
+    master_thread::PAR_SIDE,
     messages::{OpacityRequest, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg},
 };
 
@@ -27,7 +28,7 @@ pub struct RenderWorker<'a> {
     tf: TF,
     resolution: Vector2<usize>,
     comms: RenderWorkerComms<4>, // todo generic
-    blocks: &'a [Block],
+    blocks: &'a [Block<PAR_SIDE>],
 }
 
 impl<'a> RenderWorker<'a> {
@@ -38,7 +39,7 @@ impl<'a> RenderWorker<'a> {
         tf: TF,
         resolution: Vector2<usize>,
         comms: RenderWorkerComms<4>,
-        blocks: &'a [Block],
+        blocks: &'a [Block<PAR_SIDE>],
     ) -> Self {
         Self {
             renderer_id,
@@ -152,7 +153,7 @@ impl<'a> RenderWorker<'a> {
         &self,
         camera: &PerspectiveCamera,
         data: &mut [SubRenderResult],
-        block: &Block,
+        block: &Block<PAR_SIDE>,
     ) {
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
@@ -189,7 +190,7 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn sample_color(&self, block: &Block, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
+    fn sample_color(&self, block: &Block<PAR_SIDE>, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
         let mut accum = vector![0.0, 0.0, 0.0];
 
         let obj_ray = block.transform_ray(ray);

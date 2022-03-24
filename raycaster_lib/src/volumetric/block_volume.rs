@@ -1,32 +1,29 @@
-use nalgebra::{point, vector, Matrix4, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::common::{blockify, BoundBox, Ray, ValueRange};
+use crate::common::{blockify, BoundBox};
 
 use super::{
+    block::Block,
     vol_builder::{BuildVolume, VolumeMetadata},
     Volume, TF,
 };
 
-const BLOCK_SIDE: usize = 64;
-const BLOCK_OVERLAP: usize = 1;
-const BLOCK_DATA_LEN: usize = BLOCK_SIDE.pow(3);
-
-pub struct BlockVolume {
+// Default overlap == 1
+pub struct BlockVolume<const S: usize> {
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    pub data: Vec<Block>,
+    pub data: Vec<Block<S>>,
     tf: TF,
 }
 
-impl BlockVolume {
+impl<const S: usize> BlockVolume<S> {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
-        let jump_per_block = BLOCK_SIDE - BLOCK_OVERLAP;
+        let jump_per_block = S - 1;
         //assert_ne!(jump_per_block, 0);
-        let block_offset = (z % jump_per_block)
-            + (y % jump_per_block) * BLOCK_SIDE
-            + (x % jump_per_block) * BLOCK_SIDE * BLOCK_SIDE;
+        let block_offset =
+            (z % jump_per_block) + (y % jump_per_block) * S + (x % jump_per_block) * S * S;
         let block_index = (z / jump_per_block)
             + (y / jump_per_block) * self.block_size.z
             + (x / jump_per_block) * self.block_size.y * self.block_size.z;
@@ -43,113 +40,12 @@ impl BlockVolume {
     }
 }
 
-pub struct Block {
-    pub value_range: ValueRange,
-    pub bound_box: BoundBox,
-    pub transform: Matrix4<f32>,
-    pub data: [f32; BLOCK_DATA_LEN],
-}
-
-impl Block {
-    pub fn from_data(
-        data: [f32; BLOCK_DATA_LEN],
-        bound_box: BoundBox,
-        scale: Vector3<f32>,
-    ) -> Block {
-        let value_range = ValueRange::from_iter(&data);
-
-        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
-        let lower_vec = point![0.0, 0.0, 0.0] - bound_box.lower; // todo type workaround
-
-        let transform = Matrix4::identity()
-            .append_translation(&lower_vec)
-            .append_nonuniform_scaling(&scale_inv);
-
-        Block {
-            data,
-            bound_box,
-            value_range,
-            transform,
-        }
-    }
-
-    // TODO assumes scale == 1
-    pub fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        let (t0, t1) = match self.bound_box.intersect(ray) {
-            Some(t) => t,
-            None => return None,
-        };
-
-        let obj_origin = ray.point_from_t(t0);
-        let obj_origin = self.transform.transform_point(&obj_origin);
-
-        let t = t1 - t0;
-
-        Some((Ray::from_3(obj_origin, ray.direction), t))
-    }
-
-    fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
-        [
-            self.data[start_index],
-            self.data[start_index + 1],
-            self.data[start_index + BLOCK_SIDE],
-            self.data[start_index + BLOCK_SIDE + 1],
-        ]
-    }
-
-    pub fn sample_at(&self, pos: Point3<f32>) -> f32 {
-        //let data = self.get_block_data(pos);
-
-        let x = pos.x as usize;
-        let y = pos.y as usize;
-        let z = pos.z as usize;
-
-        let x_t = pos.x.fract();
-        let y_t = pos.y.fract();
-        let z_t = pos.z.fract();
-
-        let block_offset = self.get_3d_index(x, y, z);
-
-        let first_index = block_offset;
-        let second_index = block_offset + BLOCK_SIDE * BLOCK_SIDE;
-
-        let first_data = self.get_block_data_half(first_index);
-        let [c000, c001, c010, c011] = first_data;
-
-        let inv_z_t = 1.0 - z_t;
-        let inv_y_t = 1.0 - y_t;
-
-        // first plane
-
-        let c00 = c000 * inv_z_t + c001 * z_t; // z low
-        let c01 = c010 * inv_z_t + c011 * z_t; // z high
-        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
-
-        // second plane
-
-        let second_data = self.get_block_data_half(second_index);
-        let [c100, c101, c110, c111] = second_data;
-
-        let c10 = c100 * inv_z_t + c101 * z_t; // z low
-        let c11 = c110 * inv_z_t + c111 * z_t; // z high
-        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
-
-        c0 * (1.0 - x_t) + c1 * x_t
-    }
-
-    fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
-        z + y * BLOCK_SIDE + x * BLOCK_SIDE * BLOCK_SIDE
-    }
-}
-
-impl Volume for BlockVolume {
+impl<const S: usize> Volume for BlockVolume<S> {
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }
 
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
-        //let data = self.get_block_data(pos);
-
         let x = pos.x as usize;
         let y = pos.y as usize;
         let z = pos.z as usize;
@@ -162,7 +58,7 @@ impl Volume for BlockVolume {
 
         let block = &self.data[block_index];
         let first_index = block_offset;
-        let second_index = block_offset + BLOCK_SIDE * BLOCK_SIDE;
+        let second_index = block_offset + S * S;
 
         let first_data = block.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
@@ -205,8 +101,8 @@ impl Volume for BlockVolume {
     }
 }
 
-impl BuildVolume<u8> for BlockVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
+impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume<S>, &'static str> {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
@@ -222,10 +118,9 @@ impl BuildVolume<u8> for BlockVolume {
 
         let mut blocks = vec![];
 
-        let step_size = BLOCK_SIDE - BLOCK_OVERLAP;
-        //let block_size = size.map(|v| ((v - 1) / step_size) as usize);
+        let step_size = S - 1;
 
-        let block_size = blockify(size, BLOCK_SIDE, BLOCK_OVERLAP);
+        let block_size = blockify(size, S, 1);
 
         let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
@@ -233,8 +128,8 @@ impl BuildVolume<u8> for BlockVolume {
             for y in 0..block_size.y {
                 for z in 0..block_size.z {
                     let block_start = step_size * point![x, y, z];
-                    let block_data = get_block_data(slice, size, block_start);
-                    let block_bound_box = get_bound_box(position, scale, block_start);
+                    let block_data = get_block_data(slice, size, block_start, S);
+                    let block_bound_box = get_bound_box(position, scale, block_start, S);
                     let block = Block::from_data(block_data, block_bound_box, scale);
                     blocks.push(block);
                 }
@@ -242,7 +137,7 @@ impl BuildVolume<u8> for BlockVolume {
         }
 
         println!(
-            "Built {} blocks of dims {BLOCK_SIDE} blocks ({},{},{}) -> ({},{},{})",
+            "Built {} blocks of dims {S} blocks ({},{},{}) -> ({},{},{})",
             blocks.len(),
             size.x,
             size.y,
@@ -266,6 +161,7 @@ fn get_bound_box(
     vol_position: Point3<f32>,
     vol_scale: Vector3<f32>,
     block_start: Point3<usize>,
+    block_side: usize,
 ) -> BoundBox {
     let block_lower = vector![
         block_start.x as f32,
@@ -273,7 +169,7 @@ fn get_bound_box(
         block_start.z as f32
     ];
 
-    let block_dims = vector![BLOCK_SIDE - 1, BLOCK_SIDE - 1, BLOCK_SIDE - 1].cast::<f32>();
+    let block_dims = vector![block_side - 1, block_side - 1, block_side - 1].cast::<f32>();
     let block_dims = block_dims.component_mul(&vol_scale) - vector![0.01, 0.01, 0.01]; // todo workaround
 
     let block_pos = vol_position + block_lower.component_mul(&vol_scale);
@@ -286,19 +182,20 @@ pub fn get_block_data(
     volume: &[u8],
     size: Vector3<usize>,
     block_start: Point3<usize>,
-) -> [f32; BLOCK_DATA_LEN] {
-    let mut data = [0.0; BLOCK_DATA_LEN]; // todo background value
-    let mut ptr = 0;
-    for off_x in 0..BLOCK_SIDE {
-        for off_y in 0..BLOCK_SIDE {
-            for off_z in 0..BLOCK_SIDE {
+    side: usize,
+) -> Vec<f32> {
+    let mut data = Vec::with_capacity(side * side * side); // todo background value
+    for off_x in 0..side {
+        for off_y in 0..side {
+            for off_z in 0..side {
                 let pos = block_start + vector![off_x, off_y, off_z];
                 if pos.x < size.x && pos.y < size.y && pos.z < size.z {
                     let index = get_3d_index(size, pos);
                     let value = volume[index];
-                    data[ptr] = value as f32;
+                    data.push(value as f32);
+                } else {
+                    data.push(0.0);
                 }
-                ptr += 1;
             }
         }
     }
@@ -383,13 +280,14 @@ mod test {
 
     #[test]
     fn getting_block_data() {
-        // Assumes BLOCK_SIDE == 4
+        let block_side = 4;
+
         let v: Vec<u8> = (0..=255).into_iter().cycle().take(10 * 10 * 10).collect();
         let vol_data = &v[..];
 
         let size = vector![10, 10, 10];
 
-        let c = get_block_data(vol_data, size, point![0, 0, 0]);
+        let c = get_block_data(vol_data, size, point![0, 0, 0], block_side);
         assert_eq!(c[0..4], [0.0, 1.0, 2.0, 3.0]);
         assert_eq!(c[4..8], [10.0, 11.0, 12.0, 13.0]);
         assert_eq!(c[8], 20.0);
@@ -400,7 +298,6 @@ mod test {
     #[test]
     #[ignore]
     fn block_order() {
-        // Assumes BLOCK_SIDE == 4
-        let volume: BlockVolume = skull_volume();
+        let volume: BlockVolume<4> = skull_volume();
     }
 }

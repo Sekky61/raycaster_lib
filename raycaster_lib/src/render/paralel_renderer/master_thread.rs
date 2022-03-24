@@ -19,8 +19,10 @@ use super::{
     messages::{RenderTask, SubFrameResult, ToMasterMsg, ToWorkerMsg},
 };
 
+pub const PAR_SIDE: usize = 64;
+
 pub struct ParalelRenderer {
-    volume: BlockVolume,
+    volume: BlockVolume<PAR_SIDE>,
     camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
     buffer: Arc<Mutex<Vec<u8>>>,
@@ -48,7 +50,7 @@ impl RenderThread for ParalelRenderer {
 
 impl ParalelRenderer {
     pub fn new(
-        volume: BlockVolume,
+        volume: BlockVolume<PAR_SIDE>,
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
     ) -> Self {
