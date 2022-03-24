@@ -9,7 +9,7 @@ use nalgebra::{Vector2, Vector3};
 use crate::{
     camera::{Camera, PerspectiveCamera},
     common::PixelBox,
-    render::paralel_renderer::messages::{OpacityRequest, SubFrameResult},
+    render::parallel_renderer::messages::{OpacityRequest, SubFrameResult},
     volumetric::Block,
 };
 

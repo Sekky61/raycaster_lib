@@ -1,10 +1,10 @@
-mod paralel_renderer;
+mod parallel_renderer;
 mod render_front;
 mod render_options;
 mod renderer;
 mod st_renderer;
 
-pub use paralel_renderer::ParalelRenderer;
+pub use parallel_renderer::ParalelRenderer;
 pub use render_front::{RenderThread, RendererFront, RendererMessage};
 pub use render_options::RenderOptions;
 pub use renderer::Renderer;

@@ -45,7 +45,7 @@ pub fn main() {
     // State
     // Wrapped for access in closures
     let state = State::new_shared(app_weak);
-    let mt = true; // Use multithreaded renderer
+    let mt = false; // Use multithreaded renderer
     {
         // Create renderer and tart render thread
         let mut state_mut = state.borrow_mut();
