@@ -170,17 +170,31 @@ impl<'a> RenderWorker<'a> {
             let color_buf = &mut opacity_data.colors;
             let mut ptr = 0;
 
-            for y in y_range {
-                let y_norm = 1.0 - (y as f32 * step_f.y);
+            for y in y_range.clone() {
+                let y_norm = y as f32 * step_f.y;
                 for x in x_range.clone() {
                     // todo clone here -- maybe use own impl
                     let pixel_coord = (x as f32 * step_f.x, y_norm);
                     let ray = camera.get_ray(pixel_coord);
 
+                    // Early opacity check
+                    if opacities[ptr] > 0.99 {
+                        ptr += 1;
+                        color_buf.push(vector![0.0, 0.0, 0.0]); // todo check perf zeroing out vs pushing zeroes
+                        continue;
+                    }
+
                     // Adds to opacity buffer
                     let color = self.sample_color(block, &ray, &mut opacities[ptr]);
 
-                    // todo multiply color with opacity
+                    // TODO multiply color with opacity ??
+                    // TODO results seem ok
+
+                    // if x == x_range.start
+                    //     || x == x_range.end - 1
+                    //     || y == y_range.start
+                    //     || y == y_range.end - 1
+                    // {
 
                     color_buf.push(color);
 

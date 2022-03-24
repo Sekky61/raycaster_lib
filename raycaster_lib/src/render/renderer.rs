@@ -61,29 +61,20 @@ where
         let bbox = self.volume.get_bound_box();
         let tile = camera.project_box(bbox);
 
-        let mut tile_pixel_size = tile.size();
-        tile_pixel_size.x = f32::ceil(tile_pixel_size.x * image_width);
-        tile_pixel_size.y = f32::ceil(tile_pixel_size.y * image_height);
+        let res_vec = vector![
+            // todo change resolution from tuple to vector or pixelbox
+            self.render_options.resolution.0,
+            self.render_options.resolution.1
+        ];
+        let pixels = tile.get_pixel_range(res_vec);
+        let pix_width = pixels.width();
 
-        let mut start_pixel = tile.lower;
-        start_pixel.x = f32::floor(start_pixel.x * image_width);
-        start_pixel.y = f32::floor(start_pixel.y * image_height);
+        let width_bytes_skip = 3 * (img_w - pix_width);
+        let mut index = (pixels.x.start + img_w * pixels.y.start) * 3;
 
-        let start_x = (tile.lower.x * image_width) as usize;
-        let start_y = ((1.0 - tile.upper.y) * image_height) as usize;
-
-        let lim_x = tile_pixel_size.x as usize;
-        let lim_y = tile_pixel_size.y as usize;
-
-        let end_x = min(start_x + lim_x, img_w);
-        let end_y = min(start_y + lim_y, img_h);
-
-        let width_bytes_skip = 3 * (img_w - (end_x - start_x));
-        let mut index = (start_x + img_w * start_y) * 3;
-
-        for y in start_y..end_y {
-            let y_norm = 1.0 - (y as f32 * step_y);
-            for x in start_x..end_x {
+        for y in pixels.y.clone() {
+            let y_norm = y as f32 * step_y;
+            for x in pixels.x.clone() {
                 let pixel_coord = (x as f32 * step_x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
 
@@ -96,7 +87,11 @@ where
 
                 let opacity = ray_color.w;
 
-                if x == start_x || x == end_x - 1 || y == end_y - 1 || y == start_y {
+                if x == pixels.x.start
+                    || x == pixels.x.end - 1
+                    || y == pixels.y.end - 1
+                    || y == pixels.y.start
+                {
                     buffer[index] = 255;
                     buffer[index + 1] = 255;
                     buffer[index + 2] = 255;

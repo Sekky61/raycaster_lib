@@ -209,7 +209,7 @@ impl<'a> CompositorWorker<'a> {
                     self.copy_opacity(&mut subcanvas_opacity[..], &res);
 
                     // Update color
-                    self.add_color(&mut subcanvas_rgb[..], &self.pixels, &res);
+                    self.add_color(&mut subcanvas_rgb[..], &res);
 
                     // Update next expected volume
                     expected_volume = expected_iter.next();
@@ -353,20 +353,20 @@ impl<'a> CompositorWorker<'a> {
         }
     }
 
-    fn add_color(&self, rgb: &mut [Vector3<f32>], frame: &PixelBox, res: &SubRenderResult) {
-        let frame_width = frame.x.end - frame.x.start;
-        let line_width = res.pixels.x.end - res.pixels.x.start;
+    fn add_color(&self, rgb: &mut [Vector3<f32>], res: &SubRenderResult) {
+        let frame_width = self.pixels.width();
+        let line_width = res.pixels.width();
 
-        let frame_local = (
-            res.pixels.x.start - frame.x.start,
-            res.pixels.y.start - frame.y.start,
-        );
+        let offset = self.pixels.offset_in_unchecked(&res.pixels);
 
-        let mut ptr = frame_local.0 + frame_local.1 * frame_width;
+        let mut ptr = offset;
         let mut res_ptr = 0;
 
         for _ in res.pixels.y.clone() {
-            rgb[ptr..ptr + line_width].copy_from_slice(&res.colors[res_ptr..res_ptr + line_width]);
+            // Colors should be multiplied by opacity by renderers
+            for pix in 0..line_width {
+                rgb[ptr + pix] += res.colors[res_ptr + pix];
+            }
 
             ptr += frame_width;
             res_ptr += line_width;

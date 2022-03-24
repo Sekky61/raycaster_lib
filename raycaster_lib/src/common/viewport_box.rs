@@ -91,7 +91,7 @@ impl ViewportBox {
 
 // Implemented with open ended ranges
 // if x = 0..10, the width is 10, tenth pixel is index [9]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PixelBox {
     pub x: Range<usize>,
     pub y: Range<usize>,

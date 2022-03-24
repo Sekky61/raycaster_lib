@@ -19,7 +19,7 @@ use super::{
     messages::{RenderTask, SubFrameResult, ToMasterMsg, ToWorkerMsg},
 };
 
-pub const PAR_SIDE: usize = 64;
+pub const PAR_SIDE: usize = 16;
 
 pub struct ParalelRenderer {
     volume: BlockVolume<PAR_SIDE>,
@@ -103,15 +103,19 @@ impl ParalelRenderer {
                         // Create render thread
                         let ren_comms = comms.renderer(id);
                         let camera_ref = self.camera.clone();
-                        let handle = s.spawn(move |_| {
-                            println!("Started renderer {id}");
+                        let handle = s
+                            .builder()
+                            .name(format!("Ren{id}"))
+                            .spawn(move |_| {
+                                println!("Started renderer {id}");
 
-                            let renderer = RenderWorker::new(
-                                id, camera_ref, tf, resolution, ren_comms, blocks_ref,
-                            );
+                                let renderer = RenderWorker::new(
+                                    id, camera_ref, tf, resolution, ren_comms, blocks_ref,
+                                );
 
-                            renderer.run();
-                        });
+                                renderer.run();
+                            })
+                            .unwrap();
 
                         renderers.push(handle);
                     }
@@ -123,20 +127,24 @@ impl ParalelRenderer {
                         let camera_ref = self.camera.clone();
                         let pixels = assigned_area;
 
-                        let handle = s.spawn(move |_| {
-                            println!("Started compositor {id}");
+                        let handle = s
+                            .builder()
+                            .name(format!("Com{id}"))
+                            .spawn(move |_| {
+                                println!("Started compositor {id}");
 
-                            let compositor = CompositorWorker::new(
-                                id,
-                                camera_ref,
-                                pixels.clone(),
-                                resolution,
-                                comp_comms,
-                                blocks_ref,
-                            );
+                                let compositor = CompositorWorker::new(
+                                    id,
+                                    camera_ref,
+                                    pixels.clone(),
+                                    resolution,
+                                    comp_comms,
+                                    blocks_ref,
+                                );
 
-                            compositor.run();
-                        });
+                                compositor.run();
+                            })
+                            .unwrap();
 
                         compositors.push(handle);
                     }
@@ -229,6 +237,7 @@ impl ParalelRenderer {
             let block = &self.volume.data[block_order[order].0]; // TODO
 
             // Send task
+            #[cfg(debug_assertions)]
             println!("Master: send task {order}");
             task_sender.send(RenderTask::new(order)).unwrap();
         }

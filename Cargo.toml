@@ -11,10 +11,13 @@ members = [
 
 [profile.release]
 debug = true # firegraph
-debug-assertions = true
 
 [profile.bench]
 debug = true
+
+[profile.release-debug]
+inherits = "release"
+debug-assertions = true
 
 [profile.release-full]
 inherits = "release"

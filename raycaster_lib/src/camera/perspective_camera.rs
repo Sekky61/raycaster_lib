@@ -4,17 +4,16 @@ use crate::common::{BoundBox, Ray, ViewportBox};
 
 use super::Camera;
 
-// up vector = 0,1,0
 pub struct PerspectiveCamera {
     position: Point3<f32>,
-    up: Vector3<f32>,
+    up: Vector3<f32>, // up vector = 0,1,0
     right: Vector3<f32>,
     direction: Vector3<f32>,
     aspect: f32,
     fov_y: f32,                   // Vertical field of view, in degrees
     img_plane_size: Vector2<f32>, // Calculated from fov_y
     // ray
-    dir_00: Vector3<f32>, // Vector from camera point to pixel [0,0]
+    dir_00: Vector3<f32>, // Vector from camera point to pixel [0,0] | upper left corner, in line with buffer convention
     du: Vector3<f32>, // Vector between two horizontally neighbouring pixels (example: [0,0] -> [1,0])
     dv: Vector3<f32>, // Vector between two vertically neighbouring pixels (example: [0,0] -> [0,1])
 }
@@ -32,7 +31,7 @@ impl PerspectiveCamera {
         img_plane_size.x = img_plane_size.y; // * aspect, but aspect is 1.0 right now
 
         let du: Vector3<f32> = img_plane_size.x * direction.cross(&up).normalize();
-        let dv: Vector3<f32> = img_plane_size.y * du.cross(&direction).normalize();
+        let dv: Vector3<f32> = -img_plane_size.y * du.cross(&direction).normalize(); // negative, pointing downwards
         let dir_00 = direction - 0.5 * du - 0.5 * dv;
         PerspectiveCamera {
             position,
@@ -122,7 +121,7 @@ impl PerspectiveCamera {
     // Call when direction changed
     fn recalc_dudv(&mut self) {
         self.du = self.img_plane_size.x * self.direction.cross(&self.up).normalize();
-        self.dv = self.img_plane_size.y * self.du.cross(&self.direction).normalize();
+        self.dv = -self.img_plane_size.y * self.du.cross(&self.direction).normalize(); // Notice '-' sign
         self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
     }
 }
@@ -188,10 +187,10 @@ mod test {
         assert_eq!(cam.up, vector![0.0, 1.0, 0.0]);
 
         assert_eq!(cam.du.normalize(), vector![0.0, 0.0, 1.0]);
-        assert_eq!(cam.dv.normalize(), vector![0.0, 1.0, 0.0]);
+        assert_eq!(cam.dv.normalize(), vector![0.0, -1.0, 0.0]);
 
         assert_eq!(cam.du.z, cam.img_plane_size.x);
-        assert_eq!(cam.dv.y, cam.img_plane_size.y);
+        assert_eq!(cam.dv.y, -cam.img_plane_size.y); // notice '-' sign, dv points down
     }
 
     #[test]
@@ -237,10 +236,10 @@ mod test {
         let projection = cam.project_box(bbox);
 
         compare_float(projection.lower.x, 1.0, 4.0);
-        compare_float(projection.lower.y, 1.0, 4.0);
+        compare_float(projection.lower.y, 0.0, 4.0);
 
         compare_float(projection.upper.x, 1.0, 4.0);
-        compare_float(projection.upper.y, 1.0, 4.0);
+        compare_float(projection.upper.y, 0.0, 4.0);
     }
 
     #[test]
