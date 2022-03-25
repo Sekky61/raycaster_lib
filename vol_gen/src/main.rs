@@ -1,15 +1,12 @@
 use std::{error::Error, process::exit};
 
-pub struct Config {
-    dims: (usize, usize, usize),
-    generator: String,
-}
+use config::Config;
 
-impl Config {
-    pub fn new(dims: (usize, usize, usize), generator: String) -> Self {
-        Self { dims, generator }
-    }
-}
+mod config;
+mod file;
+mod generator;
+mod sample_order;
+mod shapes;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ConfigParseError;
@@ -22,44 +19,123 @@ impl std::fmt::Display for ConfigParseError {
     }
 }
 
-//  Expected args
-//
-//  0       1   2   3   4
-//  exe     x   y   z   generator
-//
-//  Example 100 100 100 noise
-pub fn parse_args(args: &[String]) -> Result<Config, ConfigParseError> {
-    if args.len() != 5 {
-        return Err(ConfigParseError);
+use clap::{Arg, Command};
+
+pub fn is_positive_number(num: &str) -> Result<(), String> {
+    let n = num.parse::<usize>();
+    match n {
+        Ok(n) => {
+            if n > 0 {
+                Ok(())
+            } else {
+                Err("Number must be greater than 0".into())
+            }
+        }
+        Err(_) => Err("Number required".into()),
     }
-
-    let x: usize = args[0].parse().map_err(|_| ConfigParseError)?;
-    let y: usize = args[1].parse().map_err(|_| ConfigParseError)?;
-    let z: usize = args[2].parse().map_err(|_| ConfigParseError)?;
-    let generator = args[3].clone();
-
-    match x == 0 {
-        true => (),
-        false => return Err(ConfigParseError),
-    }
-
-    Ok(Config::new((x, y, z), generator))
 }
 
-pub fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    println!("Hello");
-    println!("{args:?}");
-
-    let config = match parse_args(&args[..]) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("{e}");
-            exit(1);
+pub fn is_float_number(num: &str) -> Result<(), String> {
+    let n = num.parse::<f32>();
+    match n {
+        Ok(n) => {
+            if n > 0.0 {
+                Ok(())
+            } else {
+                Err("Number must be greater than 0.0".into())
+            }
         }
-    };
+        Err(_) => Err("Number required".into()),
+    }
+}
 
-    generate(config);
+// pub struct Config {
+//     dims: Vector3<usize>,
+//     cell_shape: Vector3<usize>,
+//     generator: GeneratorConfig,
+//     header_format: HeaderFormat,
+//     save_buffer_order: SampleOrder,
+//     file_name: String,
+//     sparse_file: bool,
+// }
+
+const GENERATOR_NAMES: &[&str] = &["shapes", "noise", "solid"];
+const LAYOUT_NAMES: &[&str] = &["linear", "z"];
+
+pub fn main() {
+    let cmd = Command::new("My Program")
+        .author("Michal Majer")
+        .version("0.1.0")
+        .about("Volumetric data generator")
+        .arg(
+            Arg::new("dims")
+                .help("Dimensions of volume")
+                .long("dims")
+                .short('d')
+                .required(true)
+                .number_of_values(3)
+                .value_names(&["X", "Y", "Z"])
+                .use_value_delimiter(true)
+                .require_value_delimiter(true)
+                .require_equals(true)
+                .validator(is_positive_number),
+        )
+        .arg(
+            Arg::new("shape")
+                .help("Shape of cell")
+                .long("shape")
+                .short('s')
+                .number_of_values(3)
+                .value_names(&["X", "Y", "Z"])
+                .use_value_delimiter(true)
+                .require_value_delimiter(true)
+                .require_equals(true)
+                .default_values(&["1", "1", "1"])
+                .validator(is_float_number),
+        )
+        .arg(
+            Arg::new("generator")
+                .help("Type of generator")
+                .long("generator")
+                .short('g')
+                .required(true)
+                .takes_value(true)
+                .value_name("NAME")
+                .possible_values(GENERATOR_NAMES),
+        )
+        .arg(
+            Arg::new("layout")
+                .help("Layout of samples in memory")
+                .long("layout")
+                .short('l')
+                .default_value("linear")
+                .value_name("SHAPE")
+                .possible_values(LAYOUT_NAMES),
+        )
+        .arg(
+            Arg::new("output-file")
+                .help("File name to output")
+                .long("output-file")
+                .short('o')
+                .value_name("FILE")
+                .default_value("a.vol"),
+        )
+        .arg(Arg::new("sparse").help("Use sparse files").long("sparse"));
+
+    let m = cmd.get_matches();
+
+    let dims: Vec<&str> = m.values_of("dims").unwrap().collect();
+    let shape: Vec<&str> = m.values_of("shape").unwrap().collect();
+
+    println!("dims is {:?}", dims);
+    println!("shape is {:?}", shape);
+
+    let cfg = Config::from(m);
+
+    println!("Hello");
+    println!("{:?}", cfg);
+
+    // generate(config);
 }
 
 fn generate(config: Config) {
