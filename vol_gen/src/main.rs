@@ -1,10 +1,11 @@
-use std::{error::Error, ffi::OsStr};
+use std::{error::Error, ffi::OsStr, mem::size_of, str::FromStr};
 
 use config::Config;
 
 mod config;
 mod file;
-mod generator;
+mod generators;
+mod header;
 mod sample_order;
 mod shapes;
 
@@ -21,8 +22,9 @@ impl std::fmt::Display for ConfigParseError {
 
 use clap::{Arg, Command};
 
+// up to 32bit value
 pub fn is_positive_number(num: &str) -> Result<(), String> {
-    let n = num.parse::<usize>();
+    let n = num.parse::<u32>();
     match n {
         Ok(n) => {
             if n > 0 {
@@ -32,6 +34,14 @@ pub fn is_positive_number(num: &str) -> Result<(), String> {
             }
         }
         Err(_) => Err("Number required".into()),
+    }
+}
+
+pub fn can_fit_u8(num: &str) -> Result<(), String> {
+    let n = num.parse::<u8>();
+    match n {
+        Ok(n) => Ok(()),
+        Err(_) => Err("Number does not fit in range <0;255>".into()),
     }
 }
 
@@ -103,14 +113,14 @@ pub fn main() {
                 .possible_values(LAYOUT_NAMES),
         )
         .arg(
-            Arg::new("block-size") // maybe join this with layout arg
+            Arg::new("block-size") // maybe join this with layout arg | todo add overlap default 1
                 .help("Size of blocks in Z shape layout")
                 .long("block-size")
                 .short('b')
                 .value_name("SIDE")
                 .hide(true) // Hide from help
                 .required_if_eq("layout", "z")
-                .validator(is_positive_number),
+                .validator(|s| is_positive_number(s).and(can_fit_u8(s))),
         )
         .arg(
             Arg::new("output-file")

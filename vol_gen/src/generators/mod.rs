@@ -4,6 +4,8 @@ use nalgebra::Vector3;
 
 use crate::{config::Config, file::open_create_file, sample_order::DimIterator};
 
+mod solid;
+
 // Generates continuous chunks of samples in any order
 // Writes using lseek
 pub trait ChunkGenerator {}

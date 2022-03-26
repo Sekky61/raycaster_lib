@@ -3394,6 +3394,7 @@ dependencies = [
 name = "vol_gen"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "clap 3.1.6",
  "fastrand",
  "nalgebra",

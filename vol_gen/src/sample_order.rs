@@ -16,7 +16,7 @@ pub enum SampleOrder {
     // Samples ordered by blocks
     // Blocks are ordered lineary
     // and data inside blocks is also ordered lineary
-    Z(usize), // todo parametrize overlap
+    Z(u8), // todo parametrize overlap
 }
 
 pub trait DimIterator {}

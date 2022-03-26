@@ -1,7 +1,4 @@
-use std::{
-    ffi::{OsStr, OsString},
-    str::FromStr,
-};
+use std::{ffi::OsString, str::FromStr};
 
 use clap::ArgMatches;
 use nalgebra::{vector, Vector3};
@@ -16,7 +13,7 @@ where
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     let vals: Vec<T> = args
-        .values_of("dims")
+        .values_of(key)
         .unwrap()
         .into_iter()
         .map(|v| v.parse::<T>().expect("Parse error"))
@@ -26,13 +23,13 @@ where
 
 #[derive(Debug)]
 pub struct Config {
-    dims: Vector3<usize>,
-    cell_shape: Vector3<f32>,
-    generator: GeneratorConfig,
-    header_format: HeaderFormat,
-    save_buffer_order: SampleOrder,
-    file_name: OsString,
-    sparse_file: bool,
+    pub dims: Vector3<u32>,
+    pub cell_shape: Vector3<f32>,
+    pub generator: GeneratorConfig,
+    pub header_format: HeaderFormat,
+    pub save_buffer_order: SampleOrder,
+    pub file_name: OsString,
+    pub sparse_file: bool,
 }
 
 impl From<ArgMatches> for Config {
