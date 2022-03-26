@@ -1,4 +1,4 @@
-use std::{error::Error, process::exit};
+use std::{error::Error, ffi::OsStr};
 
 use config::Config;
 
@@ -48,16 +48,6 @@ pub fn is_float_number(num: &str) -> Result<(), String> {
         Err(_) => Err("Number required".into()),
     }
 }
-
-// pub struct Config {
-//     dims: Vector3<usize>,
-//     cell_shape: Vector3<usize>,
-//     generator: GeneratorConfig,
-//     header_format: HeaderFormat,
-//     save_buffer_order: SampleOrder,
-//     file_name: String,
-//     sparse_file: bool,
-// }
 
 const GENERATOR_NAMES: &[&str] = &["shapes", "noise", "solid"];
 const LAYOUT_NAMES: &[&str] = &["linear", "z"];
@@ -113,12 +103,23 @@ pub fn main() {
                 .possible_values(LAYOUT_NAMES),
         )
         .arg(
+            Arg::new("block-size") // maybe join this with layout arg
+                .help("Size of blocks in Z shape layout")
+                .long("block-size")
+                .short('b')
+                .value_name("SIDE")
+                .hide(true) // Hide from help
+                .required_if_eq("layout", "z")
+                .validator(is_positive_number),
+        )
+        .arg(
             Arg::new("output-file")
                 .help("File name to output")
                 .long("output-file")
                 .short('o')
                 .value_name("FILE")
-                .default_value("a.vol"),
+                .allow_invalid_utf8(true)
+                .default_value_os(OsStr::new("a.vol")),
         )
         .arg(Arg::new("sparse").help("Use sparse files").long("sparse"));
 
@@ -136,8 +137,4 @@ pub fn main() {
     println!("{:?}", cfg);
 
     // generate(config);
-}
-
-fn generate(config: Config) {
-    todo!()
 }
