@@ -75,7 +75,7 @@ impl From<ArgMatches> for Config {
 pub enum GeneratorConfig {
     Shapes,
     Noise,
-    Solid,
+    Solid { sample: u8 },
 }
 
 impl GeneratorConfig {
@@ -94,7 +94,8 @@ impl GeneratorConfig {
             }
             "solid" => {
                 // Solid
-                GeneratorConfig::Solid
+                let sample = 42; // todo
+                GeneratorConfig::Solid { sample }
             }
             _ => panic!("Error parsing generator config"),
         }

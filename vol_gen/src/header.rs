@@ -5,7 +5,7 @@ use crate::{
     sample_order::{HeaderFormat, SampleOrder},
 };
 
-pub fn generate_header(cfg: Config) -> Vec<u8> {
+pub fn generate_header(cfg: &Config) -> Vec<u8> {
     match cfg.header_format {
         HeaderFormat::Default => generate_default_header(cfg),
     }
@@ -23,9 +23,9 @@ const DEFAULT_HEADER_Z_1: u8 = 2;
 /// 3. cell shape -- 3x 32bit floats
 /// 4. sample_order -- 1x 16bit -- first byte sample_order, second byte parameter to the sample_order
 /// 5. data -- x*y*z 8bit values; order depending on sample_order (4)
-fn generate_default_header(cfg: Config) -> Vec<u8> {
-    let mut vec = Vec::with_capacity(DEFAULT_HEADER_LEN);
-    let mut slice = &mut vec[..];
+fn generate_default_header(cfg: &Config) -> Vec<u8> {
+    let mut vec = vec![0; DEFAULT_HEADER_LEN];
+    let slice = &mut vec[..];
 
     BigEndian::write_u32(&mut slice[0..4], cfg.dims.x);
     BigEndian::write_u32(&mut slice[4..8], cfg.dims.y);

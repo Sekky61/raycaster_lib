@@ -1,22 +1,26 @@
 use nalgebra::Vector3;
 
-use crate::{config::Config, header};
+use crate::config::{Config, GeneratorConfig};
+
+use super::SampleGenerator;
 
 pub struct SolidGenerator {
     sample: u8,
-    dims: Vector3<usize>,
 }
 
 impl SolidGenerator {
-    #[must_use]
-    pub fn new(sample: u8, dims: Vector3<usize>) -> Self {
-        Self { sample, dims }
+    pub fn from_config(config: &Config) -> SolidGenerator {
+        let sample = match config.generator {
+            GeneratorConfig::Solid { sample } => sample,
+            _ => panic!("Bad generator config"),
+        };
+
+        SolidGenerator { sample }
     }
+}
 
-    pub fn from_config(cfg: Config, sample: u8) -> SolidGenerator {
-        let dims = cfg.dims;
-        let header = header::generate_header(cfg);
-
-        todo!()
+impl SampleGenerator for SolidGenerator {
+    fn sample_at(&self, _coords: Vector3<u32>) -> u8 {
+        self.sample
     }
 }

@@ -1,4 +1,4 @@
-use std::{error::Error, ffi::OsStr, mem::size_of, str::FromStr};
+use std::{error::Error, ffi::OsStr};
 
 use config::Config;
 
@@ -20,7 +20,9 @@ impl std::fmt::Display for ConfigParseError {
     }
 }
 
-use clap::{Arg, Command};
+use clap::{Arg, Command, ValueHint};
+
+use crate::generators::{generate_linear_order, get_sample_generator};
 
 // up to 32bit value
 pub fn is_positive_number(num: &str) -> Result<(), String> {
@@ -40,7 +42,7 @@ pub fn is_positive_number(num: &str) -> Result<(), String> {
 pub fn can_fit_u8(num: &str) -> Result<(), String> {
     let n = num.parse::<u8>();
     match n {
-        Ok(n) => Ok(()),
+        Ok(_) => Ok(()),
         Err(_) => Err("Number does not fit in range <0;255>".into()),
     }
 }
@@ -99,6 +101,9 @@ pub fn main() {
                 .long("generator")
                 .short('g')
                 .required(true)
+                .requires_ifs(&[
+                    ("solid", "sample"), // if solid is set, require sample
+                ])
                 .takes_value(true)
                 .value_name("NAME")
                 .possible_values(GENERATOR_NAMES),
@@ -129,6 +134,7 @@ pub fn main() {
                 .short('o')
                 .value_name("FILE")
                 .allow_invalid_utf8(true)
+                .value_hint(ValueHint::FilePath)
                 .default_value_os(OsStr::new("a.vol")),
         )
         .arg(Arg::new("sparse").help("Use sparse files").long("sparse"));
@@ -145,6 +151,12 @@ pub fn main() {
 
     println!("Hello");
     println!("{:?}", cfg);
+
+    let gen = get_sample_generator(&cfg);
+
+    generate_linear_order(gen, &cfg).unwrap();
+
+    println!("Generating finished, result in {:#?}", cfg.file_name);
 
     // generate(config);
 }
