@@ -1,9 +1,12 @@
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{
-    config::Config,
-    sample_order::{HeaderFormat, SampleOrder},
-};
+use crate::{config::Config, orders::SampleOrder};
+
+// Describe header
+#[derive(Debug)]
+pub enum HeaderFormat {
+    Default,
+}
 
 pub fn generate_header(cfg: &Config) -> Vec<u8> {
     match cfg.header_format {

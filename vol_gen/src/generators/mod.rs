@@ -6,9 +6,10 @@ use crate::{
     config::{Config, GeneratorConfig},
     file::open_create_file,
     header::generate_header,
-    sample_order::{LinearCoordIterator, SampleOrder},
+    orders::{LinearCoordIterator, SampleOrder},
 };
 
+mod shapes;
 mod solid;
 
 // todo sparse

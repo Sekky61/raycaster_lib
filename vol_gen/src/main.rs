@@ -5,8 +5,7 @@ mod config;
 mod file;
 mod generators;
 mod header;
-mod sample_order;
-mod shapes;
+mod orders;
 
 use crate::{args::get_command, generators::generate_vol};
 

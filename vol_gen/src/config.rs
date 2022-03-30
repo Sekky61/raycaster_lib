@@ -3,7 +3,7 @@ use std::{ffi::OsString, str::FromStr};
 use clap::ArgMatches;
 use nalgebra::{vector, Vector3};
 
-use crate::sample_order::{HeaderFormat, SampleOrder};
+use crate::{header::HeaderFormat, orders::SampleOrder};
 
 // todo Describe command args here
 
