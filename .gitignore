@@ -4,3 +4,4 @@ flamegraph.svg
 *.svg
 /volumes
 /.vscode
+*.vol

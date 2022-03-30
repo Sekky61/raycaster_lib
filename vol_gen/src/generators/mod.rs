@@ -6,7 +6,7 @@ use crate::{
     config::{Config, GeneratorConfig},
     file::open_create_file,
     header::generate_header,
-    sample_order::LinearCoordIterator,
+    sample_order::{LinearCoordIterator, SampleOrder},
 };
 
 mod solid;
@@ -41,14 +41,16 @@ pub fn generate_linear_order(
 ) -> Result<(), Box<dyn Error>> {
     let file_name = &config.file_name;
     let mut file = open_create_file(file_name)?;
-    let ord_iter = LinearCoordIterator::from_config(config);
+    let ord_iter = LinearCoordIterator::from_dims(config.dims);
 
+    // Write header
     let header = generate_header(config);
     let h_written = file.write(&header[..]).unwrap();
     if h_written != header.len() {
         return Err("Writing header error".into());
     }
 
+    // Write samples
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
         let written = file.write(&[sample])?;
@@ -61,15 +63,13 @@ pub fn generate_linear_order(
     Ok(())
 }
 
-// fn generate_with_order(&self) -> Result<(), Box<dyn Error>> {
-//     let file_name = self.get_file_name();
-//     let mut file = open_create_file(file_name)?;
-//     let mut ord_iter = self.get_order_iter();
+pub fn generate_vol(config: Config) {
+    let gen = get_sample_generator(&config);
 
-//     while let Some(dims) = Iterator::next(&mut ord_iter) {
-//         let sample = self.sample_at(dims);
-//         let written = file.write(&[sample]).unwrap();
-//     }
+    match config.save_buffer_order {
+        SampleOrder::Linear => generate_linear_order(gen, &config).unwrap(),
+        SampleOrder::Z(s) => todo!(),
+    }
 
-//     Ok(())
-// }
+    println!("Generating finished, result in {:#?}", config.file_name);
+}
