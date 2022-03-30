@@ -2,22 +2,42 @@ use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
 use crate::common::{BoundBox, Ray, ViewportBox};
 
+/// Ray-casting camera
 pub struct PerspectiveCamera {
+    /// Position of the camera in world coordinates
     position: Point3<f32>,
+    /// Up direction from the camera's perspective
     up: Vector3<f32>, // up vector = 0,1,0
     right: Vector3<f32>,
-    direction: Vector3<f32>,
+    direction: Vector3<f32>, // todo unit?
     aspect: f32,
     fov_y: f32,                   // Vertical field of view, in degrees
     img_plane_size: Vector2<f32>, // Calculated from fov_y
     // ray
-    dir_00: Vector3<f32>, // Vector from camera point to pixel [0,0] | upper left corner, in line with buffer convention
+    dir_00: Vector3<f32>, // Vector from camera point to pixel \[0,0\] | upper left corner, in line with buffer convention
     du: Vector3<f32>, // Vector between two horizontally neighbouring pixels (example: [0,0] -> [1,0])
     dv: Vector3<f32>, // Vector between two vertically neighbouring pixels (example: [0,0] -> [0,1])
 }
 
 impl PerspectiveCamera {
+    /// Construct new camera
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - Position of the camera in world coordinates
+    /// * `direction` - Looking direction of the camera
+    ///
+    /// # Notes
+    ///
+    /// The up direction is assumed to be 'up' (positive y axis)
+    ///
+    /// Default fov is 60 degrees, default aspect ratio is 1. To change it,
+    /// call [`change_aspect_from_resolution`](PerspectiveCamera::change_aspect_from_resolution),
+    /// [`change_fov`](PerspectiveCamera::change_fov), [`change_aspect`](PerspectiveCamera::change_aspect)
+    ///
+    ///
     pub fn new(position: Point3<f32>, direction: Vector3<f32>) -> PerspectiveCamera {
+        // todo init with resolution?
         let up = vector![0.0, 1.0, 0.0];
         let direction = direction.normalize();
 
@@ -45,50 +65,91 @@ impl PerspectiveCamera {
         }
     }
 
-    pub fn get_dir(&self) -> Vector3<f32> {
-        self.direction
+    /// Changes aspect ratio to match `(width, height)` resolution
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let position = point![0.0,0.0,0.0];
+    /// let direction = vector![1.0,0.0,0.0];
+    /// let mut camera = PerspectiveCamera::new(position, direction);
+    ///
+    /// let width = 1280;
+    /// let height = 720;
+    ///
+    /// camera.change_aspect_from_resolution(width, height);
+    /// // has the same effect as
+    /// let fov = (width as f32) / (height as f32);
+    /// camera.change_aspect(fov);
+    /// ```
+    pub fn change_aspect_from_resolution(&mut self, width: u32, height: u32) {
+        let fov = (width as f32) / (height as f32);
+        self.change_aspect(fov);
     }
 
-    // In degrees
-    pub fn change_fov(&mut self, vertical_fov: f32) {
-        self.fov_y = vertical_fov;
+    /// Change vertical FoV of camera
+    ///
+    /// # Arguments
+    ///
+    /// * `vertical_fov_deg` - vertical FoV in degrees
+    pub fn change_fov(&mut self, vertical_fov_deg: f32) {
+        self.fov_y = vertical_fov_deg; // todo check if >180deg
         self.recalc_plane_size();
         self.recalc_dudv();
     }
 
-    // W/H ... for example 1.7777 for 16:9
+    /// Change aspect ratio of camera
+    ///
+    /// For example 1.7777 for 16:9 ratio
     pub fn change_aspect(&mut self, aspect_ratio: f32) {
         self.aspect = aspect_ratio;
         self.recalc_plane_size();
         self.recalc_dudv();
     }
 
+    /// Set new position of camera
     pub fn set_pos(&mut self, pos: Point3<f32>) {
         self.position = pos;
     }
 
+    /// Set new direction of camera
     pub fn set_direction(&mut self, direction: Vector3<f32>) {
         self.direction = direction.normalize();
         self.recalc_plane();
     }
 
+    /// Move camera by vector `delta`
     pub fn change_pos(&mut self, delta: Vector3<f32>) {
         self.position += delta;
     }
 
+    /// Move camera on the plane defined by camera position and direction (as a normal to the plane)
+    ///
+    /// Can also be thought of as the plane defined by right and up camera vectors
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` - move on the plane with base vectors being the right and up vector of the camera
     pub fn change_pos_plane(&mut self, delta: Vector2<f32>) {
         self.position += delta.x * self.right + delta.y * self.up;
     }
 
+    /// Move camera on the line defined by camera position and direction (as a direction of the line)
     pub fn change_pos_view_dir(&mut self, delta: f32) {
         self.position += delta * self.direction;
     }
 
+    /// Change direction of the camera
+    ///
+    /// Positive `delta.x` means look to the right.
+    /// Positive `delta.y` means look up.
     pub fn look_around(&mut self, delta: Vector2<f32>) {
         self.direction += self.right * delta.x + self.up * delta.y;
         self.recalc_plane();
     }
 
+    /// Apply rotation matrix to the camera
+    /// This changes both position and direction
     pub fn change_pos_matrix(&mut self, matrix: Rotation3<f32>) {
         self.position = matrix * self.position;
         self.direction = matrix * self.direction;
@@ -123,12 +184,20 @@ impl PerspectiveCamera {
         self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
     }
 
+    /// Get ray originating in the camera position crossing view plane in coordinates `pixel_coord`
+    ///
+    /// # Arguments
+    ///
+    /// * pixel_coord - Coordinates in the range of `<0;1>x<0;1>`, point \[0,0\] being upper left corner
     pub fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
         Ray::from_3(self.position, dir)
     }
 
+    /// Project bounding box of a volume to viewport
+    ///
+    /// Resulting viewport box is the minimal orthogonal rectangular projection
     pub fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
         let mut viewbox = ViewportBox::new();
 
@@ -154,10 +223,16 @@ impl PerspectiveCamera {
         viewbox
     }
 
-    // TODO is lower corner enough for relative distances? Assuming blocks have the same size
+    /// Get the distance from camera origin to the middle of a bound box
     pub fn box_distance(&self, bound_box: &BoundBox) -> f32 {
-        let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower);
+        // TODO is lower corner enough for relative distances? Assuming blocks have the same size
+        let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower); // todo move to box_center function
         (center - self.position).magnitude()
+    }
+
+    /// Direction getter
+    pub fn get_dir(&self) -> Vector3<f32> {
+        self.direction
     }
 }
 

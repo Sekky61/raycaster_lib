@@ -1,3 +1,9 @@
+//! # Raycaster lib crate
+//!
+//! Rust library for volumetric raycasting
+//!
+//! # Example
+
 // #![feature(generic_const_exprs)]
 
 pub mod color;
