@@ -1,8 +1,9 @@
 use nalgebra::{vector, Vector3};
 
+#[derive(Debug)]
 pub struct LinearCoordIterator {
-    dims: Vector3<u32>,
-    state: Vector3<u32>,
+    pub dims: Vector3<u32>,
+    pub state: Vector3<u32>,
     done: bool,
     started: bool,
 }
@@ -15,6 +16,12 @@ impl LinearCoordIterator {
             done: false,
             started: false,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.state = vector![0, 0, 0];
+        self.done = false;
+        self.started = false;
     }
 }
 

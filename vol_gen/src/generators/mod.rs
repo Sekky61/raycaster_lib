@@ -6,14 +6,13 @@ use crate::{
     config::{Config, GeneratorConfig},
     file::open_create_file,
     header::generate_header,
-    orders::{LinearCoordIterator, SampleOrder},
+    orders::{LinearCoordIterator, SampleOrder, ZCoordIterator},
 };
 
 mod shapes;
 mod solid;
 
-// todo sparse
-// Writes using lseek
+// todo sparse files with writes using lseek
 
 // Any generator
 pub trait Generator {
@@ -64,12 +63,41 @@ pub fn generate_linear_order(
     Ok(())
 }
 
+pub fn generate_z_order(
+    sg: impl SampleGenerator,
+    config: &Config,
+    block_side: u32,
+) -> Result<(), Box<dyn Error>> {
+    let file_name = &config.file_name;
+    let mut file = open_create_file(file_name)?;
+    let ord_iter = ZCoordIterator::new(config.dims, block_side);
+
+    // Write header
+    let header = generate_header(config);
+    let h_written = file.write(&header[..]).unwrap();
+    if h_written != header.len() {
+        return Err("Writing header error".into());
+    }
+
+    // Write samples
+    for dims in ord_iter {
+        let sample = sg.sample_at(dims);
+        let written = file.write(&[sample])?;
+
+        if written != 1 {
+            return Err("Writing error".into());
+        }
+    }
+
+    Ok(())
+}
+
 pub fn generate_vol(config: Config) {
     let gen = get_sample_generator(&config);
 
     match config.save_buffer_order {
         SampleOrder::Linear => generate_linear_order(gen, &config).unwrap(),
-        SampleOrder::Z(s) => todo!(),
+        SampleOrder::Z(side) => generate_z_order(gen, &config, side as u32).unwrap(),
     }
 
     println!("Generating finished, result in {:#?}", config.file_name);
