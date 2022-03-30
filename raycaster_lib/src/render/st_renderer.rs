@@ -5,7 +5,7 @@ use std::{
 
 use crossbeam::channel::{Receiver, Sender};
 
-use crate::{camera::PerspectiveCamera, volumetric::Volume};
+use crate::{volumetric::Volume, PerspectiveCamera};
 
 use super::{render_front::RenderThread, RenderOptions, Renderer, RendererMessage};
 

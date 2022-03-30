@@ -7,10 +7,10 @@ use crossbeam::channel::{Receiver, Sender};
 use nalgebra::vector;
 
 use crate::{
-    camera::{Camera, PerspectiveCamera},
     common::PixelBox,
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
     volumetric::{BlockVolume, Volume},
+    PerspectiveCamera,
 };
 
 use super::workers::{CompositorWorker, RenderWorker};

@@ -5,9 +5,9 @@ use crossbeam::select;
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
 use crate::{
-    camera::{Camera, PerspectiveCamera},
     common::Ray,
     volumetric::{Block, TF},
+    PerspectiveCamera,
 };
 
 use super::{

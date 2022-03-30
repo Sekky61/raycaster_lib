@@ -6,13 +6,13 @@ use std::{
 use nalgebra::{point, vector};
 use native_dialog::FileDialog;
 use raycaster_lib::{
-    camera::PerspectiveCamera,
     premade::{
         parse::{from_file, skull_parser},
         transfer_functions::skull_tf,
     },
     render::{ParalelRenderer, RenderOptions, RendererMessage, SerialRenderer},
     volumetric::{BlockVolume, LinearVolume},
+    PerspectiveCamera,
 };
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
 use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
@@ -65,6 +65,7 @@ pub fn main() {
         let render_recv = state_mut.renderer_front.get_receiver();
         let timer = Timer::default();
         timer.start(TimerMode::Repeated, Duration::from_millis(1), move || {
+            // todo recv instead of try_recv, passive wait
             if render_recv.try_recv().is_ok() {
                 // New Frame
                 let a = app_poll.clone();

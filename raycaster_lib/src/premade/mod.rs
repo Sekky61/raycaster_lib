@@ -8,13 +8,13 @@ pub mod transfer_functions;
 
 pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
     use crate::{
-        camera::PerspectiveCamera,
         premade::{
             parse::{from_file, skull_parser},
             transfer_functions::skull_tf,
         },
         render::{RenderOptions, Renderer},
         volumetric::LinearVolume,
+        PerspectiveCamera,
     };
     use nalgebra::point;
 

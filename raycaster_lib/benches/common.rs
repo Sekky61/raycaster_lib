@@ -1,9 +1,9 @@
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector3};
 pub use raycaster_lib::{
-    camera::PerspectiveCamera,
     render::{RenderOptions, Renderer},
     volumetric::{BlockVolume, BuildVolume, LinearVolume, Volume, VolumeMetadata},
+    PerspectiveCamera,
 };
 
 pub const WIDTH: usize = 512;

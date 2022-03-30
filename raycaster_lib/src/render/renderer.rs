@@ -3,9 +3,9 @@ use std::cmp::min;
 use nalgebra::{vector, Vector4};
 
 use crate::{
-    camera::{Camera, PerspectiveCamera},
     common::Ray,
     volumetric::{BlockType, EmptyIndex, Volume},
+    PerspectiveCamera,
 };
 
 use super::RenderOptions;

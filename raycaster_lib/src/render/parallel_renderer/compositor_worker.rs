@@ -7,10 +7,10 @@ use crossbeam::select;
 use nalgebra::{Vector2, Vector3};
 
 use crate::{
-    camera::{Camera, PerspectiveCamera},
     common::PixelBox,
     render::parallel_renderer::messages::{OpacityRequest, SubFrameResult},
     volumetric::Block,
+    PerspectiveCamera,
 };
 
 use super::{

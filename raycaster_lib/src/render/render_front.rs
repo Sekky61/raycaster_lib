@@ -5,7 +5,7 @@ use std::{
 
 use crossbeam::channel::{Receiver, Sender};
 
-use crate::camera::PerspectiveCamera;
+use crate::PerspectiveCamera;
 
 pub enum RendererMessage {
     StartRendering,
@@ -28,7 +28,7 @@ pub struct RendererFront {
     buffer: Option<Arc<Mutex<Vec<u8>>>>,
     camera: Option<Arc<RwLock<PerspectiveCamera>>>,
     communication_in: (Sender<RendererMessage>, Receiver<RendererMessage>),
-    communication_out: (Sender<()>, Receiver<()>),
+    communication_out: (Sender<()>, Receiver<()>), // todo passive wait to read buffer instead?
 }
 
 impl RendererFront {

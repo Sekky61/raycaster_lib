@@ -2,8 +2,6 @@ use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
 use crate::common::{BoundBox, Ray, ViewportBox};
 
-use super::Camera;
-
 pub struct PerspectiveCamera {
     position: Point3<f32>,
     up: Vector3<f32>, // up vector = 0,1,0
@@ -124,16 +122,14 @@ impl PerspectiveCamera {
         self.dv = -self.img_plane_size.y * self.du.cross(&self.direction).normalize(); // Notice '-' sign
         self.dir_00 = self.direction - 0.5 * self.du - 0.5 * self.dv;
     }
-}
 
-impl Camera for PerspectiveCamera {
-    fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
+    pub fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
         Ray::from_3(self.position, dir)
     }
 
-    fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
+    pub fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
         let mut viewbox = ViewportBox::new();
 
         let dun = self.du.normalize() / self.img_plane_size.x;
@@ -159,7 +155,7 @@ impl Camera for PerspectiveCamera {
     }
 
     // TODO is lower corner enough for relative distances? Assuming blocks have the same size
-    fn box_distance(&self, bound_box: &BoundBox) -> f32 {
+    pub fn box_distance(&self, bound_box: &BoundBox) -> f32 {
         let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower);
         (center - self.position).magnitude()
     }
