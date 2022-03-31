@@ -264,7 +264,7 @@ impl ParalelRenderer {
     // todo return only PixelBox
     fn generate_compositor_areas(resolution: (usize, usize), n: usize) -> Vec<PixelBox> {
         if n == 4 {
-            let pixels_1 = PixelBox::new(0..350, 0..350);
+            let pixels_1 = PixelBox::new(0..350, 0..350); // todo adapt to resolution
             let pixels_2 = PixelBox::new(350..700, 0..350);
             let pixels_3 = PixelBox::new(0..350, 350..700);
             let pixels_4 = PixelBox::new(350..700, 350..700);
