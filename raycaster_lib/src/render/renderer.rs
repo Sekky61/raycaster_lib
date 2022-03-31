@@ -87,17 +87,17 @@ where
 
                 let opacity = ray_color.w;
 
-                if x == pixels.x.start
-                    || x == pixels.x.end - 1
-                    || y == pixels.y.end - 1
-                    || y == pixels.y.start
-                {
-                    buffer[index] = 255;
-                    buffer[index + 1] = 255;
-                    buffer[index + 2] = 255;
-                    index += 3;
-                    continue;
-                }
+                // if x == pixels.x.start
+                //     || x == pixels.x.end - 1
+                //     || y == pixels.y.end - 1
+                //     || y == pixels.y.start
+                // {
+                //     buffer[index] = 255;
+                //     buffer[index + 1] = 255;
+                //     buffer[index + 2] = 255;
+                //     index += 3;
+                //     continue;
+                // }
 
                 // expects black background
                 buffer[index] = (ray_color.x * opacity) as u8;

@@ -94,7 +94,7 @@ impl RendererFront {
         renderer.set_communication(communication);
         let buffer = renderer.get_shared_buffer();
         let camera = renderer.get_camera();
-        let handle = renderer.start();
+        let handle = renderer.start(); // start thread but wait for startrendering message
         self.buffer = Some(buffer);
         self.handle = Some(handle);
         self.camera = Some(camera);
