@@ -3,7 +3,7 @@ use nalgebra::{point, vector, Vector3};
 use crate::{
     color::RGBA,
     premade::parse::skull_parser,
-    volumetric::{BuildVolume, DataSource, Volume, VolumeMetadata},
+    volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMetadata},
 };
 
 pub fn white_tf(sample: f32) -> RGBA {
@@ -20,6 +20,7 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
         position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
+        data_shape: Some(StorageShape::Linear),
     }
 }
 
@@ -33,6 +34,7 @@ pub fn empty_vol_meta(size: Vector3<usize>) -> VolumeMetadata<u8> {
         position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
+        data_shape: Some(StorageShape::Linear),
     }
 }
 

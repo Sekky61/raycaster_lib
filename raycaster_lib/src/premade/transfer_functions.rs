@@ -16,6 +16,16 @@ pub fn skull_tf(sample: f32) -> RGBA {
 
 // R G B A -- A <0;1>
 #[allow(dead_code)]
+pub fn anything_tf(sample: f32) -> RGBA {
+    if sample > 0.0 {
+        RGBA::new(255.0, 255.0, 255.0, 1.0)
+    } else {
+        color::zero()
+    }
+}
+
+// R G B A -- A <0;1>
+#[allow(dead_code)]
 pub fn c60large_tf(sample: f32) -> RGBA {
     if sample > 230.0 && sample < 255.0 {
         RGBA::new(200.0, 0.0, 0.0, 0.5)

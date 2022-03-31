@@ -35,6 +35,7 @@ pub trait Volume: Send {
         let mut grad_dir = vector![0.05, 0.05, 0.05]; // todo get scale / voxel shape
 
         let size = self.get_size().map(|v| v as f32);
+        // todo change from sampling to gradient compute and optimise, use background values outside
 
         if pos.x + grad_dir.x > size.x {
             grad_dir.x *= -1.0;

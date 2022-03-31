@@ -5,6 +5,7 @@ use crate::config::{Config, GeneratorConfig};
 use super::SampleGenerator;
 
 pub struct SolidGenerator {
+    // todo pad a little, gradients are badly defined on volume edge
     sample: u8,
 }
 

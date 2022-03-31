@@ -20,7 +20,7 @@ const DEFAULT_HEADER_LINEAR_2: u8 = 0;
 const DEFAULT_HEADER_Z_1: u8 = 2;
 
 /// Default header
-/// little-endian
+/// little-endian, total length 27B
 /// 1. resolution -- 3x 32bit ints (x,y,z)
 /// 2. 1 byte padding
 /// 3. cell shape -- 3x 32bit floats

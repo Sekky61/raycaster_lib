@@ -38,8 +38,8 @@ impl LinearVolume {
         [
             self.data[base],
             self.data[base + 1],
-            self.data[base + self.size.y],
-            self.data[base + self.size.y + 1],
+            self.data[base + self.size.z],
+            self.data[base + self.size.z + 1],
         ]
     }
 }
@@ -132,6 +132,8 @@ impl BuildVolume<u8> for LinearVolume {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
 
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
+
+        println!("New linear volume, size {size:?} scale {scale:?} bound_box {bound_box:?}");
 
         Ok(LinearVolume {
             bound_box,

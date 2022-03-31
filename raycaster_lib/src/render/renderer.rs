@@ -120,7 +120,7 @@ where
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
-        let step_size = 1.0;
+        let step_size = 0.2;
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized
@@ -145,7 +145,7 @@ where
 
             let grad = grad.normalize();
 
-            let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
+            let n_dot_l = f32::max(grad.dot(&light_source), 0.2); // todo phong
             let rgb = color_b.xyz() * n_dot_l;
 
             pos += step;
@@ -181,7 +181,7 @@ where
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
-        let step_size = 1.0;
+        let step_size = 0.2;
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized
@@ -212,7 +212,7 @@ where
 
             let grad = grad.normalize();
 
-            let n_dot_l = f32::max(grad.dot(&light_source), 0.0);
+            let n_dot_l = f32::max(grad.dot(&light_source), 0.2);
             let rgb = color_b.xyz() * n_dot_l;
 
             pos += step;

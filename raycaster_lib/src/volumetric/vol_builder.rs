@@ -13,6 +13,11 @@ where
     fn build(metadata: VolumeMetadata<T>) -> Result<Self, &'static str>;
 }
 
+pub enum StorageShape {
+    Linear,
+    Z(u8),
+}
+
 #[derive(Default)]
 pub struct VolumeMetadata<T> {
     // Shape
@@ -22,6 +27,7 @@ pub struct VolumeMetadata<T> {
     // Data
     pub data: Option<DataSource<T>>,
     pub data_offset: Option<usize>,
+    pub data_shape: Option<StorageShape>,
     pub tf: Option<TF>, // Transfer function
 }
 

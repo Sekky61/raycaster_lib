@@ -14,7 +14,7 @@ pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
 pub use stream_volume::StreamVolume;
 pub use vol_builder::DataSource;
-pub use vol_builder::{BuildVolume, VolumeMetadata};
+pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
 pub use volume::Volume;
 
 pub type TF = fn(f32) -> RGBA; // todo tf module, with trait

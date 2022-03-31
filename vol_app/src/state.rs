@@ -74,7 +74,6 @@ impl State {
 
     pub fn render_thread_send_message(&self, msg: RendererMessage) {
         self.renderer_front.send_message(msg);
-        println!("Sent order!!");
     }
 
     fn new_camera_movement(&mut self, movement: CameraMovement) {
@@ -197,7 +196,6 @@ impl State {
 
     fn start_render(&mut self) {
         self.is_rendering = true;
-        println!("ISRENDERING TRUE");
         self.render_thread_send_message(RendererMessage::StartRendering);
     }
 }

@@ -7,8 +7,8 @@ use nalgebra::{point, vector};
 use native_dialog::FileDialog;
 use raycaster_lib::{
     premade::{
-        parse::{from_file, skull_parser},
-        transfer_functions::skull_tf,
+        parse::{from_file, generator_parser, skull_parser},
+        transfer_functions::{anything_tf, skull_tf},
     },
     render::{ParalelRenderer, RenderOptions, RendererMessage, SerialRenderer},
     volumetric::{BlockVolume, LinearVolume},
@@ -194,23 +194,24 @@ fn volume_setup_paralel() -> ParalelRenderer {
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
 
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear() -> SerialRenderer<BlockVolume<10>> {
+fn volume_setup_linear() -> SerialRenderer<LinearVolume> {
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
 
     //let direction = vector![-0.721, -0.148, -0.676];
 
-    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+    //let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+    let volume = from_file("volumes/a.vol", generator_parser, anything_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
 
     SerialRenderer::new(volume, camera, render_options)
 }

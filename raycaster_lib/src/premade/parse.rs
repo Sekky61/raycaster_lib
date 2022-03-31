@@ -3,12 +3,12 @@ use std::path::Path;
 use nalgebra::{vector, Vector3};
 use nom::{
     bytes::complete::take,
-    number::complete::{be_f32, be_u32, le_u16},
+    number::complete::{be_f32, be_u32, le_f32, le_u16, le_u32},
     sequence::tuple,
     IResult,
 };
 
-use crate::volumetric::{BuildVolume, DataSource, Volume, VolumeMetadata, TF};
+use crate::volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMetadata, TF};
 
 use super::transfer_functions::{beetle_tf, skull_tf};
 
@@ -68,13 +68,14 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
         scale: None,
         data: Some(new_data_src),
         data_offset: Some(6),
+        data_shape: Some(StorageShape::Linear),
         tf: Some(beetle_tf),
     };
 
     Ok(meta)
 }
 
-pub struct ExtractedMeta {
+pub struct ExtractedMetaSkull {
     offset: usize,
     size: Vector3<usize>,
     scale: Vector3<f32>,
@@ -85,7 +86,7 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
 
     let parse_res = skull_inner(slice);
 
-    let ExtractedMeta {
+    let ExtractedMetaSkull {
         offset,
         size,
         scale,
@@ -100,11 +101,12 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
         scale: Some(scale),
         data_offset: Some(offset),
         data: Some(data_source),
+        data_shape: Some(StorageShape::Linear),
         tf: Some(skull_tf),
     })
 }
 
-fn skull_inner(s: &[u8]) -> IResult<&[u8], ExtractedMeta> {
+fn skull_inner(s: &[u8]) -> IResult<&[u8], ExtractedMetaSkull> {
     let mut skull_header = tuple((
         tuple((be_u32, be_u32, be_u32)),
         take(4_u8),
@@ -121,7 +123,72 @@ fn skull_inner(s: &[u8]) -> IResult<&[u8], ExtractedMeta> {
 
     Ok((
         s,
-        ExtractedMeta {
+        ExtractedMetaSkull {
+            offset,
+            size,
+            scale,
+        },
+    ))
+}
+
+pub struct ExtractedMetaGen {
+    offset: usize,
+    size: Vector3<usize>,
+    scale: Vector3<f32>,
+}
+
+pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
+    let slice = data_source.get_slice().ok_or("No data in data_source")?;
+
+    let parse_res = generator_inner(slice);
+
+    let (_, meta) = match parse_res {
+        Ok(r) => r,
+        Err(_) => return Err("Parse error"),
+    };
+
+    let ExtractedMetaGen {
+        offset,
+        size,
+        scale,
+    } = meta;
+
+    let data_shape = match slice[25] {
+        1 => StorageShape::Linear,
+        2 => StorageShape::Z(slice[26]),
+        _ => return Err("Unknown data shape"),
+    };
+
+    assert_eq!(slice.len() - offset, size.x * size.y * size.z); // todo maybe doesnt hold for z shape
+
+    Ok(VolumeMetadata {
+        position: None,
+        size: Some(size),
+        scale: Some(scale),
+        data_offset: Some(offset),
+        data: Some(data_source),
+        data_shape: Some(data_shape),
+        tf: Some(skull_tf),
+    })
+}
+
+fn generator_inner(s: &[u8]) -> IResult<&[u8], ExtractedMetaGen> {
+    let mut gen_header = tuple((
+        tuple((le_u32, le_u32, le_u32)),
+        take(1_u8),
+        tuple((le_f32, le_f32, le_f32)),
+    ));
+
+    let (s, (size, _, scale)) = gen_header(s)?;
+
+    let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
+    let scale = vector![scale.0 * 0.99, scale.1 * 0.99, scale.2 * 0.99];
+
+    let offset = 27; // 12 + 1 + 12 + 2 = 27, data starts at this index
+
+    Ok((
+        s,
+        ExtractedMetaGen {
             offset,
             size,
             scale,
