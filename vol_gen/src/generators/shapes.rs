@@ -2,17 +2,47 @@ use std::ops::RangeBounds;
 
 use nalgebra::{vector, Vector3};
 
+use crate::config::{Config, GeneratorConfig};
+
+use super::SampleGenerator;
+
 pub struct ShapesGenerator {
-    dims: Vector3<usize>,
+    dims: Vector3<u32>, // todo unnecessary
     shapes: Vec<ShapeInfo>,
 }
 
 impl ShapesGenerator {
-    #[must_use]
-    pub fn new(dims: Vector3<usize>, n_of_shapes: usize) -> Self {
-        let random_shape_gen = ShapeInfoGenerator::new(dims, vector![5, 5, 5], vector![0, 0, 0]);
+    pub fn from_config(config: &Config) -> ShapesGenerator {
+        let dims = config.dims;
+        let (n_of_shapes, sample) = match config.generator {
+            GeneratorConfig::Shapes {
+                n_of_shapes,
+                sample,
+            } => (n_of_shapes, sample),
+            _ => panic!("Bad generator args - Should not happen"),
+        };
+        let random_shape_gen =
+            ShapeInfoGenerator::new(dims, vector![7, 7, 7], vector![0, 0, 0], sample);
         let shapes = random_shape_gen.get_shapes(n_of_shapes);
-        Self { dims, shapes }
+        ShapesGenerator { dims, shapes }
+    }
+}
+
+impl SampleGenerator for ShapesGenerator {
+    fn sample_at(&self, coords: Vector3<u32>) -> u8 {
+        for shape in &self.shapes {
+            if coords.x >= shape.position_low.x
+                && coords.y >= shape.position_low.y
+                && coords.z >= shape.position_low.z
+                && coords.x <= shape.position_high.x
+                && coords.y <= shape.position_high.y
+                && coords.z <= shape.position_high.z
+            {
+                let offset = coords - shape.position_low;
+                shape.render_at(offset);
+            }
+        }
+        0 // todo background
     }
 }
 
@@ -23,43 +53,63 @@ pub enum ShapeType {
 }
 
 pub struct ShapeInfo {
-    position: Vector3<usize>,
-    size: Vector3<usize>,
-    shape_type: ShapeType,
+    pub position_low: Vector3<u32>,
+    pub position_high: Vector3<u32>,
+    pub shape_type: ShapeType,
+    pub sample: u8,
 }
 
 impl ShapeInfo {
     #[must_use]
-    pub fn new(position: Vector3<usize>, size: Vector3<usize>, shape_type: ShapeType) -> Self {
+    pub fn new(
+        position_low: Vector3<u32>,
+        position_high: Vector3<u32>,
+        shape_type: ShapeType,
+        sample: u8,
+    ) -> Self {
         Self {
-            position,
-            size,
+            position_low,
+            position_high,
             shape_type,
+            sample, // todo
         }
     }
 
     pub fn new_generator(
-        vol_dims: Vector3<usize>,
-        size: Vector3<usize>,
-        size_variance: Vector3<usize>,
+        vol_dims: Vector3<u32>,
+        size: Vector3<u32>,
+        size_variance: Vector3<u32>,
+        sample: u8,
     ) -> ShapeInfoGenerator {
-        ShapeInfoGenerator::new(vol_dims, size, size_variance)
+        ShapeInfoGenerator::new(vol_dims, size, size_variance, sample)
+    }
+
+    fn render_at(&self, offset: Vector3<u32>) -> u8 {
+        match self.shape_type {
+            ShapeType::Cuboid => self.render_cuboid(offset),
+        }
+    }
+
+    fn render_cuboid(&self, offset: Vector3<u32>) -> u8 {
+        self.sample
     }
 }
 
 pub struct ShapeInfoGenerator {
     rng: fastrand::Rng,
-    vol_dims: Vector3<usize>,
-    size: Vector3<usize>,
-    size_variance: Vector3<usize>,
+    vol_dims: Vector3<u32>,
+    size: Vector3<u32>,
+    size_variance: Vector3<u32>,
+    sample: u8,
 }
 
 impl ShapeInfoGenerator {
     #[must_use]
     pub fn new(
-        vol_dims: Vector3<usize>,
-        size: Vector3<usize>,
-        size_variance: Vector3<usize>,
+        vol_dims: Vector3<u32>,
+        size: Vector3<u32>,
+        size_variance: Vector3<u32>,
+        sample: u8,
     ) -> Self {
         let rng = fastrand::Rng::new();
         Self {
@@ -67,6 +117,7 @@ impl ShapeInfoGenerator {
             vol_dims,
             size,
             size_variance,
+            sample,
         }
     }
 
@@ -78,21 +129,23 @@ impl ShapeInfoGenerator {
         }
     }
 
-    fn random_vector<R>(&self, ranges: Vector3<R>) -> Vector3<usize>
+    fn random_vector<R>(&self, ranges: Vector3<R>) -> Vector3<u32>
     where
-        R: RangeBounds<usize> + Clone,
+        R: RangeBounds<u32> + Clone,
     {
-        let rand_x = self.rng.usize(ranges[0].clone()); // Using index, .x access not working
-        let rand_y = self.rng.usize(ranges[1].clone());
-        let rand_z = self.rng.usize(ranges[2].clone());
+        let rand_x = self.rng.u32(ranges[0].clone()); // Using index, .x access not working
+        let rand_y = self.rng.u32(ranges[1].clone());
+        let rand_z = self.rng.u32(ranges[2].clone());
         vector![rand_x, rand_y, rand_z]
     }
 
     pub fn get_shapes(&self, n: usize) -> Vec<ShapeInfo> {
-        (0..n).into_iter().map(|i| self.get_shape()).collect()
+        (0..n).into_iter().map(|_| self.get_shape()).collect()
     }
 
     pub fn get_shape(&self) -> ShapeInfo {
+        let shape_type = self.random_shape();
+
         let size_min = self.size - self.size_variance;
         let size_max = self.size + self.size_variance;
 
@@ -109,14 +162,15 @@ impl ShapeInfoGenerator {
         let pos_range_z = 0..(self.vol_dims.z - size.z);
 
         let pos_ranges = vector![pos_range_x, pos_range_y, pos_range_z];
-        let position = self.random_vector(pos_ranges);
+        let position_low = self.random_vector(pos_ranges);
 
-        let shape_type = self.random_shape();
+        let position_high = position_low + size;
 
         ShapeInfo {
-            position,
-            size,
+            position_low,
+            position_high,
             shape_type,
+            sample: self.sample, // todo
         }
     }
 }

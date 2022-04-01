@@ -80,7 +80,9 @@ pub fn get_command<'a>() -> Command<'a> {
                 .short('g')
                 .required(true)
                 .requires_ifs(&[
-                    ("solid", "sample"), // if solid is set, require sample
+                    ("solid", "sample"),       // if solid is set, require option sample
+                    ("shapes", "n-of-shapes"), // todo shapes size and variance
+                    ("shapes", "sample"),
                 ])
                 .takes_value(true)
                 .value_name("NAME")
@@ -96,6 +98,14 @@ pub fn get_command<'a>() -> Command<'a> {
                 .possible_values(LAYOUT_NAMES),
         )
         .arg(
+            Arg::new("sample") // maybe join this with layout arg | todo add overlap default 1
+                .help("Values of generated object")
+                .long("sample")
+                .value_name("BYTE")
+                .hide(true) // Hide from help
+                .validator(|s| is_positive_number(s).and(can_fit_u8(s))),
+        )
+        .arg(
             Arg::new("block-size") // maybe join this with layout arg | todo add overlap default 1
                 .help("Size of blocks in Z shape layout")
                 .long("block-size")
@@ -104,6 +114,15 @@ pub fn get_command<'a>() -> Command<'a> {
                 .hide(true) // Hide from help
                 .required_if_eq("layout", "z")
                 .validator(|s| is_positive_number(s).and(can_fit_u8(s))),
+        )
+        .arg(
+            Arg::new("n-of-shapes")
+                .help("Number of shapes generated in volume")
+                .long("n-of-shapes")
+                .value_name("N")
+                .hide(true) // Hide from help
+                .required_if_eq("generator", "z")
+                .validator(is_positive_number),
         )
         .arg(
             Arg::new("output-file")

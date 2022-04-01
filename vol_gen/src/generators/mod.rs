@@ -9,6 +9,8 @@ use crate::{
     orders::{LinearCoordIterator, SampleOrder, ZCoordIterator},
 };
 
+use self::{shapes::ShapesGenerator, solid::SolidGenerator};
+
 mod shapes;
 mod solid;
 
@@ -27,16 +29,16 @@ pub trait SampleGenerator {
     fn sample_at(&self, coords: Vector3<u32>) -> u8;
 }
 
-pub fn get_sample_generator(config: &Config) -> impl SampleGenerator {
+pub fn get_sample_generator(config: &Config) -> Box<dyn SampleGenerator> {
     match config.generator {
-        GeneratorConfig::Shapes => todo!(),
+        GeneratorConfig::Shapes { .. } => Box::new(ShapesGenerator::from_config(config)),
         GeneratorConfig::Noise => todo!(),
-        GeneratorConfig::Solid { .. } => solid::SolidGenerator::from_config(config),
+        GeneratorConfig::Solid { .. } => Box::new(SolidGenerator::from_config(config)),
     }
 }
 
 pub fn generate_linear_order(
-    sg: impl SampleGenerator,
+    sg: Box<dyn SampleGenerator>,
     config: &Config,
 ) -> Result<(), Box<dyn Error>> {
     let file_name = &config.file_name;
@@ -64,7 +66,7 @@ pub fn generate_linear_order(
 }
 
 pub fn generate_z_order(
-    sg: impl SampleGenerator,
+    sg: Box<dyn SampleGenerator>,
     config: &Config,
     block_side: u32,
 ) -> Result<(), Box<dyn Error>> {

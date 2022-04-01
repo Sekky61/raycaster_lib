@@ -13,11 +13,19 @@ pub fn main() {
     let cmd = get_command();
     // todo analyse header flag
 
-    let m = cmd.get_matches();
+    let args = cmd.get_matches();
 
-    let cfg = Config::from(m);
+    let cfg = Config::from_args(args);
 
-    println!("Hello");
+    let cfg = match cfg {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            return;
+        }
+    };
+
+    println!("Generating volume...");
     println!("{:?}", cfg);
 
     generate_vol(cfg);

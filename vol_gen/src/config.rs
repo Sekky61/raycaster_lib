@@ -32,8 +32,8 @@ pub struct Config {
     pub sparse_file: bool,
 }
 
-impl From<ArgMatches> for Config {
-    fn from(args: ArgMatches) -> Self {
+impl Config {
+    pub fn from_args(args: ArgMatches) -> Result<Config, String> {
         // Dims
         let dims = values_to_vector3(&args, "dims");
         // Cell shape
@@ -47,8 +47,18 @@ impl From<ArgMatches> for Config {
         let save_buffer_order = match layout {
             "linear" => SampleOrder::Linear,
             "z" => {
+                // block size
                 let z_val = args.value_of("block-size").unwrap();
                 let side = z_val.parse().unwrap();
+                // Validate
+                for &dim in dims.iter() {
+                    let rem = dim % (side as u32);
+                    if rem != 0 {
+                        return Err(format!(
+                            "block-size not divisible by {side} ({dim} % {side} = {rem})"
+                        ));
+                    }
+                }
                 SampleOrder::Z(side)
             }
             _ => panic!("Error parsing buffer orser"),
@@ -58,7 +68,7 @@ impl From<ArgMatches> for Config {
                                                                          // Sparse
         let sparse_file = args.is_present("sparse");
 
-        Config {
+        Ok(Config {
             dims,
             cell_shape,
             generator,
@@ -66,14 +76,14 @@ impl From<ArgMatches> for Config {
             save_buffer_order,
             file_name,
             sparse_file,
-        }
+        })
     }
 }
 
 // Enum variant has settings specific to generator variant
 #[derive(Debug)]
 pub enum GeneratorConfig {
-    Shapes,
+    Shapes { n_of_shapes: usize, sample: u8 },
     Noise,
     Solid { sample: u8 },
 }
@@ -83,10 +93,19 @@ impl GeneratorConfig {
         // Safe to unwrap, args checked by parser
         let s = args.value_of("generator").unwrap();
 
+        // sample
+        let sample_str = args.value_of("sample");
+        let n_of_shapes_str = args.value_of("n-of-shapes");
+
         match s {
             "shapes" => {
                 // Shapes
-                GeneratorConfig::Shapes
+                let n_of_shapes = n_of_shapes_str.unwrap().parse().unwrap();
+                let sample = sample_str.unwrap().parse().unwrap();
+                GeneratorConfig::Shapes {
+                    n_of_shapes,
+                    sample,
+                }
             }
             "noise" => {
                 // Noise
@@ -94,7 +113,7 @@ impl GeneratorConfig {
             }
             "solid" => {
                 // Solid
-                let sample = 42; // todo
+                let sample = sample_str.unwrap().parse().unwrap();
                 GeneratorConfig::Solid { sample }
             }
             _ => panic!("Error parsing generator config"),
