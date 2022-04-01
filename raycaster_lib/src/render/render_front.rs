@@ -7,22 +7,42 @@ use crossbeam::channel::{Receiver, Sender};
 
 use crate::PerspectiveCamera;
 
+/// Messages to renderer
+///
+/// Messages queue up and one is read after frame is done
 pub enum RendererMessage {
+    /// Start rendering
     StartRendering,
+    /// Shut down, thread will get ready to be joined
     ShutDown,
 }
 
-// Interface for renderers running in different thread
+/// Interface for renderers running in different thread
+///
+/// Must be implemented by renderers that wish to communicate using
+/// [`RendererFront`].
 pub trait RenderThread {
+    /// Get reference to shared framebuffer
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>>;
 
+    /// Get reference to camera
+    ///
+    /// If you obtain write lock, you can change camera position
     fn get_camera(&self) -> Arc<RwLock<PerspectiveCamera>>;
 
+    /// Spawn thread(s) with renderer
+    ///
+    /// Renderer waits for messages, does _not_ start rendering.
+    /// Returns handle which can be used to sync with parent thread.
     fn start(self) -> JoinHandle<()>;
 
+    /// Communication setter
     fn set_communication(&mut self, communication: (Sender<()>, Receiver<RendererMessage>));
 }
 
+/// Communicating with renderer
+///
+/// Can be active or inactive.
 pub struct RendererFront {
     handle: Option<JoinHandle<()>>,
     buffer: Option<Arc<Mutex<Vec<u8>>>>,
@@ -32,6 +52,7 @@ pub struct RendererFront {
 }
 
 impl RendererFront {
+    /// Create inactive front
     pub fn new() -> Self {
         let communication_in = crossbeam::channel::unbounded(); // main -> renderer
         let communication_out = crossbeam::channel::unbounded(); // renderer -> main
@@ -44,37 +65,64 @@ impl RendererFront {
         }
     }
 
+    /// Getter for sender
+    /// Returned struct can be used to send commands to renderer
+    ///
+    /// see `send()` method
     pub fn get_sender(&self) -> Sender<RendererMessage> {
         self.communication_in.0.clone()
     }
 
+    /// Send message to renderer
+    ///
+    /// Equivalent to:
+    /// ```
+    /// let sender = front.get_sender();
+    /// sender.send(msg);
+    /// ```
     pub fn send_message(&self, msg: RendererMessage) {
         self.communication_in.0.send(msg).unwrap()
     }
 
-    pub fn get_communication_render_side(&self) -> (Sender<()>, Receiver<RendererMessage>) {
-        (
-            self.communication_out.0.clone(),
-            self.communication_in.1.clone(),
-        )
-    }
-
+    /// Getter for message receiver
+    ///
+    /// Receive messages from renderer.
+    /// At the moment, the only message means new frame is ready and shared buffer can be obtained.
     pub fn get_receiver(&self) -> Receiver<()> {
         self.communication_out.1.clone()
     }
 
+    /// Receive message from renderer
+    ///
+    /// Blocking call
+    ///
+    /// Equivalent to:
+    /// ```
+    /// let rec = front.get_receiver();
+    /// rec.recv().unwrap(); // returns unit type
+    /// ```
     pub fn receive_message(&self) {
         self.communication_out.1.recv().unwrap()
     }
 
+    /// Getter for shared framebuffer
+    /// If front is inactive, return `None`
     pub fn get_buffer_handle(&self) -> Option<Arc<Mutex<Vec<u8>>>> {
         self.buffer.as_ref().cloned()
     }
 
+    /// Getter for camera handle
+    /// /// If front is inactive, return `None`
     pub fn get_camera_handle(&self) -> Option<Arc<RwLock<PerspectiveCamera>>> {
         self.camera.as_ref().cloned()
     }
 
+    /// Start `renderer`
+    ///
+    /// Front goes into active state.
+    /// If front was already active, previous renderer gets shutdown first.
+    ///
+    /// Parameter `renderer` must implement `RenderThread`
     pub fn start_rendering<R: RenderThread>(&mut self, mut renderer: R) {
         // Shutdown if needed
         if let Some(handle) = self.handle.take() {
@@ -100,8 +148,14 @@ impl RendererFront {
         self.camera = Some(camera);
     }
 
+    /// Sync thread with parent
+    ///
+    /// `ShutDown` message must be sent first separately.
+    /// Call is blocking until thread is joined.
+    /// Front goes into inactive state.
     pub fn finish(&mut self) {
         if let Some(handle) = self.handle.take() {
+            // todo should it send shutdown on its own?
             handle.join().unwrap();
             self.buffer = None;
             self.handle = None;
