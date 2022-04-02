@@ -1,11 +1,16 @@
 use std::{cell::RefCell, collections::VecDeque, path::PathBuf, rc::Rc, time::Instant};
 
 use nalgebra::{vector, Vector2, Vector3};
-use raycaster_lib::render::{RendererFront, RendererMessage};
+use raycaster_lib::{
+    render::{RendererFront, RendererMessage},
+    volumetric::{DataSource, VolumeMetadata},
+};
 use slint::{
     re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
     Weak,
 };
+
+use crate::{volume_setup_linear, volume_setup_paralel};
 
 use super::App;
 
@@ -37,17 +42,26 @@ impl CameraBuffer {
     }
 }
 
+pub enum PrewrittenParser {
+    MyVolParser,
+    SkullParser,
+}
+
 pub struct State {
     pub app: Weak<App>,
     pub renderer_front: RendererFront,
     pub is_rendering: bool,
     pub camera_buffer: CameraBuffer,
+    pub multi_thread: bool,
     // GUI
     pub timer: Instant,
     pub slider: Vector3<f32>,
     pub left_mouse_held: bool,
     pub right_mouse_held: bool,
     pub mouse: Option<Vector2<f32>>,
+    // Vol picker
+    pub file_picked: Option<PathBuf>,
+    pub parser_picked: Option<PrewrittenParser>,
 }
 
 impl State {
@@ -64,6 +78,9 @@ impl State {
             mouse: None,
             timer: Instant::now(),
             slider: Default::default(),
+            file_picked: None,
+            parser_picked: None,
+            multi_thread: false,
         }
     }
 
@@ -174,8 +191,11 @@ impl State {
         }
     }
 
-    pub fn handle_new_vol(&self, path: PathBuf) {
-        todo!()
+    pub fn handle_new_vol(&self, path: PathBuf, parser: PrewrittenParser) {
+        match parser {
+            PrewrittenParser::MyVolParser => todo!(),
+            PrewrittenParser::SkullParser => todo!(),
+        }
     }
 
     fn apply_cam_change(&mut self) {
@@ -197,5 +217,48 @@ impl State {
     fn start_render(&mut self) {
         self.is_rendering = true;
         self.render_thread_send_message(RendererMessage::StartRendering);
+        self.timer = Instant::now();
+    }
+
+    pub fn initial_render_call(&mut self) {
+        if self.multi_thread {
+            let renderer = volume_setup_paralel();
+            self.renderer_front.start_rendering(renderer);
+        } else {
+            let renderer = volume_setup_linear();
+            self.renderer_front.start_rendering(renderer);
+        }
+        self.render_thread_send_message(RendererMessage::StartRendering); // Initial command
+    }
+
+    pub fn handle_open_vol(&mut self, parser_index: i32) {
+        // Is file and parser picked?
+        let path_picked = self.file_picked.is_some();
+        let parser_picked = parser_index != -1;
+
+        // Is parser selected?
+        if !path_picked || !parser_picked {
+            return;
+        }
+
+        // Take both
+        let path = match self.file_picked.take() {
+            Some(path) => path,
+            None => return, // todo error
+        };
+        self.parser_picked = None;
+
+        // Display new
+        let parser = match parser_index {
+            0 => PrewrittenParser::MyVolParser,
+            1 => PrewrittenParser::SkullParser,
+            _ => panic!("Unexpected parser"),
+        };
+
+        self.start_renderer(path, parser);
+    }
+
+    fn start_renderer(&self, path: PathBuf, parser: PrewrittenParser) {
+        todo!()
     }
 }

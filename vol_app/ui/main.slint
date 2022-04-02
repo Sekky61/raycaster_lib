@@ -12,7 +12,8 @@ App := Window {
     title: "Volume app";
 
     property<int> frame_time;
-    property<[StandardListViewItem]> parsers_name_list : [{text: "parser1"}, {text: "parser2"}];
+    property<[StandardListViewItem]> parsers_name_list : [{text: "Vol parser"}, {text: "Skull parser"}];
+    property<int> parser_picked_index;
 
     property<image> render_target;
     callback new_rendered_frame();
@@ -29,8 +30,8 @@ App := Window {
 
     callback render_area_pointer_event <=> render_area.pointer-event;
 
-    callback load_file <=> load_file_button.clicked;
-    callback load_folder <=> load_folder_button.clicked;
+    callback load_file <=> pick_file_button.clicked;
+    callback open_file <=> open_file.clicked;
 
     HorizontalLayout {
         padding-left: 10px;
@@ -44,12 +45,8 @@ App := Window {
                     padding-top: 20px;
                     spacing: 10px;
 
-                    load_file_button := Button { 
+                    pick_file_button := Button { 
                         text: "Load from a file";
-                        
-                    }
-                    load_folder_button := Button { 
-                        text: "Load from a folder";
                     }
 
                     Text { 
@@ -57,14 +54,19 @@ App := Window {
                      }
 
                     StandardListView {
-                        width: 200px;
+                        width: parent.width;
                         height: 300px;
                         model <=> root.parsers_name_list;
+                        current-item <=> root.parser_picked_index;
                     }
 
-                    Button { 
+                    mt_checkbox := CheckBox {
+                        text: "Multi-threaded rendering";
+                    }
+
+                    open_file := Button { 
                         text: "Open";
-                     }
+                    }
                 }
             }
             Tab {

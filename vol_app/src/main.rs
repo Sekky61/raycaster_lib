@@ -45,18 +45,10 @@ pub fn main() {
     // State
     // Wrapped for access in closures
     let state = State::new_shared(app_weak);
-    let mt = false; // Use multithreaded renderer
     {
-        // Create renderer and tart render thread
+        // Start render thread
         let mut state_mut = state.borrow_mut();
-        if mt {
-            let renderer = volume_setup_paralel();
-            state_mut.renderer_front.start_rendering(renderer);
-        } else {
-            let renderer = volume_setup_linear();
-            state_mut.renderer_front.start_rendering(renderer);
-        }
-        state_mut.render_thread_send_message(RendererMessage::StartRendering); // Initial command
+        state_mut.initial_render_call();
     }
 
     let _timer = {
@@ -101,7 +93,6 @@ pub fn main() {
         // Frame time
         let elapsed = state_ref.timer.elapsed();
         app.set_frame_time(elapsed.as_millis().try_into().unwrap());
-        state_ref.timer = Instant::now();
     });
 
     // React to mouse move in render area
@@ -128,6 +119,7 @@ pub fn main() {
         EventResult::accept
     });
 
+    // Pick file button callback
     let state_clone = state.clone();
     app.on_load_file(move || {
         let path = FileDialog::new()
@@ -140,28 +132,17 @@ pub fn main() {
             None => return,
         };
 
-        // let mut item = slint::re_exports::StandardListViewItem::default();
-        // item.text = SharedString::from("bar");
-        // let list = slint::re_exports::ModelRc::new(item);
-
-        // app_file.unwrap().set_parsers_name_list(list);
-
-        state_clone.borrow_mut().handle_new_vol(path);
+        state_clone.borrow_mut().file_picked = Some(path);
     });
 
+    // Open button callback
     let state_clone = state.clone();
-    app.on_load_folder(move || {
-        let path = FileDialog::new()
-            .set_location(".")
-            .show_open_single_dir()
-            .unwrap();
+    app.on_open_file(move || {
+        let mut state = state_clone.borrow_mut();
 
-        let path = match path {
-            Some(path) => path,
-            None => return,
-        };
-
-        state_clone.borrow_mut().handle_new_vol(path);
+        let app = state.app.unwrap();
+        let parser_gui_index = app.get_parser_picked_index();
+        state.handle_open_vol(parser_gui_index);
     });
 
     let state_clone = state.clone();
@@ -205,8 +186,8 @@ fn volume_setup_linear() -> SerialRenderer<LinearVolume> {
 
     //let direction = vector![-0.721, -0.148, -0.676];
 
-    //let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
-    let volume = from_file("volumes/a.vol", generator_parser, anything_tf).unwrap();
+    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
+    //let volume = from_file("volumes/a.vol", generator_parser, anything_tf).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
