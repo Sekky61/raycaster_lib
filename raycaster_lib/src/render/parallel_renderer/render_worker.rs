@@ -214,7 +214,7 @@ impl<'a> RenderWorker<'a> {
             None => return accum,
         };
 
-        let step_size = 1.0;
+        let step_size = 0.5;
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = obj_ray.direction * step_size; // normalized

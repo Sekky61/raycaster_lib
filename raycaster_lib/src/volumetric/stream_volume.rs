@@ -121,6 +121,10 @@ impl Volume for StreamVolume {
         self.tf
     }
 
+    fn set_tf(&mut self, tf: TF) {
+        self.tf = tf;
+    }
+
     fn get_bound_box(&self) -> BoundBox {
         self.bound_box
     }

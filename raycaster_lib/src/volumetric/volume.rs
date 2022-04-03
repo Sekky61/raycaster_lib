@@ -23,6 +23,9 @@ pub trait Volume: Send {
     // get transfer function
     fn get_tf(&self) -> TF;
 
+    // set transfer function
+    fn set_tf(&mut self, tf: TF);
+
     // trilinear interpolation sample, zero if outside
     // pos in volume coordinates
     fn sample_at(&self, pos: Point3<f32>) -> f32;

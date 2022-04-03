@@ -99,6 +99,10 @@ impl<const S: usize> Volume for BlockVolume<S> {
     fn get_scale(&self) -> Vector3<f32> {
         vector![1.0, 1.0, 1.0] // todo
     }
+
+    fn set_tf(&mut self, tf: TF) {
+        self.tf = tf;
+    }
 }
 
 impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {

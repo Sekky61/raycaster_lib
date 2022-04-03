@@ -1,16 +1,26 @@
-use std::{cell::RefCell, collections::VecDeque, path::PathBuf, rc::Rc, time::Instant};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::{Arc, RwLock},
+    time::Instant,
+};
 
-use nalgebra::{vector, Vector2, Vector3};
+use nalgebra::{point, vector, Vector2, Vector3};
 use raycaster_lib::{
-    render::{RendererFront, RendererMessage},
-    volumetric::{DataSource, VolumeMetadata},
+    premade::{
+        parse::{from_file, generator_parser, skull_parser},
+        transfer_functions::{self, skull_tf},
+    },
+    render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
+    volumetric::LinearVolume,
+    PerspectiveCamera,
 };
 use slint::{
     re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
     Weak,
 };
-
-use crate::{volume_setup_linear, volume_setup_paralel};
 
 use super::App;
 
@@ -19,6 +29,8 @@ pub const RENDER_HEIGHT_U: usize = 700;
 
 pub const RENDER_WIDTH: u32 = RENDER_WIDTH_U as u32;
 pub const RENDER_HEIGHT: u32 = RENDER_HEIGHT_U as u32;
+
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol";
 
 pub enum CameraMovement {
     PositionOrtho(Vector3<f32>),
@@ -47,6 +59,12 @@ pub enum PrewrittenParser {
     SkullParser,
 }
 
+#[derive(Clone, Copy)]
+pub enum PrewrittenTF {
+    Green,
+    Gray,
+}
+
 pub struct State {
     pub app: Weak<App>,
     pub renderer_front: RendererFront,
@@ -62,6 +80,7 @@ pub struct State {
     // Vol picker
     pub file_picked: Option<PathBuf>,
     pub parser_picked: Option<PrewrittenParser>,
+    pub current_tf: PrewrittenTF,
 }
 
 impl State {
@@ -81,6 +100,7 @@ impl State {
             file_picked: None,
             parser_picked: None,
             multi_thread: false,
+            current_tf: PrewrittenTF::Green,
         }
     }
 
@@ -191,13 +211,6 @@ impl State {
         }
     }
 
-    pub fn handle_new_vol(&self, path: PathBuf, parser: PrewrittenParser) {
-        match parser {
-            PrewrittenParser::MyVolParser => todo!(),
-            PrewrittenParser::SkullParser => todo!(),
-        }
-    }
-
     fn apply_cam_change(&mut self) {
         let camera = self.renderer_front.get_camera_handle().unwrap();
         {
@@ -214,21 +227,16 @@ impl State {
         }
     }
 
+    // Instruct renderer to start rendering next frame
     fn start_render(&mut self) {
+        // todo rename
         self.is_rendering = true;
         self.render_thread_send_message(RendererMessage::StartRendering);
         self.timer = Instant::now();
     }
 
     pub fn initial_render_call(&mut self) {
-        if self.multi_thread {
-            let renderer = volume_setup_paralel();
-            self.renderer_front.start_rendering(renderer);
-        } else {
-            let renderer = volume_setup_linear();
-            self.renderer_front.start_rendering(renderer);
-        }
-        self.render_thread_send_message(RendererMessage::StartRendering); // Initial command
+        self.start_renderer(DEFAULT_VOLUME_PATH.into(), PrewrittenParser::SkullParser);
     }
 
     pub fn handle_open_vol(&mut self, parser_index: i32) {
@@ -258,7 +266,86 @@ impl State {
         self.start_renderer(path, parser);
     }
 
-    fn start_renderer(&self, path: PathBuf, parser: PrewrittenParser) {
-        todo!()
+    fn start_renderer(&mut self, path: PathBuf, parser: PrewrittenParser) {
+        if self.multi_thread {
+            let renderer = volume_setup_paralel(&path, parser, self.current_tf);
+            self.renderer_front.start_rendering(renderer);
+        } else {
+            let renderer = volume_setup_linear(&path, parser, self.current_tf);
+            self.renderer_front.start_rendering(renderer);
+        }
+        self.renderer_front
+            .send_message(RendererMessage::StartRendering);
+        println!(
+            "Started renderer: {} | {path:#?}",
+            if self.multi_thread { "MT" } else { "ST" }
+        );
     }
+
+    pub fn handle_tf_changed(&mut self, tf_name: &str) {
+        let tf = match tf_name {
+            "Green" => PrewrittenTF::Green,
+            "Gray" => PrewrittenTF::Gray,
+            _ => panic!("Unknown transfer function '{tf_name}'"),
+        };
+        self.current_tf = tf;
+        self.start_renderer(DEFAULT_VOLUME_PATH.into(), PrewrittenParser::SkullParser);
+    }
+}
+
+fn volume_setup_paralel(
+    path: &Path,
+    parser: PrewrittenParser,
+    tf: PrewrittenTF,
+) -> ParalelRenderer {
+    let position = point![300.0, 300.0, 300.0];
+    let direction = point![34.0, 128.0, 128.0] - position;
+
+    let parser_fn = match parser {
+        PrewrittenParser::MyVolParser => generator_parser,
+        PrewrittenParser::SkullParser => skull_parser,
+    };
+
+    let tf_fn = match tf {
+        PrewrittenTF::Green => transfer_functions::skull_tf,
+        PrewrittenTF::Gray => transfer_functions::anything_tf,
+    };
+
+    let volume = from_file(path, parser_fn, tf_fn).unwrap();
+
+    let camera = PerspectiveCamera::new(position, direction);
+    let camera = Arc::new(RwLock::new(camera));
+
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+
+    ParalelRenderer::new(volume, camera, render_options)
+}
+
+fn volume_setup_linear(
+    path: &Path,
+    parser: PrewrittenParser,
+    tf: PrewrittenTF,
+) -> SerialRenderer<LinearVolume> {
+    let position = point![300.0, 300.0, 300.0];
+    let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
+
+    let parser_fn = match parser {
+        PrewrittenParser::MyVolParser => generator_parser,
+        PrewrittenParser::SkullParser => skull_parser,
+    };
+
+    let tf_fn = match tf {
+        PrewrittenTF::Green => transfer_functions::skull_tf,
+        PrewrittenTF::Gray => transfer_functions::anything_tf,
+    };
+
+    let volume = from_file(path, parser_fn, tf_fn).unwrap();
+    //let volume = from_file("volumes/a.vol", generator_parser, anything_tf).unwrap();
+
+    let camera = PerspectiveCamera::new(position, direction);
+    let camera = Arc::new(RwLock::new(camera));
+
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
+
+    SerialRenderer::new(volume, camera, render_options)
 }

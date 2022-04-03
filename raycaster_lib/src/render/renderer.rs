@@ -120,7 +120,7 @@ where
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
-        let step_size = 0.2;
+        let step_size = 0.5;
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized
@@ -181,7 +181,7 @@ where
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
-        let step_size = 0.2;
+        let step_size = 0.5;
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized

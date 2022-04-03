@@ -1,19 +1,8 @@
-use std::{
-    sync::{Arc, RwLock},
-    time::{Duration, Instant},
-};
+use std::time::Duration;
 
-use nalgebra::{point, vector};
+use nalgebra::vector;
 use native_dialog::FileDialog;
-use raycaster_lib::{
-    premade::{
-        parse::{from_file, generator_parser, skull_parser},
-        transfer_functions::{anything_tf, skull_tf},
-    },
-    render::{ParalelRenderer, RenderOptions, RendererMessage, SerialRenderer},
-    volumetric::{BlockVolume, LinearVolume},
-    PerspectiveCamera,
-};
+use raycaster_lib::render::RendererMessage;
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
 use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
 
@@ -145,6 +134,22 @@ pub fn main() {
         state.handle_open_vol(parser_gui_index);
     });
 
+    // MT checkbox changed callback
+    let state_clone = state.clone();
+    app.on_mt_changed(move || {
+        let mut state = state_clone.borrow_mut();
+        let app = state.app.unwrap();
+        let checked = app.get_mt_checked();
+        state.multi_thread = checked;
+    });
+
+    // New TF selected callback
+    let state_clone = state.clone();
+    app.on_tf_selected(move |tf_name| {
+        let mut state = state_clone.borrow_mut();
+        state.handle_tf_changed(&tf_name);
+    });
+
     let state_clone = state.clone();
     app.on_x_slider_new_value(move |f| state_clone.borrow_mut().slider_event(0, f));
 
@@ -165,34 +170,4 @@ pub fn main() {
         .send_message(RendererMessage::ShutDown);
 
     state.borrow_mut().renderer_front.finish();
-}
-
-fn volume_setup_paralel() -> ParalelRenderer {
-    let position = point![300.0, 300.0, 300.0];
-    let direction = point![34.0, 128.0, 128.0] - position;
-    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
-
-    let camera = PerspectiveCamera::new(position, direction);
-    let camera = Arc::new(RwLock::new(camera));
-
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
-
-    ParalelRenderer::new(volume, camera, render_options)
-}
-
-fn volume_setup_linear() -> SerialRenderer<LinearVolume> {
-    let position = point![300.0, 300.0, 300.0];
-    let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
-
-    //let direction = vector![-0.721, -0.148, -0.676];
-
-    let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
-    //let volume = from_file("volumes/a.vol", generator_parser, anything_tf).unwrap();
-
-    let camera = PerspectiveCamera::new(position, direction);
-    let camera = Arc::new(RwLock::new(camera));
-
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
-
-    SerialRenderer::new(volume, camera, render_options)
 }

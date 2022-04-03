@@ -12,8 +12,12 @@ App := Window {
     title: "Volume app";
 
     property<int> frame_time;
+
     property<[StandardListViewItem]> parsers_name_list : [{text: "Vol parser"}, {text: "Skull parser"}];
     property<int> parser_picked_index;
+
+    property<[string]> tf_list : ["Green", "Gray"];
+    property<string> tf_current_value: "Green";
 
     property<image> render_target;
     callback new_rendered_frame();
@@ -32,6 +36,11 @@ App := Window {
 
     callback load_file <=> pick_file_button.clicked;
     callback open_file <=> open_file.clicked;
+
+    callback mt_changed <=> mt_checkbox.toggled;
+    property<bool> mt_checked: false;
+
+    callback tf_selected <=> tf_box.selected;
 
     HorizontalLayout {
         padding-left: 10px;
@@ -62,10 +71,11 @@ App := Window {
 
                     mt_checkbox := CheckBox {
                         text: "Multi-threaded rendering";
+                        checked <=> root.mt_checked;
                     }
 
                     open_file := Button { 
-                        text: "Open";
+                        text: "Open"; // todo disable
                     }
                 }
             }
@@ -101,6 +111,19 @@ App := Window {
             }
             Tab {
                 title: "Transfer function";
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-top: 20px;
+                    spacing: 10px;
+                    
+                    tf_box := ComboBox {
+                        width: parent.width;
+                        height: 60px;
+                        model <=> root.tf_list;
+                        current-value <=> root.tf_current_value;
+                    }
+                }
             }
         }
 

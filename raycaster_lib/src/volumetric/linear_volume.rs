@@ -106,6 +106,10 @@ impl Volume for LinearVolume {
     fn get_scale(&self) -> Vector3<f32> {
         vector![1.0, 1.0, 1.0]
     }
+
+    fn set_tf(&mut self, tf: TF) {
+        self.tf = tf;
+    }
 }
 
 impl BuildVolume<u8> for LinearVolume {
