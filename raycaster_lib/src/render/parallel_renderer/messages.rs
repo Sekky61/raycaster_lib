@@ -2,19 +2,27 @@ use nalgebra::Vector3;
 
 use crate::common::PixelBox;
 
+use super::composition::SubCanvas;
+
 // Todo combine Vec and pixelbox to newtype
 
 pub struct RenderTask {
-    pub block_order: usize,
+    pub block_id: usize,
+    pub tile_id: usize,
+    pub subcanvas: *mut SubCanvas,
 }
-
-// todo masterToRendererMsg with finish, camera_changed
 
 impl RenderTask {
-    pub fn new(block_order: usize) -> Self {
-        Self { block_order }
+    pub fn new(block_id: usize, tile_id: usize, subcanvas: *mut SubCanvas) -> Self {
+        Self {
+            block_id,
+            tile_id,
+            subcanvas,
+        }
     }
 }
+
+unsafe impl Send for RenderTask {}
 
 pub enum ToWorkerMsg {
     StopRendering,
@@ -43,25 +51,12 @@ impl OpacityRequest {
 
 // todo split color and transmit it at lower priority
 pub struct SubRenderResult {
-    // todo remove pixels field, use order
-    pub recipient_id: usize,
-    pub order: usize,
-    pub pixels: PixelBox,
-    pub colors: Vec<Vector3<f32>>,
-    pub opacities: Vec<f32>,
+    pub tile_id: usize,
 }
 
 impl SubRenderResult {
-    pub fn new(recipient_id: usize, order: usize, pixels: PixelBox, opacities: Vec<f32>) -> Self {
-        let capacity = pixels.items();
-        let colors = Vec::with_capacity(capacity);
-        Self {
-            recipient_id,
-            order,
-            pixels,
-            colors,
-            opacities,
-        }
+    pub fn new(tile_id: usize) -> Self {
+        Self { tile_id }
     }
 }
 
@@ -99,7 +94,7 @@ pub enum ToCompositorMsg {
 }
 
 pub enum ToMasterMsg {
-    Subframe(SubFrameResult),
+    RenderDone,
 }
 
 pub enum ToRendererMsg {

@@ -5,13 +5,14 @@ use crossbeam::select;
 use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
 
 use crate::{
-    common::Ray,
+    common::{PixelBox, Ray},
     volumetric::{Block, TF},
     PerspectiveCamera,
 };
 
 use super::{
     communication::RenderWorkerComms,
+    composition::SubCanvas,
     master_thread::PAR_SIDE,
     messages::{OpacityRequest, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg},
 };
@@ -23,11 +24,12 @@ enum Run {
 }
 
 pub struct RenderWorker<'a> {
+    // todo render options?
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     tf: TF,
     resolution: Vector2<usize>,
-    comms: RenderWorkerComms<4>, // todo generic
+    comms: RenderWorkerComms,
     blocks: &'a [Block<PAR_SIDE>],
 }
 
@@ -38,7 +40,7 @@ impl<'a> RenderWorker<'a> {
         camera: Arc<RwLock<PerspectiveCamera>>,
         tf: TF,
         resolution: Vector2<usize>,
-        comms: RenderWorkerComms<4>,
+        comms: RenderWorkerComms,
         blocks: &'a [Block<PAR_SIDE>],
     ) -> Self {
         Self {
@@ -56,7 +58,7 @@ impl<'a> RenderWorker<'a> {
         loop {
             let msg = match command.take() {
                 Some(cmd) => cmd,
-                None => self.comms.command_receiver.recv().unwrap(),
+                None => self.comms.command_rec.recv().unwrap(),
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
@@ -83,11 +85,11 @@ impl<'a> RenderWorker<'a> {
         loop {
             // Wait for task from master thread or finish call
             let task = select! {
-                recv(self.comms.task_receiver) -> msg => msg.unwrap(),
-                recv(self.comms.command_receiver) -> msg => return msg.unwrap(),
+                recv(self.comms.task_rec) -> msg => msg.unwrap(),
+                recv(self.comms.command_rec) -> msg => return msg.unwrap(),
             };
 
-            let block_order = task.block_order;
+            let block_order = task.block_id;
             let (block_id, _) = ordered_ids[block_order];
 
             #[cfg(debug_assertions)]
@@ -96,25 +98,8 @@ impl<'a> RenderWorker<'a> {
                 self.renderer_id
             );
 
-            // Ask for all opacity data
-            // TODO it could be known in which subframes the block is (part of task), eliminating some searches in expected_volumes
-            for comp in self.comms.compositors.iter() {
-                let op_req = OpacityRequest::new(self.renderer_id, block_order);
-                comp.send(ToCompositorMsg::OpacityRequest(op_req)).unwrap();
-            }
-            #[cfg(debug_assertions)]
-            println!("Render {}: requested order {block_order}", self.renderer_id);
-
-            // Wait for all opacity data from compositors
-            let mut color_opacity = ArrayVec::<SubRenderResult, 4>::new(); // todo const generics
-            for _ in 0..self.comms.compositors.len() {
-                let msg = self.comms.receiver.recv().unwrap();
-                if let ToRendererMsg::Opacity(d) = msg {
-                    let comp_id = d.from_compositor;
-                    let res = SubRenderResult::new(comp_id, block_order, d.pixels, d.opacities);
-                    color_opacity.push(res);
-                }
-            }
+            // Safety: ref is unique
+            let mut subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
             #[cfg(debug_assertions)]
             println!(
@@ -131,18 +116,13 @@ impl<'a> RenderWorker<'a> {
             );
 
             // Render task
-            self.render_block(&camera, &mut color_opacity, block);
-            // Opacities has been mutated
+            self.render_block(&camera, subcanvas, block);
+            // Opacities have been mutated
 
             #[cfg(debug_assertions)]
             println!("Render {}: rendered {block_order}", self.renderer_id);
-
-            // give data to compositers
-            color_opacity.into_iter().for_each(|sub| {
-                let id = sub.recipient_id;
-                let msg = ToCompositorMsg::RenderResult(sub);
-                self.comms.compositors[id].send(msg).unwrap();
-            });
+            let subrender_res = SubRenderResult::new(task.tile_id);
+            self.comms.result_sen.send(subrender_res).unwrap();
 
             #[cfg(debug_assertions)]
             println!("Render {}: sent back {block_order}", self.renderer_id);
@@ -152,54 +132,50 @@ impl<'a> RenderWorker<'a> {
     fn render_block(
         &self,
         camera: &PerspectiveCamera,
-        data: &mut [SubRenderResult],
+        subcanvas: &mut SubCanvas,
         block: &Block<PAR_SIDE>,
     ) {
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);
 
-        for opacity_data in data {
-            // todo waiting for opacities can be done here, render and send back immediately
-            // flatten skips Nones
-            let opacities = &mut opacity_data.opacities[..];
+        // todo waiting for opacities can be done here, render and send back immediately
+        // flatten skips Nones
+        let opacities = &mut subcanvas.opacities[..];
 
-            let x_range = opacity_data.pixels.x.clone();
-            let y_range = opacity_data.pixels.y.clone();
+        let x_range = subcanvas.pixels.x.clone();
+        let y_range = subcanvas.pixels.y.clone();
 
-            let color_buf = &mut opacity_data.colors;
-            let mut ptr = 0;
+        let color_buf = &mut subcanvas.colors[..];
+        let mut ptr = 0;
 
-            for y in y_range.clone() {
-                let y_norm = y as f32 * step_f.y;
-                for x in x_range.clone() {
-                    // todo clone here -- maybe use own impl
-                    let pixel_coord = (x as f32 * step_f.x, y_norm);
-                    let ray = camera.get_ray(pixel_coord);
+        for y in y_range.clone() {
+            let y_norm = y as f32 * step_f.y;
+            for x in x_range.clone() {
+                // todo clone here -- maybe use own impl
+                let pixel_coord = (x as f32 * step_f.x, y_norm);
+                let ray = camera.get_ray(pixel_coord);
 
-                    // Early opacity check
-                    if opacities[ptr] > 0.99 {
-                        ptr += 1;
-                        color_buf.push(vector![0.0, 0.0, 0.0]); // todo check perf zeroing out vs pushing zeroes
-                        continue;
-                    }
-
-                    // Adds to opacity buffer
-                    let color = self.sample_color(block, &ray, &mut opacities[ptr]);
-
-                    // TODO multiply color with opacity ??
-                    // TODO results seem ok
-
-                    // if x == x_range.start
-                    //     || x == x_range.end - 1
-                    //     || y == y_range.start
-                    //     || y == y_range.end - 1
-                    // {
-
-                    color_buf.push(color);
-
+                // Early opacity check
+                if opacities[ptr] > 0.99 {
                     ptr += 1;
+                    continue;
                 }
+
+                // Adds to opacity buffer
+                let color = self.sample_color(block, &ray, &mut opacities[ptr]);
+
+                // TODO multiply color with opacity ??
+                // TODO results seem ok
+
+                // if x == x_range.start
+                //     || x == x_range.end - 1
+                //     || y == y_range.start
+                //     || y == y_range.end - 1
+                // {
+                color_buf[ptr] += color;
+
+                ptr += 1;
             }
         }
     }
