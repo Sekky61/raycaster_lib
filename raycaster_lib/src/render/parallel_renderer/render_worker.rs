@@ -222,9 +222,9 @@ impl<'a> RenderWorker<'a> {
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            *opacity += (1.0 - *opacity) * color_b.w;
+            accum += (1.0 - *opacity) * color_b.w * color_b.xyz();
 
-            accum += (1.0 - *opacity) * color_b.xyz();
+            *opacity += (1.0 - *opacity) * color_b.w;
         }
 
         accum
