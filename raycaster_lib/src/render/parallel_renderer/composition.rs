@@ -1,16 +1,18 @@
 use std::{
     cell::UnsafeCell,
+    cmp::min,
     collections::VecDeque,
     sync::{Arc, Mutex},
 };
 
 use crossbeam::select;
-use nalgebra::Vector3;
+use nalgebra::{vector, Vector3};
 
-use crate::{common::PixelBox, PerspectiveCamera};
+use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
 
 use super::{
     communication::CompWorkerComms,
+    master_thread::PAR_SIDE,
     messages::{RenderTask, SubFrameResult, SubRenderResult, ToMasterMsg, ToWorkerMsg},
 };
 
@@ -40,6 +42,8 @@ pub struct Canvas {
     size: PixelBox,
     sub_canvases: Vec<UnsafeCell<SubCanvas>>,
     remaining_subs: Mutex<u32>,
+    tile_side: usize,
+    tiles_x: usize, // number of tiles in one row
 }
 
 unsafe impl Sync for Canvas {}
@@ -63,22 +67,67 @@ impl Canvas {
             let low_y = y * tile_side;
             for x in 0..tiles_x {
                 let low_x = x * tile_side;
-                let pixel_box =
-                    PixelBox::new(low_x..(low_x + tile_side), low_y..(low_y + tile_side));
+                let high_x = min(low_x + tile_side, resolution.0);
+                let high_y = min(low_y + tile_side, resolution.1);
+                let pixel_box = PixelBox::new(low_x..high_x, low_y..high_y);
 
                 let sub_canvas = UnsafeCell::new(SubCanvas::new(pixel_box));
                 sub_canvases.push(sub_canvas);
             }
         }
+        let remaining_subs = sub_canvases.len() as u32;
         Canvas {
             sub_canvases,
-            remaining_subs: Mutex::new(0),
+            remaining_subs: Mutex::new(remaining_subs),
             size,
+            tile_side,
+            tiles_x,
         }
     }
 
-    pub fn build_queues(&mut self, camera: &PerspectiveCamera) {
-        todo!();
+    // Interior mutability, needs exclusive access
+    pub fn build_queues(&self, camera: &PerspectiveCamera, blocks: &[Block<PAR_SIDE>]) {
+        let mut block_infos = Vec::with_capacity(blocks.len());
+        for (i, block) in blocks.iter().enumerate() {
+            let distance = camera.box_distance(&block.bound_box);
+            block_infos.push((i, distance));
+        }
+
+        // todo maybe cache this, until cam dir changes octant
+        block_infos.sort_unstable_by(|b1, b2| b1.1.partial_cmp(&b2.1).unwrap()); // todo maybe by cached key
+
+        // Info now sorted by distance
+
+        let res = vector![self.size.width(), self.size.height()];
+
+        // Reset done subcanvases counter
+        {
+            let mut remaining = self.remaining_subs.lock().unwrap();
+            *remaining = self.sub_canvases.len() as u32;
+        }
+
+        for (block_id, _) in block_infos {
+            let vpbox = camera.project_box(blocks[block_id].bound_box);
+            let pixel_box = vpbox.get_pixel_range(res);
+            // Count which pixelboxes intersect
+            // Assume all tiles are the same size
+
+            let tile_start_x = pixel_box.x.start / self.tile_side;
+            let tile_end_x = (pixel_box.x.end - 1) / self.tile_side;
+
+            let tile_start_y = pixel_box.y.start / self.tile_side;
+            let tile_end_y = (pixel_box.y.end - 1) / self.tile_side;
+
+            for y in tile_start_y..=tile_end_y {
+                for x in tile_start_x..=tile_end_x {
+                    let tile_id = self.tiles_x * y + x;
+
+                    // Safety: build phase, only master has access
+                    let tile = unsafe { self.sub_canvases[tile_id].get().as_mut().unwrap() };
+                    tile.queue.push_back(block_id);
+                }
+            }
+        }
     }
 }
 
@@ -135,15 +184,27 @@ impl CompWorker {
     }
 
     pub fn main_loop(&self) -> ToWorkerMsg {
+        #[cfg(debug_assertions)]
+        println!("Comp {}: start main loop", self.compositor_id);
+
         // Initial batch of tasks
         // Safety: Subcanvases are accessed based on worker id, no overlap possible
         unsafe {
             let canvases = &self.canvas.sub_canvases[..];
 
-            let mut tile_id = self.compositor_id as usize; // todo maybe for cache reasons do first 1/n tiles instead
+            // relies on compositor ids being continuous, todo fix
+            let mut tile_id = (self.compositor_id % self.compositor_count) as usize; // todo maybe for cache reasons do first 1/n tiles instead
             while tile_id < canvases.len() {
                 let subcanvas_ptr = canvases[tile_id].get();
                 let subcanvas = subcanvas_ptr.as_mut().unwrap();
+
+                // Zero out color and opacity
+                subcanvas
+                    .colors
+                    .iter_mut()
+                    .for_each(|v| *v = vector![0.0, 0.0, 0.0]);
+                subcanvas.opacities.iter_mut().for_each(|v| *v = 0.0);
+
                 let order = subcanvas.queue.pop_front();
                 match order {
                     Some(block_id) => self.send_task(block_id, tile_id, subcanvas_ptr),
@@ -153,12 +214,21 @@ impl CompWorker {
             }
         }
 
+        #[cfg(debug_assertions)]
+        println!("Comp {}: initial batch done", self.compositor_id);
+
         loop {
             // Wait for render task
             let result = select! {
                 recv(self.comms.result_rec) -> msg => msg.unwrap(),
                 recv(self.comms.command_rec) -> msg => return msg.unwrap(),
             };
+
+            #[cfg(debug_assertions)]
+            println!(
+                "Comp {}: got result tile {}",
+                self.compositor_id, result.tile_id
+            );
 
             // subcanvas is already mutated, colors added
 
@@ -196,8 +266,16 @@ impl CompWorker {
             // mutex guard
             let mut remaining_tiles = self.canvas.remaining_subs.lock().unwrap();
             *remaining_tiles -= 1;
+            #[cfg(debug_assertions)]
+            println!(
+                "Comp {}: tile done, remaining {}",
+                self.compositor_id, *remaining_tiles
+            );
             if *remaining_tiles == 0 {
                 // Send message to master, render is done
+                #[cfg(debug_assertions)]
+                println!("Comp {}: sent render done message", self.compositor_id);
+
                 self.comms.master_sen.send(ToMasterMsg::RenderDone).unwrap();
             }
         }
@@ -205,6 +283,12 @@ impl CompWorker {
 
     fn send_task(&self, block_id: usize, tile_id: usize, subcanvas: *mut SubCanvas) {
         let task = RenderTask::new(block_id, tile_id, subcanvas);
+        #[cfg(debug_assertions)]
+        println!(
+            "Comp {}: sent task block {} tile {}",
+            self.compositor_id, block_id, tile_id
+        );
+
         self.comms.task_sen.send(task).unwrap();
     }
 

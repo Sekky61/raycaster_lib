@@ -84,6 +84,11 @@ pub struct State {
 }
 
 impl State {
+    /// Default values for state
+    ///
+    /// # Params
+    ///
+    /// * app - reference to GUI, see `App::as_weak`
     pub fn new(app: Weak<App>) -> State {
         let renderer_front = RendererFront::new();
 
@@ -99,7 +104,7 @@ impl State {
             slider: Default::default(),
             file_picked: None,
             parser_picked: None,
-            multi_thread: false,
+            multi_thread: true,
             current_tf: PrewrittenTF::Green,
         }
     }

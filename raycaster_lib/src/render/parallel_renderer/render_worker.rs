@@ -1,11 +1,10 @@
 use std::sync::{Arc, RwLock};
 
-use arrayvec::ArrayVec;
 use crossbeam::select;
-use nalgebra::{point, vector, Matrix4, Vector2, Vector3};
+use nalgebra::{vector, Vector2, Vector3};
 
 use crate::{
-    common::{PixelBox, Ray},
+    common::Ray,
     volumetric::{Block, TF},
     PerspectiveCamera,
 };
@@ -14,7 +13,7 @@ use super::{
     communication::RenderWorkerComms,
     composition::SubCanvas,
     master_thread::PAR_SIDE,
-    messages::{OpacityRequest, SubRenderResult, ToCompositorMsg, ToRendererMsg, ToWorkerMsg},
+    messages::{SubRenderResult, ToWorkerMsg},
 };
 
 enum Run {
@@ -82,6 +81,9 @@ impl<'a> RenderWorker<'a> {
 
         let ordered_ids = self.get_block_info();
 
+        #[cfg(debug_assertions)]
+        println!("Render {}: entering main loop", self.renderer_id);
+
         loop {
             // Wait for task from master thread or finish call
             let task = select! {
@@ -99,7 +101,7 @@ impl<'a> RenderWorker<'a> {
             );
 
             // Safety: ref is unique
-            let mut subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
+            let subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
             #[cfg(debug_assertions)]
             println!(
@@ -125,7 +127,7 @@ impl<'a> RenderWorker<'a> {
             self.comms.result_sen.send(subrender_res).unwrap();
 
             #[cfg(debug_assertions)]
-            println!("Render {}: sent back {block_order}", self.renderer_id);
+            println!("Render {}: sent back block {block_order}", self.renderer_id);
         }
     }
 
@@ -173,6 +175,10 @@ impl<'a> RenderWorker<'a> {
                 //     || y == y_range.start
                 //     || y == y_range.end - 1
                 // {
+                //     color_buf[ptr] = vector![255.0, 255.0, 255.0];
+                //     opacities[ptr] = 1.0;
+                // }
+
                 color_buf[ptr] += color;
 
                 ptr += 1;

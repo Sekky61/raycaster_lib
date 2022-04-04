@@ -7,16 +7,12 @@ use crossbeam::channel::{Receiver, Sender};
 use nalgebra::vector;
 
 use crate::{
-    common::PixelBox,
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
     volumetric::{BlockVolume, Volume},
     PerspectiveCamera,
 };
 
-use super::{
-    communication::CommsBuilder,
-    messages::{RenderTask, SubFrameResult, ToMasterMsg, ToWorkerMsg},
-};
+use super::{communication::CommsBuilder, messages::ToWorkerMsg};
 use super::{
     composition::Canvas,
     workers::{CompWorker, RenderWorker},
@@ -28,7 +24,7 @@ const RENDERER_COUNT: u8 = 4;
 const COMPOSITER_COUNT: u8 = 4;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
-const TILE_SIDE: usize = 32;
+const TILE_SIDE: usize = 350;
 
 pub struct ParalelRenderer {
     volume: BlockVolume<PAR_SIDE>,
@@ -86,13 +82,10 @@ impl ParalelRenderer {
             crossbeam::scope(|s| {
                 let volume = &self.volume;
 
-                let buffer = Arc::new(Mutex::new(vec![
-                    0u8;
-                    3 * self.render_options.resolution.0
-                        * self.render_options.resolution.1
-                ]));
-
                 let canvas = Arc::new(Canvas::new(self.render_options.resolution, TILE_SIDE));
+
+                #[cfg(debug_assertions)]
+                println!("Master : build workers");
 
                 // inlined function because borrow checker defeated me (scope cannot leave closure)
                 let (master_comms, ren_handles, comp_handles) = {
@@ -119,6 +112,7 @@ impl ParalelRenderer {
                             .builder()
                             .name(format!("Ren{id}"))
                             .spawn(move |_| {
+                                #[cfg(debug_assertions)]
                                 println!("Started renderer {id}");
 
                                 let renderer = RenderWorker::new(
@@ -142,12 +136,13 @@ impl ParalelRenderer {
 
                         let comp_comms = comms.compositor(id as usize);
                         let canvas = canvas.clone();
-                        let buffer = buffer.clone();
+                        let buffer = self.buffer.clone();
 
                         let handle = s
                             .builder()
                             .name(format!("Com{id}"))
                             .spawn(move |_| {
+                                #[cfg(debug_assertions)]
                                 println!("Started compositor {id}");
 
                                 let compositor = CompWorker::new(
@@ -168,6 +163,9 @@ impl ParalelRenderer {
                     (comms.master(), renderers, compositors)
                 };
 
+                #[cfg(debug_assertions)]
+                println!("Master : entering main loop");
+
                 // Master loop
                 loop {
                     // Gather input
@@ -182,16 +180,33 @@ impl ParalelRenderer {
                     #[cfg(debug_assertions)]
                     println!("Master : start rendering");
 
+                    // Prepare canvas (mainly queues)
+                    {
+                        let camera = self.camera.read().unwrap();
+                        canvas.build_queues(&camera, &self.volume.data[..]);
+                    }
+
+                    #[cfg(debug_assertions)]
+                    println!("Master : queues built");
+
                     // Send go live messages
                     for worker in master_comms.command_sender.iter() {
                         worker.send(ToWorkerMsg::GoLive).unwrap();
                     }
 
+                    #[cfg(debug_assertions)]
+                    println!("Master : workers ordered to work, waiting for canvas");
+
                     // Wait for rendered frame
-                    todo!();
+                    master_comms.result_receiver.recv().unwrap();
 
                     // Send result
                     self.communication.0.send(()).unwrap();
+
+                    // Send finish messages and join threads
+                    for worker in master_comms.command_sender.iter() {
+                        worker.send(ToWorkerMsg::GoIdle).unwrap();
+                    }
 
                     #[cfg(debug_assertions)]
                     println!("Master : result sent");
