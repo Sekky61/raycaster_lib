@@ -18,7 +18,7 @@ use super::{
     workers::{CompWorker, RenderWorker},
 };
 
-pub const PAR_SIDE: usize = 16;
+pub const PAR_SIDE: usize = 64;
 
 const RENDERER_COUNT: u8 = 4;
 const COMPOSITER_COUNT: u8 = 4;

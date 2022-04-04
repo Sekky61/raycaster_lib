@@ -79,8 +79,6 @@ impl<'a> RenderWorker<'a> {
             .read()
             .expect("Cannot acquire read lock to camera");
 
-        let ordered_ids = self.get_block_info();
-
         #[cfg(debug_assertions)]
         println!("Render {}: entering main loop", self.renderer_id);
 
@@ -91,29 +89,22 @@ impl<'a> RenderWorker<'a> {
                 recv(self.comms.command_rec) -> msg => return msg.unwrap(),
             };
 
-            let block_order = task.block_id;
-            let (block_id, _) = ordered_ids[block_order];
+            let block_id = task.block_id;
 
             #[cfg(debug_assertions)]
-            println!(
-                "Render {}: got task order {block_order} block id {block_id}",
-                self.renderer_id
-            );
+            println!("Render {}: got task block id {block_id}", self.renderer_id);
 
             // Safety: ref is unique
             let subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
             #[cfg(debug_assertions)]
-            println!(
-                "Render {}: received opacities {block_order}",
-                self.renderer_id
-            );
+            println!("Render {}: received opacities {block_id}", self.renderer_id);
 
             let block = &self.blocks[block_id];
 
             #[cfg(debug_assertions)]
             println!(
-                "Render {}: rendering block order {block_order} (id {block_id})",
+                "Render {}: rendering block order {block_id} (id {block_id})",
                 self.renderer_id
             );
 
@@ -122,12 +113,12 @@ impl<'a> RenderWorker<'a> {
             // Opacities have been mutated
 
             #[cfg(debug_assertions)]
-            println!("Render {}: rendered {block_order}", self.renderer_id);
+            println!("Render {}: rendered {block_id}", self.renderer_id);
             let subrender_res = SubRenderResult::new(task.tile_id);
             self.comms.result_sen.send(subrender_res).unwrap();
 
             #[cfg(debug_assertions)]
-            println!("Render {}: sent back block {block_order}", self.renderer_id);
+            println!("Render {}: sent back block {block_id}", self.renderer_id);
         }
     }
 

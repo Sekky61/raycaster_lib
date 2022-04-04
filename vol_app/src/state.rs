@@ -104,7 +104,7 @@ impl State {
             slider: Default::default(),
             file_picked: None,
             parser_picked: None,
-            multi_thread: false,
+            multi_thread: true,
             current_tf: PrewrittenTF::Green,
         }
     }

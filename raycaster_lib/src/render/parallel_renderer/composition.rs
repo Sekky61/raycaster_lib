@@ -6,7 +6,7 @@ use std::{
 };
 
 use crossbeam::select;
-use nalgebra::{vector, Vector3};
+use nalgebra::{vector, Vector2, Vector3};
 
 use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
 
@@ -53,8 +53,7 @@ impl Canvas {
     // Calc pixel sizes and offsets
     // todo return only PixelBox
     pub fn new(resolution: (usize, usize), tile_side: usize) -> Canvas {
-        let tiles_x = (resolution.0 + tile_side - 1) / tile_side; // ceil
-        let tiles_y = (resolution.1 + tile_side - 1) / tile_side; // ceil
+        let (tiles_x, tiles_y) = Canvas::slice_into_tiles(resolution, tile_side);
         let size = PixelBox::new(0..resolution.0, 0..resolution.1);
 
         let mut sub_canvases = Vec::with_capacity(tiles_x * tiles_y); //todo
@@ -75,6 +74,7 @@ impl Canvas {
                 sub_canvases.push(sub_canvas);
             }
         }
+
         let remaining_subs = sub_canvases.len() as u32;
         Canvas {
             sub_canvases,
@@ -83,6 +83,12 @@ impl Canvas {
             tile_side,
             tiles_x,
         }
+    }
+
+    fn slice_into_tiles(resolution: (usize, usize), tile_side: usize) -> (usize, usize) {
+        let tiles_x = (resolution.0 + tile_side - 1) / tile_side; // ceil
+        let tiles_y = (resolution.1 + tile_side - 1) / tile_side; // ceil
+        (tiles_x, tiles_y)
     }
 
     // Interior mutability, needs exclusive access
@@ -112,14 +118,14 @@ impl Canvas {
             // Count which pixelboxes intersect
             // Assume all tiles are the same size
 
-            let tile_start_x = pixel_box.x.start / self.tile_side;
-            let tile_end_x = (pixel_box.x.end - 1) / self.tile_side;
+            let (tiles_x_range, tiles_y_range) =
+                Canvas::get_affected_tiles(res, pixel_box, self.tile_side);
 
-            let tile_start_y = pixel_box.y.start / self.tile_side;
-            let tile_end_y = (pixel_box.y.end - 1) / self.tile_side;
+            let mut flag = false;
 
-            for y in tile_start_y..=tile_end_y {
-                for x in tile_start_x..=tile_end_x {
+            for y in tiles_y_range {
+                for x in tiles_x_range.clone() {
+                    flag = true;
                     let tile_id = self.tiles_x * y + x;
 
                     // Safety: build phase, only master has access
@@ -127,7 +133,25 @@ impl Canvas {
                     tile.queue.push_back(block_id);
                 }
             }
+
+            if !flag {
+                let x = 5; // uheuibnejivnbaefjknvasdfjkvberub
+            }
         }
+    }
+
+    fn get_affected_tiles(
+        res: Vector2<usize>,
+        pixel_box: PixelBox,
+        tile_side: usize,
+    ) -> (std::ops::Range<usize>, std::ops::Range<usize>) {
+        let tile_start_x = pixel_box.x.start / tile_side;
+        let tile_end_x = (pixel_box.x.end + tile_side - 1) / tile_side;
+
+        let tile_start_y = pixel_box.y.start / tile_side;
+        let tile_end_y = (pixel_box.y.end + tile_side - 1) / tile_side;
+
+        (tile_start_x..tile_end_x, tile_start_y..tile_end_y)
     }
 }
 
@@ -321,4 +345,52 @@ fn convert_to_bytes(subcanvas_rgb: &[Vector3<f32>]) -> Vec<u8> {
         rgb.iter().for_each(|&val| v.push(val as u8));
     });
     v
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn slicing_tiles() {
+        let resolution = (700, 700);
+
+        let tile_side = 100;
+        let tiles = Canvas::slice_into_tiles(resolution, tile_side);
+        assert_eq!(tiles, (7, 7));
+
+        let tile_side = 16;
+        let tiles = Canvas::slice_into_tiles(resolution, tile_side);
+        assert_eq!(tiles, (44, 44));
+    }
+
+    #[test]
+    fn affected_tiles() {
+        let resolution = vector![700, 700];
+
+        let tile_side = 100;
+        let pixel_box = PixelBox::new(0..150, 0..180);
+        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        assert_eq!(tiles.0, 0..2);
+        assert_eq!(tiles.1, 0..2);
+
+        let tile_side = 16;
+        let pixel_box = PixelBox::new(16..33, 15..32);
+        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        assert_eq!(tiles.0, 1..3);
+        assert_eq!(tiles.1, 0..2);
+
+        let tile_side = 350;
+        let pixel_box = PixelBox::new(16..33, 15..32);
+        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        assert_eq!(tiles.0, 0..1);
+        assert_eq!(tiles.1, 0..1);
+
+        let tile_side = 350;
+        let pixel_box = PixelBox::new(300..500, 340..600);
+        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        assert_eq!(tiles.0, 0..2);
+        assert_eq!(tiles.1, 0..2);
+    }
 }
