@@ -163,7 +163,7 @@ where
             // relying on branch predictor to "eliminate" branch
             if self.render_options.ray_termination {
                 // early ray termination
-                if color_b.w > 0.99 {
+                if opacity > 0.99 {
                     break;
                 }
             }
@@ -172,11 +172,12 @@ where
     }
 
     pub fn collect_light_index(&self, ray: &Ray) -> Vector4<f32> {
-        let mut accum = vector![0.0, 0.0, 0.0, 0.0];
+        let mut rgb = vector![0.0, 0.0, 0.0];
+        let mut opacity = 0.0;
 
         let (obj_ray, t) = match self.volume.intersect_transform(ray) {
             Some(e) => e,
-            None => return accum,
+            None => return vector![0.0, 0.0, 0.0, 0.0],
         };
 
         let begin = obj_ray.origin;
@@ -214,7 +215,7 @@ where
             let grad = grad.normalize();
 
             let n_dot_l = f32::max(grad.dot(&light_source), 0.2);
-            let rgb = color_b.xyz() * n_dot_l;
+            let sample_rgb = color_b.xyz() * n_dot_l;
 
             pos += step;
 
@@ -225,16 +226,18 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum += (1.0 - accum.w) * vector![rgb.x, rgb.y, rgb.z, color_b.w]; // todo dont scale W
+            rgb += (1.0 - opacity) * color_b.w * sample_rgb;
+
+            opacity += (1.0 - opacity) * color_b.w;
 
             // relying on branch predictor to "eliminate" branch
             if self.render_options.ray_termination {
                 // early ray termination
-                if color_b.w > 0.99 {
+                if opacity > 0.99 {
                     break;
                 }
             }
         }
-        accum
+        vector![rgb.x, rgb.y, rgb.z, opacity]
     }
 }
