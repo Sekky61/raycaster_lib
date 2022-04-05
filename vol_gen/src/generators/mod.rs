@@ -1,3 +1,7 @@
+//! Generators module
+//!
+//! Types implmenting `SampleGenerator` can be used to generate volumes
+
 use std::{error::Error, io::Write};
 
 use nalgebra::Vector3;
@@ -24,11 +28,18 @@ pub trait Generator {
 // Generates continuous chunks of samples in any order
 pub trait ChunkGenerator {}
 
-// Generates one sample at a time, at any location
+/// Generates one sample at a time, at any location
 pub trait SampleGenerator {
+    /// Generate sample
+    /// Returns sample value
+    ///
+    /// # Arguments
+    ///
+    /// * `coords` - coordinates of the sample
     fn sample_at(&self, coords: Vector3<u32>) -> u8;
 }
 
+/// Obtain source of data
 pub fn get_sample_generator(config: &Config) -> Box<dyn SampleGenerator> {
     match config.generator {
         GeneratorConfig::Shapes { .. } => Box::new(ShapesGenerator::from_config(config)),
@@ -37,13 +48,15 @@ pub fn get_sample_generator(config: &Config) -> Box<dyn SampleGenerator> {
     }
 }
 
+/// Generate header and samples into file
+/// Samples are in linear order
 pub fn generate_linear_order(
     sg: Box<dyn SampleGenerator>,
     config: &Config,
 ) -> Result<(), Box<dyn Error>> {
+    // Open file
     let file_name = &config.file_name;
     let mut file = open_create_file(file_name)?;
-    let ord_iter = LinearCoordIterator::from_dims(config.dims);
 
     // Write header
     let header = generate_header(config);
@@ -52,7 +65,9 @@ pub fn generate_linear_order(
         return Err("Writing header error".into());
     }
 
-    // Write samples
+    // Write samples in linear order
+    let ord_iter = LinearCoordIterator::from_dims(config.dims);
+
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
         let written = file.write(&[sample])?;
@@ -65,14 +80,16 @@ pub fn generate_linear_order(
     Ok(())
 }
 
+/// Generate header and samples into file
+/// Samples are in Z order
 pub fn generate_z_order(
     sg: Box<dyn SampleGenerator>,
     config: &Config,
     block_side: u32,
 ) -> Result<(), Box<dyn Error>> {
+    // Open file
     let file_name = &config.file_name;
     let mut file = open_create_file(file_name)?;
-    let ord_iter = ZCoordIterator::new(config.dims, block_side);
 
     // Write header
     let header = generate_header(config);
@@ -82,6 +99,8 @@ pub fn generate_z_order(
     }
 
     // Write samples
+    let ord_iter = ZCoordIterator::new(config.dims, block_side);
+
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
         let written = file.write(&[sample])?;

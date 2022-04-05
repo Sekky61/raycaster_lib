@@ -1,3 +1,6 @@
+//! Argument parsing and validation
+//! Uses library `clap`
+
 use std::ffi::OsStr;
 
 use clap::{Arg, Command, ValueHint};
@@ -43,7 +46,7 @@ const GENERATOR_NAMES: &[&str] = &["shapes", "noise", "solid"];
 const LAYOUT_NAMES: &[&str] = &["linear", "z"];
 
 pub fn get_command<'a>() -> Command<'a> {
-    Command::new("My Program")
+    Command::new("Vol-gen")
         .author("Michal Majer")
         .version("0.1.0")
         .about("Volumetric data generator")

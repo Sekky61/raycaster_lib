@@ -1,3 +1,5 @@
+//! Orders in which samples can be laid out
+
 mod linear_order;
 mod z_order;
 

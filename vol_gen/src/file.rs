@@ -3,6 +3,9 @@ use std::{
     path::Path,
 };
 
+/// Open file
+/// Existing files are rewritten
+/// Non-existing files are created
 pub fn open_create_file<P>(path: P) -> Result<File, std::io::Error>
 where
     P: AsRef<Path>,

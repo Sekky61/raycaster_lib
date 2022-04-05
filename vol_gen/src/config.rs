@@ -5,8 +5,7 @@ use nalgebra::{vector, Vector3};
 
 use crate::{header::HeaderFormat, orders::SampleOrder};
 
-// todo Describe command args here
-
+/// Transform `Values` into `Vector`
 fn values_to_vector3<T>(args: &ArgMatches, key: &str) -> Vector3<T>
 where
     T: FromStr + Copy,
@@ -21,14 +20,23 @@ where
     vector![vals[0], vals[1], vals[2]]
 }
 
+/// App configuration
+/// Config is built from args parsed by `clap`
 #[derive(Debug)]
 pub struct Config {
+    /// Dimensions of volume
     pub dims: Vector3<u32>,
+    /// Shape of cells
     pub cell_shape: Vector3<f32>,
+    /// Type of generator to be used
     pub generator: GeneratorConfig,
+    /// Format of header
     pub header_format: HeaderFormat,
+    /// Order of samples in file
     pub save_buffer_order: SampleOrder,
+    // Output file name
     pub file_name: OsString,
+    /// _unimplemented_ Use sparse files to save space
     pub sparse_file: bool,
 }
 
@@ -80,11 +88,14 @@ impl Config {
     }
 }
 
-// Enum variant has settings specific to generator variant
+/// Settings specific to generator variant
 #[derive(Debug)]
 pub enum GeneratorConfig {
+    /// Generate shapes
     Shapes { n_of_shapes: usize, sample: u8 },
+    /// _unimplemented_ Generate random data
     Noise,
+    /// Generate solid volume
     Solid { sample: u8 },
 }
 

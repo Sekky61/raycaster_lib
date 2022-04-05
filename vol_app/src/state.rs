@@ -27,9 +27,9 @@ use super::App;
 pub const RENDER_WIDTH_U: usize = 700;
 pub const RENDER_HEIGHT_U: usize = 700;
 
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/a.vol";
-pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
-const DEFAULT_MULTI_THREAD: bool = true;
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol"
+pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
+const DEFAULT_MULTI_THREAD: bool = false;
 
 pub enum CameraMovement {
     PositionOrtho(Vector3<f32>),
@@ -351,7 +351,7 @@ fn volume_setup_linear(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, false);
+    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
 
     SerialRenderer::new(volume, camera, render_options)
 }

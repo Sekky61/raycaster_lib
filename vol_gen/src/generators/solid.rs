@@ -4,8 +4,10 @@ use crate::config::{Config, GeneratorConfig};
 
 use super::SampleGenerator;
 
+/// Generate solid volume
+/// All sample values are the same
 pub struct SolidGenerator {
-    // todo pad a little, gradients are badly defined on volume edge
+    /// The sample value
     sample: u8,
 }
 
