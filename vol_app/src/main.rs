@@ -4,7 +4,6 @@ use nalgebra::vector;
 use native_dialog::FileDialog;
 use raycaster_lib::render::RendererMessage;
 use slint::{re_exports::EventResult, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode};
-use state::{RENDER_HEIGHT, RENDER_HEIGHT_U, RENDER_WIDTH, RENDER_WIDTH_U};
 
 use crate::state::State;
 
@@ -63,7 +62,10 @@ pub fn main() {
         let mut state_ref = state_clone.borrow_mut();
         let app = state_ref.app.unwrap();
 
-        let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(RENDER_WIDTH, RENDER_HEIGHT);
+        let mut pixel_buffer = SharedPixelBuffer::<Rgb8Pixel>::new(
+            state_ref.render_resolution.x as u32,
+            state_ref.render_resolution.y as u32,
+        );
 
         let shared_buffer = state_ref.renderer_front.get_buffer_handle().unwrap();
 

@@ -61,7 +61,6 @@ impl<'a> RenderWorker<'a> {
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::StopRendering => Run::Continue,
                 ToWorkerMsg::GoLive => Run::Render,
                 ToWorkerMsg::Finish => Run::Stop,
             };
@@ -133,7 +132,7 @@ impl<'a> RenderWorker<'a> {
         let color_buf = &mut subcanvas.colors[..];
         let mut ptr = 0;
 
-        for y in y_range.clone() {
+        for y in y_range {
             let y_norm = y as f32 * step_f.y;
             for x in x_range.clone() {
                 // todo clone here -- maybe use own impl
@@ -210,22 +209,5 @@ impl<'a> RenderWorker<'a> {
         }
 
         accum
-    }
-
-    // Return collection of blocks in the subframe
-    // Collection is sorted by distance (asc.)
-    fn get_block_info(&self) -> Vec<(usize, f32)> {
-        let mut relevant_ids = vec![];
-        {
-            let camera = self.camera.read().unwrap();
-
-            for (i, block) in self.blocks.iter().enumerate() {
-                let distance = camera.box_distance(&block.bound_box);
-                relevant_ids.push((i, distance));
-            }
-        }
-        relevant_ids.sort_unstable_by(|b1, b2| b1.1.partial_cmp(&b2.1).unwrap());
-
-        relevant_ids
     }
 }

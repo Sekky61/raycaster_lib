@@ -11,7 +11,7 @@ use nalgebra::{point, vector, Vector2, Vector3};
 use raycaster_lib::{
     premade::{
         parse::{from_file, generator_parser, skull_parser},
-        transfer_functions::{self, skull_tf},
+        transfer_functions,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
     volumetric::LinearVolume,
@@ -27,10 +27,9 @@ use super::App;
 pub const RENDER_WIDTH_U: usize = 700;
 pub const RENDER_HEIGHT_U: usize = 700;
 
-pub const RENDER_WIDTH: u32 = RENDER_WIDTH_U as u32;
-pub const RENDER_HEIGHT: u32 = RENDER_HEIGHT_U as u32;
-
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol";
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/a.vol";
+pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
+const DEFAULT_MULTI_THREAD: bool = true;
 
 pub enum CameraMovement {
     PositionOrtho(Vector3<f32>),
@@ -71,6 +70,7 @@ pub struct State {
     pub is_rendering: bool,
     pub camera_buffer: CameraBuffer,
     pub multi_thread: bool,
+    pub render_resolution: Vector2<usize>,
     // GUI
     pub timer: Instant,
     pub slider: Vector3<f32>,
@@ -104,8 +104,9 @@ impl State {
             slider: Default::default(),
             file_picked: None,
             parser_picked: None,
-            multi_thread: true,
+            multi_thread: DEFAULT_MULTI_THREAD,
             current_tf: PrewrittenTF::Green,
+            render_resolution: vector![RENDER_WIDTH_U, RENDER_HEIGHT_U],
         }
     }
 
@@ -241,7 +242,7 @@ impl State {
     }
 
     pub fn initial_render_call(&mut self) {
-        self.start_renderer(DEFAULT_VOLUME_PATH.into(), PrewrittenParser::SkullParser);
+        self.start_renderer(DEFAULT_VOLUME_PATH.into(), DEFAULT_VOLUME_PARSER);
     }
 
     pub fn handle_open_vol(&mut self, parser_index: i32) {

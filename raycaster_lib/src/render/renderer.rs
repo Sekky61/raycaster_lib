@@ -1,5 +1,3 @@
-use std::cmp::min;
-
 use nalgebra::{vector, Vector4};
 
 use crate::{

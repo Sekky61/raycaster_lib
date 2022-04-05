@@ -6,14 +6,14 @@ use std::{
 };
 
 use crossbeam::select;
-use nalgebra::{vector, Vector2, Vector3};
+use nalgebra::{vector, Vector3};
 
 use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
 
 use super::{
     communication::CompWorkerComms,
     master_thread::PAR_SIDE,
-    messages::{RenderTask, SubFrameResult, SubRenderResult, ToMasterMsg, ToWorkerMsg},
+    messages::{RenderTask, ToMasterMsg, ToWorkerMsg},
 };
 
 pub struct SubCanvas {
@@ -119,13 +119,10 @@ impl Canvas {
             // Assume all tiles are the same size
 
             let (tiles_x_range, tiles_y_range) =
-                Canvas::get_affected_tiles(res, pixel_box, self.tile_side);
-
-            let mut flag = false;
+                Canvas::get_affected_tiles(pixel_box, self.tile_side);
 
             for y in tiles_y_range {
                 for x in tiles_x_range.clone() {
-                    flag = true;
                     let tile_id = self.tiles_x * y + x;
 
                     // Safety: build phase, only master has access
@@ -133,15 +130,10 @@ impl Canvas {
                     tile.queue.push_back(block_id);
                 }
             }
-
-            if !flag {
-                let x = 5; // uheuibnejivnbaefjknvasdfjkvberub
-            }
         }
     }
 
     fn get_affected_tiles(
-        res: Vector2<usize>,
         pixel_box: PixelBox,
         tile_side: usize,
     ) -> (std::ops::Range<usize>, std::ops::Range<usize>) {
@@ -195,7 +187,6 @@ impl CompWorker {
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::StopRendering => Run::Continue,
                 ToWorkerMsg::GoLive => Run::Render,
                 ToWorkerMsg::Finish => Run::Stop,
             };
@@ -367,29 +358,27 @@ mod test {
 
     #[test]
     fn affected_tiles() {
-        let resolution = vector![700, 700];
-
         let tile_side = 100;
         let pixel_box = PixelBox::new(0..150, 0..180);
-        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        let tiles = Canvas::get_affected_tiles(pixel_box, tile_side);
         assert_eq!(tiles.0, 0..2);
         assert_eq!(tiles.1, 0..2);
 
         let tile_side = 16;
         let pixel_box = PixelBox::new(16..33, 15..32);
-        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        let tiles = Canvas::get_affected_tiles(pixel_box, tile_side);
         assert_eq!(tiles.0, 1..3);
         assert_eq!(tiles.1, 0..2);
 
         let tile_side = 350;
         let pixel_box = PixelBox::new(16..33, 15..32);
-        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        let tiles = Canvas::get_affected_tiles(pixel_box, tile_side);
         assert_eq!(tiles.0, 0..1);
         assert_eq!(tiles.1, 0..1);
 
         let tile_side = 350;
         let pixel_box = PixelBox::new(300..500, 340..600);
-        let tiles = Canvas::get_affected_tiles(resolution, pixel_box, tile_side);
+        let tiles = Canvas::get_affected_tiles(pixel_box, tile_side);
         assert_eq!(tiles.0, 0..2);
         assert_eq!(tiles.1, 0..2);
     }

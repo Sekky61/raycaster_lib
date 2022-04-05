@@ -7,7 +7,6 @@ use crate::config::{Config, GeneratorConfig};
 use super::SampleGenerator;
 
 pub struct ShapesGenerator {
-    dims: Vector3<u32>, // todo unnecessary
     shapes: Vec<ShapeInfo>,
 }
 
@@ -24,7 +23,7 @@ impl ShapesGenerator {
         let random_shape_gen =
             ShapeInfoGenerator::new(dims, vector![7, 7, 7], vector![0, 0, 0], sample);
         let shapes = random_shape_gen.get_shapes(n_of_shapes);
-        ShapesGenerator { dims, shapes }
+        ShapesGenerator { shapes }
     }
 }
 

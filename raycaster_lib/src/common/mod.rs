@@ -3,25 +3,11 @@ mod ray;
 mod value_range;
 mod viewport_box;
 
-use std::fmt::Debug;
-
 pub use bound_box::{BoundBox, BoundBoxIterator};
-use nalgebra::{vector, Point3, Vector3};
+use nalgebra::{vector, Vector3};
 pub use ray::Ray;
 pub use value_range::ValueRange;
 pub use viewport_box::{PixelBox, ViewportBox};
-
-// Order of growth: Z, Y, X
-// Z is the fastest moving axis
-pub fn index_3d<I, II>(index: Point3<I>, vol_size: Vector3<II>) -> usize
-where
-    I: Into<usize> + Copy + PartialEq + Debug + 'static,
-    II: Into<usize> + Copy + PartialEq + Debug + 'static,
-{
-    index.z.into()
-        + index.y.into() * vol_size.z.into()
-        + index.x.into() * vol_size.y.into() * vol_size.z.into()
-}
 
 // Rounds up
 pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<usize> {
@@ -36,25 +22,9 @@ pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<us
 #[cfg(test)]
 mod test {
 
-    use nalgebra::{point, vector};
+    use nalgebra::vector;
 
     use super::*;
-
-    #[test]
-    fn index_3d_test() {
-        let size = vector![3usize, 4, 5];
-        let index = point![2usize, 2, 2];
-
-        assert_eq!(index_3d(index, size), 5 * 4 * 2 + 5 * 2 + 2);
-
-        let index = point![0usize, 0, 0];
-
-        assert_eq!(index_3d(index, size), 0);
-
-        let index = point![2usize, 3, 4];
-
-        assert_eq!(index_3d(index, size), 3 * 4 * 5 - 1);
-    }
 
     #[test]
     fn blockify_3() {

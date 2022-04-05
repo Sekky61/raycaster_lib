@@ -215,8 +215,6 @@ mod test {
 
     use nalgebra::{point, vector};
 
-    use crate::test_helpers::skull_volume;
-
     use super::*;
 
     // Copy of block indexing for testing (no constants)
@@ -297,11 +295,5 @@ mod test {
         assert_eq!(c[8], 20.0);
 
         assert_eq!(c[(4 * 4)..((4 * 4) + 4)], [100.0, 101.0, 102.0, 103.0]);
-    }
-
-    #[test]
-    #[ignore]
-    fn block_order() {
-        let volume: BlockVolume<4> = skull_volume();
     }
 }

@@ -1,9 +1,6 @@
-use arrayvec::ArrayVec;
 use crossbeam::channel::{Receiver, Sender};
 
-use super::messages::{
-    RenderTask, SubRenderResult, ToCompositorMsg, ToMasterMsg, ToRendererMsg, ToWorkerMsg,
-};
+use super::messages::{RenderTask, SubRenderResult, ToMasterMsg, ToWorkerMsg};
 
 type Channel<T> = (Sender<T>, Receiver<T>);
 

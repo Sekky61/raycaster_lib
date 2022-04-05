@@ -133,15 +133,3 @@ impl Volume for StreamVolume {
         vector![1.0, 1.0, 1.0]
     }
 }
-
-#[cfg(test)]
-mod test {
-
-    use super::*;
-    use nalgebra::{point, vector};
-
-    #[test]
-    fn t1() {
-        println!("{:?}", std::env::current_dir());
-    }
-}
