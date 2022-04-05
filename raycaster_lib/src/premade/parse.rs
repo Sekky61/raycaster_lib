@@ -153,13 +153,14 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         scale,
     } = meta;
 
-    let data_shape = match slice[25] {
+    let data_shape = match slice[24] {
         1 => StorageShape::Linear,
-        2 => StorageShape::Z(slice[26]),
+        2 => StorageShape::Z(slice[25]),
         _ => return Err("Unknown data shape"),
     };
 
-    assert_eq!(slice.len() - offset, size.x * size.y * size.z); // todo maybe doesnt hold for z shape
+    dbg!(slice.len() - offset);
+    assert_eq!(slice.len() - offset, size.x * size.y * size.z); // todo doesnt hold for z shape (padidng to blocks)
 
     Ok(VolumeMetadata {
         position: None,
@@ -175,16 +176,15 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
 fn generator_inner(s: &[u8]) -> IResult<&[u8], ExtractedMetaGen> {
     let mut gen_header = tuple((
         tuple((le_u32, le_u32, le_u32)),
-        take(1_u8),
         tuple((le_f32, le_f32, le_f32)),
     ));
 
-    let (s, (size, _, scale)) = gen_header(s)?;
+    let (s, (size, scale)) = gen_header(s)?;
 
     let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
     let scale = vector![scale.0 * 0.99, scale.1 * 0.99, scale.2 * 0.99];
 
-    let offset = 27; // 12 + 1 + 12 + 2 = 27, data starts at this index
+    let offset = 26; // 12 + 12 + 2 = 26, data starts at this index
 
     Ok((
         s,

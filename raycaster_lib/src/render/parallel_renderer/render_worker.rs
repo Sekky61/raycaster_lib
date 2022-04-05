@@ -97,16 +97,7 @@ impl<'a> RenderWorker<'a> {
             // Safety: ref is unique
             let subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
-            #[cfg(debug_assertions)]
-            println!("Render {}: received opacities {block_id}", self.renderer_id);
-
             let block = &self.blocks[block_id];
-
-            #[cfg(debug_assertions)]
-            println!(
-                "Render {}: rendering block order {block_id} (id {block_id})",
-                self.renderer_id
-            );
 
             // Render task
             self.render_block(&camera, subcanvas, block);
