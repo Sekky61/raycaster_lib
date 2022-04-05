@@ -62,6 +62,7 @@ pub enum PrewrittenParser {
 pub enum PrewrittenTF {
     Green,
     Gray,
+    White,
 }
 
 pub struct State {
@@ -315,6 +316,7 @@ fn volume_setup_paralel(
     let tf_fn = match tf {
         PrewrittenTF::Green => transfer_functions::skull_tf,
         PrewrittenTF::Gray => transfer_functions::anything_tf,
+        PrewrittenTF::White => transfer_functions::white_tf,
     };
 
     let volume = from_file(path, parser_fn, tf_fn).unwrap();
@@ -343,6 +345,7 @@ fn volume_setup_linear(
     let tf_fn = match tf {
         PrewrittenTF::Green => transfer_functions::skull_tf,
         PrewrittenTF::Gray => transfer_functions::anything_tf,
+        PrewrittenTF::White => transfer_functions::white_tf,
     };
 
     let volume = from_file(path, parser_fn, tf_fn).unwrap();

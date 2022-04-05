@@ -8,15 +8,22 @@ pub struct PerspectiveCamera {
     position: Point3<f32>,
     /// Up direction from the camera's perspective
     up: Vector3<f32>, // up vector = 0,1,0
+    /// Right direction from the camera's perspective
     right: Vector3<f32>,
+    /// Direction of camera
     direction: Vector3<f32>, // todo unit?
+    /// Aspect ratio of image plane
     aspect: f32,
-    fov_y: f32,                   // Vertical field of view, in degrees
+    /// Vertical Field of View in degrees
+    fov_y: f32,
+    /// Size of image plane
     img_plane_size: Vector2<f32>, // Calculated from fov_y
-    // ray
+    /// Direction of ray passing through pixel \[0,0\]
     dir_00: Vector3<f32>, // Vector from camera point to pixel \[0,0\] | upper left corner, in line with buffer convention
-    du: Vector3<f32>, // Vector between two horizontally neighbouring pixels (example: [0,0] -> [1,0])
-    dv: Vector3<f32>, // Vector between two vertically neighbouring pixels (example: [0,0] -> [0,1])
+    /// Vector offset between two horizontally neighbouring pixels (such as: [0,0] -> [1,0])
+    du: Vector3<f32>,
+    /// Vector offset between two vertically neighbouring pixels (such as: [0,0] -> [0,1])
+    dv: Vector3<f32>,
 }
 
 impl PerspectiveCamera {
@@ -34,8 +41,6 @@ impl PerspectiveCamera {
     /// Default fov is 60 degrees, default aspect ratio is 1. To change it,
     /// call [`change_aspect_from_resolution`](PerspectiveCamera::change_aspect_from_resolution),
     /// [`change_fov`](PerspectiveCamera::change_fov), [`change_aspect`](PerspectiveCamera::change_aspect)
-    ///
-    ///
     pub fn new(position: Point3<f32>, direction: Vector3<f32>) -> PerspectiveCamera {
         // todo init with resolution?
         let up = vector![0.0, 1.0, 0.0];
@@ -190,6 +195,7 @@ impl PerspectiveCamera {
     ///
     /// * pixel_coord - Coordinates in the range of `<0;1>x<0;1>`, point \[0,0\] being upper left corner
     pub fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
+        // todo component_mul
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
         Ray::from_3(self.position, dir)
@@ -199,6 +205,7 @@ impl PerspectiveCamera {
     ///
     /// Resulting viewport box is the minimal orthogonal rectangular projection
     pub fn project_box(&self, bound_box: BoundBox) -> ViewportBox {
+        // Source: https://github.com/ospray/ospray, Intel corp., Apache 2.0 license
         let mut viewbox = ViewportBox::new();
 
         let dun = self.du.normalize() / self.img_plane_size.x;

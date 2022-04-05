@@ -4,11 +4,22 @@ use crate::color::{self, RGBA};
 // Skull has u8 samples (0;255)
 #[allow(dead_code)]
 pub fn skull_tf(sample: f32) -> RGBA {
-    if sample > 170.0 {
+    if sample > 150.0 {
         //RGBA::new(220.0, 0.0, 20.0, 0.14)
-        RGBA::new(220.0, 40.0, 60.0, 0.9)
+        RGBA::new(220.0, 40.0, 60.0, 0.5)
     } else if sample > 5.0 {
-        RGBA::new(40.0, 190.0, 5.0, 0.16)
+        RGBA::new(45.0, 180.0, 5.0, 0.20)
+    } else {
+        color::zero()
+    }
+}
+
+// R G B A -- A <0;1>
+// Skull has u8 samples (0;255)
+#[allow(dead_code)]
+pub fn white_tf(sample: f32) -> RGBA {
+    if sample > 10.0 {
+        RGBA::new(255.0, 255.0, 255.0, 0.3)
     } else {
         color::zero()
     }
