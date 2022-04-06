@@ -1,6 +1,7 @@
 use std::{fs::File, mem::size_of, path::Path};
 
-use super::TF;
+use crate::TF;
+
 use memmap::{Mmap, MmapOptions};
 use nalgebra::{Point3, Vector3};
 

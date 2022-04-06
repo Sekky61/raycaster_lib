@@ -8,7 +8,10 @@ use nom::{
     IResult,
 };
 
-use crate::volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMetadata, TF};
+use crate::{
+    volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMetadata},
+    TF,
+};
 
 use super::transfer_functions::{beetle_tf, skull_tf};
 

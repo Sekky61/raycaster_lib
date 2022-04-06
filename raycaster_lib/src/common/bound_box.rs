@@ -13,6 +13,16 @@ impl BoundBox {
         BoundBox { lower, upper }
     }
 
+    /// Zero sized boundbox
+    ///
+    /// For testing purposes, where bound box is irrelevant
+    pub fn empty() -> BoundBox {
+        BoundBox {
+            lower: point![0.0, 0.0, 0.0],
+            upper: point![0.0, 0.0, 0.0],
+        }
+    }
+
     pub fn from_position_dims(position: Point3<f32>, dimensions: Vector3<f32>) -> BoundBox {
         BoundBox {
             lower: position,

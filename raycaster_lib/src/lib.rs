@@ -15,3 +15,6 @@ pub mod test_helpers;
 pub mod volumetric;
 
 pub use perspective_camera::PerspectiveCamera;
+
+use volumetric::RGBA;
+pub type TF = fn(f32) -> RGBA; // todo tf module, with trait

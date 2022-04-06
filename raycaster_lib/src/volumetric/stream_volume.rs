@@ -1,9 +1,9 @@
 use memmap::Mmap;
 use nalgebra::{point, vector, Vector3};
 
-use crate::{common::BoundBox, volumetric::vol_builder::DataSource};
+use crate::{common::BoundBox, volumetric::vol_builder::DataSource, TF};
 
-use super::{vol_builder::VolumeMetadata, BuildVolume, Volume, TF};
+use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 // todo typed mmap
 #[derive(Debug)]

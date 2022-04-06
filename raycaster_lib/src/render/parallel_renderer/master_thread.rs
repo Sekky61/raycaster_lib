@@ -183,7 +183,11 @@ impl ParalelRenderer {
                     // Prepare canvas (mainly queues)
                     {
                         let camera = self.camera.read().unwrap();
-                        canvas.build_queues(&camera, &self.volume.data[..]);
+                        canvas.build_queues(
+                            &camera,
+                            &self.volume.data[..],
+                            &self.volume.empty_blocks[..],
+                        );
                     }
 
                     #[cfg(debug_assertions)]

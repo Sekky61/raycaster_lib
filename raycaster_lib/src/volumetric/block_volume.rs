@@ -1,11 +1,14 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::common::{blockify, BoundBox};
+use crate::{
+    common::{blockify, tf_visible_range, BoundBox},
+    TF,
+};
 
 use super::{
     block::Block,
     vol_builder::{BuildVolume, VolumeMetadata},
-    Volume, TF,
+    Volume,
 };
 
 // Default overlap == 1
@@ -13,6 +16,7 @@ pub struct BlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
+    pub empty_blocks: Vec<bool>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
     pub data: Vec<Block>,
     tf: TF,
@@ -39,6 +43,17 @@ impl BlockVolume {
             Some(b) => b.data.get(block_offset).copied(),
             None => None,
         }
+    }
+
+    pub fn build_empty(blocks: &[Block], tf: TF) -> Vec<bool> {
+        let mut v = Vec::with_capacity(blocks.len());
+        let vis_ranges = tf_visible_range(tf);
+
+        for block in blocks {
+            let visible = vis_ranges.iter().any(|r| r.intersects(&block.value_range));
+            v.push(!visible);
+        }
+        v
     }
 }
 
@@ -90,7 +105,7 @@ impl Volume for BlockVolume {
         self.get_3d_data(x, y, z)
     }
 
-    fn get_tf(&self) -> super::TF {
+    fn get_tf(&self) -> TF {
         self.tf
     }
 
@@ -143,6 +158,8 @@ impl BuildVolume<u8> for BlockVolume {
             }
         }
 
+        let empty_blocks = BlockVolume::build_empty(&blocks, tf);
+
         println!(
             "Built {} blocks of dims {} blocks ({},{},{}) -> ({},{},{})",
             blocks.len(),
@@ -162,6 +179,7 @@ impl BuildVolume<u8> for BlockVolume {
             data: blocks,
             tf,
             block_side,
+            empty_blocks,
         })
     }
 }
@@ -255,6 +273,23 @@ mod test {
 
     //     assert_eq!(block.value_range.limits(), (0.0, 1.9));
     // }
+
+    #[test]
+    fn build_empty() {
+        let block1 = Block::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
+        let block2 = Block::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
+        let block3 = Block::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
+        let blocks = &[block1, block2, block3];
+
+        let tf = |v: f32| vector![1.0, 1.0, 1.0, v];
+
+        let empty = BlockVolume::build_empty(blocks, tf);
+
+        assert_eq!(empty.len(), 3);
+        assert!(empty[0]);
+        assert!(!empty[1]);
+        assert!(!empty[2]);
+    }
 
     #[test]
     fn block_indexing_3() {

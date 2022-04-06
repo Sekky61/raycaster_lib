@@ -9,6 +9,8 @@ pub use ray::Ray;
 pub use value_range::ValueRange;
 pub use viewport_box::{PixelBox, ViewportBox};
 
+use crate::TF;
+
 // Rounds up
 pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<usize> {
     let cells = side - overlap; // cells per block
@@ -19,12 +21,53 @@ pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<us
     y / cells
 }
 
+// Assumes range of values <0.0;255.0>
+pub fn tf_visible_range(tf: TF) -> Vec<ValueRange> {
+    let mut ranges = vec![];
+    let mut range: Option<ValueRange> = None;
+
+    for v in 0..=255 {
+        let v = v as f32;
+        let sample = tf(v);
+        if sample.w == 0.0 {
+            if let Some(mut r) = range.take() {
+                r.high = v;
+                ranges.push(r);
+            }
+        } else if range.is_none() {
+            range = Some(ValueRange::seed(v));
+        }
+    }
+
+    if let Some(mut range) = range {
+        range.high = 255.0;
+        ranges.push(range);
+    }
+    ranges
+}
+
 #[cfg(test)]
 mod test {
 
     use nalgebra::vector;
 
     use super::*;
+
+    #[test]
+    fn tf_range() {
+        let tf = |x: f32| {
+            if x > 10.5 && x < 20.5 {
+                return vector![1.0, 1.0, 1.0, 1.0];
+            } else {
+                return vector![1.0, 1.0, 1.0, 0.0];
+            }
+        };
+
+        let ranges = tf_visible_range(tf);
+
+        assert_eq!(ranges.len(), 1);
+        assert_eq!(ranges[0], ValueRange::from_range(11.0..21.0));
+    }
 
     #[test]
     fn blockify_3() {

@@ -1,10 +1,10 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::common::BoundBox;
+use crate::{common::BoundBox, TF};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
-    Volume, TF,
+    Volume,
 };
 
 pub struct LinearVolume {

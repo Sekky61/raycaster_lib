@@ -17,8 +17,6 @@ pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
 pub use volume::Volume;
 
-pub type TF = fn(f32) -> RGBA; // todo tf module, with trait
-
 #[cfg(test)]
 mod test {
 

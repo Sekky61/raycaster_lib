@@ -3,11 +3,7 @@ use std::sync::{Arc, RwLock};
 use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 
-use crate::{
-    common::Ray,
-    volumetric::{Block, TF},
-    PerspectiveCamera,
-};
+use crate::{common::Ray, volumetric::Block, PerspectiveCamera, TF};
 
 use super::{
     communication::RenderWorkerComms,

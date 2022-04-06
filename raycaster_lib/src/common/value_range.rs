@@ -1,8 +1,9 @@
 use std::ops::Deref;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ValueRange {
-    low: f32,
-    high: f32,
+    pub low: f32,
+    pub high: f32,
 }
 
 impl ValueRange {
@@ -17,6 +18,13 @@ impl ValueRange {
         ValueRange {
             low: val,
             high: val,
+        }
+    }
+
+    pub fn from_range(range: std::ops::Range<f32>) -> ValueRange {
+        ValueRange {
+            low: range.start,
+            high: range.end,
         }
     }
 
@@ -48,6 +56,15 @@ impl ValueRange {
 
     pub fn contains(&self, val: f32) -> bool {
         self.low <= val && val <= self.high
+    }
+
+    /// Touching intervals intersect
+    pub fn intersects(&self, other: &ValueRange) -> bool {
+        // todo test
+        (other.low <= self.high && other.low >= self.low)
+            || (other.high >= self.low && other.high <= self.high)
+            || (self.high >= other.low && self.high <= other.high)
+            || (self.low <= other.high && self.low >= other.low)
     }
 
     pub fn limits(&self) -> (f32, f32) {
