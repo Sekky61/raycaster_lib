@@ -10,7 +10,7 @@ fn get_ui_from_usize(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: true,
         empty_index: true,
     };
@@ -31,7 +31,7 @@ fn get_ui_from_float(c: &mut Criterion) {
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: true,
         empty_index: true,
     };

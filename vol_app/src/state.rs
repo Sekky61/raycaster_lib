@@ -25,8 +25,8 @@ use slint::{
 
 use super::App;
 
-pub const RENDER_WIDTH_U: usize = 700;
-pub const RENDER_HEIGHT_U: usize = 700;
+pub const RENDER_WIDTH_U: u16 = 700;
+pub const RENDER_HEIGHT_U: u16 = 700;
 
 pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol"
 pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
@@ -88,7 +88,7 @@ pub struct State {
     pub is_rendering: bool,
     pub camera_buffer: CameraBuffer,
     pub multi_thread: bool,
-    pub render_resolution: Vector2<usize>,
+    pub render_resolution: Vector2<u16>,
     // GUI
     pub timer: Instant,
     pub slider: Vector3<f32>,
@@ -355,7 +355,7 @@ fn volume_setup_paralel(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+    let render_options = RenderOptions::new(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U], true, true);
 
     ParalelRenderer::new(volume, camera, render_options)
 }
@@ -385,7 +385,7 @@ fn volume_setup_linear(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new((RENDER_WIDTH_U, RENDER_HEIGHT_U), true, true);
+    let render_options = RenderOptions::new(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U], true, true);
 
     SerialRenderer::new(volume, camera, render_options)
 }

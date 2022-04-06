@@ -4,6 +4,7 @@ use std::{
 };
 
 pub use criterion::{criterion_group, criterion_main, Criterion};
+use nalgebra::Vector2;
 pub use nalgebra::{point, vector, Point3, Vector3};
 pub use raycaster_lib::{
     render::{RenderOptions, Renderer},
@@ -11,8 +12,10 @@ pub use raycaster_lib::{
     PerspectiveCamera,
 };
 
-pub const WIDTH: usize = 700;
-pub const HEIGHT: usize = 700;
+pub const WIDTH: u16 = 700;
+pub const HEIGHT: u16 = 700;
+
+pub const RESOLUTION: Vector2<u16> = vector![WIDTH, HEIGHT];
 
 pub const POSITION: Point3<f32> = point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE];
 pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];

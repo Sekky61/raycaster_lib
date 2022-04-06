@@ -38,7 +38,7 @@ impl ViewportBox {
         self.upper - self.lower
     }
 
-    pub fn get_pixel_range(&self, resolution: Vector2<usize>) -> PixelBox {
+    pub fn get_pixel_range(&self, resolution: Vector2<u16>) -> PixelBox {
         // Approach: floor values down to nearest pixel
         // Two adjacent boxes can share one line of pixels
         // TODO might be good to ceil values
@@ -46,8 +46,8 @@ impl ViewportBox {
         let res_f = resolution.map(|v| v as f32);
 
         // Converting to integer rounds down
-        let low_pixel = (self.lower.component_mul(&res_f)).map(|v| v as usize);
-        let high_pixel = (self.upper.component_mul(&res_f)).map(|v| v as usize);
+        let low_pixel = (self.lower.component_mul(&res_f)).map(|v| v as u16);
+        let high_pixel = (self.upper.component_mul(&res_f)).map(|v| v as u16);
 
         PixelBox::new(low_pixel.x..high_pixel.x, low_pixel.y..high_pixel.y)
     }
@@ -93,25 +93,26 @@ impl ViewportBox {
 // if x = 0..10, the width is 10, tenth pixel is index [9]
 #[derive(Clone, Debug)]
 pub struct PixelBox {
-    pub x: Range<usize>,
-    pub y: Range<usize>,
+    pub x: Range<u16>,
+    pub y: Range<u16>,
 }
 
 impl PixelBox {
-    pub fn new(x: Range<usize>, y: Range<usize>) -> Self {
+    pub fn new(x: Range<u16>, y: Range<u16>) -> Self {
         Self { x, y }
     }
 
-    pub fn width(&self) -> usize {
+    pub fn width(&self) -> u16 {
         self.x.end - self.x.start
     }
 
-    pub fn height(&self) -> usize {
+    pub fn height(&self) -> u16 {
         self.y.end - self.y.start
     }
 
-    pub fn items(&self) -> usize {
-        self.width() * self.height()
+    pub fn items(&self) -> u32 {
+        // Can be at most 32bit
+        (self.width() as u32) * (self.height() as u32)
     }
 
     // True if rectangles share any area (in other words, if bounds cross)
@@ -148,7 +149,7 @@ impl PixelBox {
 
     // Returns linear offset
     // Trusts input
-    pub fn offset_in_unchecked(&self, smaller: &PixelBox) -> usize {
+    pub fn offset_in_unchecked(&self, smaller: &PixelBox) -> u32 {
         //  _______
         // |   __  |
         // |  |__| |
@@ -156,9 +157,9 @@ impl PixelBox {
         //  __
         //   ^offset x
 
-        let offset_x = smaller.x.start - self.x.start;
-        let offset_y = smaller.y.start - self.y.start;
-        let bigger_width = self.width();
+        let offset_x = (smaller.x.start - self.x.start) as u32;
+        let offset_y = (smaller.y.start - self.y.start) as u32;
+        let bigger_width = self.width() as u32;
 
         offset_y * bigger_width + offset_x
     }

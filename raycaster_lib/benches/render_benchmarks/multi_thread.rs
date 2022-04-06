@@ -1,10 +1,10 @@
-use crate::common::{Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, HEIGHT, WIDTH};
+use crate::common::{Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, HEIGHT, RESOLUTION, WIDTH};
 use criterion::Criterion;
 use raycaster_lib::render::RenderOptions;
 
 pub fn render_parallel(c: &mut Criterion) {
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: true,
         empty_index: true,
     };

@@ -3,11 +3,13 @@
 //! Serves as an example to make your own, for example to add support
 //! for some format
 
+use nalgebra::Vector2;
+
 pub mod parse;
 pub mod transfer_functions;
 
 /// Example of a usecase - single-threaded renderer
-pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
+pub fn render_frame(resolution: Vector2<u16>) -> Vec<u8> {
     use crate::{
         premade::{
             parse::{from_file, skull_parser},
@@ -32,14 +34,14 @@ pub fn render_frame(width: usize, height: usize) -> Vec<u8> {
 
     // Render options - set resolution and optimisations
     let ren_opts = RenderOptions {
-        resolution: (width, height),
+        resolution,
         ray_termination: true,
         empty_index: false,
     };
 
     // Instantiate a renderer, framebuffer
     let mut renderer = Renderer::<LinearVolume>::new(volume, ren_opts);
-    let mut buffer = vec![0; 3 * width * height]; // 3 bytes per pixel
+    let mut buffer = vec![0; 3 * (resolution.x as usize) * (resolution.y as usize)]; // 3 bytes per pixel
 
     // Run rendering (blocking)
     renderer.render_to_buffer(&camera, buffer.as_mut_slice());

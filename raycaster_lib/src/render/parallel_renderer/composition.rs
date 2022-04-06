@@ -6,13 +6,12 @@ use std::{
 };
 
 use crossbeam::select;
-use nalgebra::{vector, Vector3};
+use nalgebra::{vector, Vector2, Vector3};
 
 use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
 
 use super::{
     communication::CompWorkerComms,
-    master_thread::PAR_SIDE,
     messages::{RenderTask, ToMasterMsg, ToWorkerMsg},
 };
 
@@ -27,8 +26,8 @@ impl SubCanvas {
     pub fn new(pixels: PixelBox) -> Self {
         let size = pixels.items();
         let queue = VecDeque::new();
-        let colors = vec![Vector3::zeros(); size];
-        let opacities = vec![0.0; size];
+        let colors = vec![Vector3::zeros(); size as usize];
+        let opacities = vec![0.0; size as usize];
         Self {
             queue,
             pixels,
@@ -42,8 +41,8 @@ pub struct Canvas {
     size: PixelBox,
     sub_canvases: Vec<UnsafeCell<SubCanvas>>,
     remaining_subs: Mutex<u32>,
-    tile_side: usize,
-    tiles_x: usize, // number of tiles in one row
+    tile_side: u16,
+    tiles_x: u16, // number of tiles in one row
 }
 
 unsafe impl Sync for Canvas {}
@@ -52,22 +51,24 @@ impl Canvas {
     // Segment viewport into NxN subframes
     // Calc pixel sizes and offsets
     // todo return only PixelBox
-    pub fn new(resolution: (usize, usize), tile_side: usize) -> Canvas {
-        let (tiles_x, tiles_y) = Canvas::slice_into_tiles(resolution, tile_side);
-        let size = PixelBox::new(0..resolution.0, 0..resolution.1);
+    pub fn new(resolution: Vector2<u16>, tile_side: u16) -> Canvas {
+        let tiles = Canvas::slice_into_tiles(resolution, tile_side);
+        let size = PixelBox::new(0..resolution.x, 0..resolution.y);
 
-        let mut sub_canvases = Vec::with_capacity(tiles_x * tiles_y); //todo
+        let items = (tiles.x as usize) * (tiles.y as usize);
+
+        let mut sub_canvases = Vec::with_capacity(items); //todo
         println!(
-            "Canvas split into {tiles_x}x{tiles_y} = {} tiles",
-            tiles_x * tiles_y
+            "Canvas split into {}x{} = {} tiles",
+            tiles.x, tiles.y, items
         );
 
-        for y in 0..tiles_y {
+        for y in 0..tiles.y {
             let low_y = y * tile_side;
-            for x in 0..tiles_x {
+            for x in 0..tiles.x {
                 let low_x = x * tile_side;
-                let high_x = min(low_x + tile_side, resolution.0);
-                let high_y = min(low_y + tile_side, resolution.1);
+                let high_x = min(low_x + tile_side, resolution.x);
+                let high_y = min(low_y + tile_side, resolution.y);
                 let pixel_box = PixelBox::new(low_x..high_x, low_y..high_y);
 
                 let sub_canvas = UnsafeCell::new(SubCanvas::new(pixel_box));
@@ -81,14 +82,13 @@ impl Canvas {
             remaining_subs: Mutex::new(remaining_subs),
             size,
             tile_side,
-            tiles_x,
+            tiles_x: tiles.x,
         }
     }
 
-    fn slice_into_tiles(resolution: (usize, usize), tile_side: usize) -> (usize, usize) {
-        let tiles_x = (resolution.0 + tile_side - 1) / tile_side; // ceil
-        let tiles_y = (resolution.1 + tile_side - 1) / tile_side; // ceil
-        (tiles_x, tiles_y)
+    fn slice_into_tiles(resolution: Vector2<u16>, tile_side: u16) -> Vector2<u16> {
+        (resolution + vector![tile_side - 1, tile_side - 1]) // Ceil
+            .component_div(&vector![tile_side, tile_side])
     }
 
     // Interior mutability, needs exclusive access
@@ -133,7 +133,8 @@ impl Canvas {
                     let tile_id = self.tiles_x * y + x;
 
                     // Safety: build phase, only master has access
-                    let tile = unsafe { self.sub_canvases[tile_id].get().as_mut().unwrap() };
+                    let tile =
+                        unsafe { self.sub_canvases[tile_id as usize].get().as_mut().unwrap() };
                     tile.queue.push_back(block_id);
                 }
             }
@@ -142,8 +143,8 @@ impl Canvas {
 
     fn get_affected_tiles(
         pixel_box: PixelBox,
-        tile_side: usize,
-    ) -> (std::ops::Range<usize>, std::ops::Range<usize>) {
+        tile_side: u16,
+    ) -> (std::ops::Range<u16>, std::ops::Range<u16>) {
         let tile_start_x = pixel_box.x.start / tile_side;
         let tile_end_x = (pixel_box.x.end + tile_side - 1) / tile_side;
 
@@ -323,11 +324,11 @@ impl CompWorker {
         let comp_pixelbox = &tile.pixels;
 
         let offset = full_pixelbox.offset_in_unchecked(comp_pixelbox) * 3;
-        let width = full_pixelbox.width() * 3;
-        let subframe_w = comp_pixelbox.width() * 3;
+        let width = (full_pixelbox.width() * 3) as usize;
+        let subframe_w = (comp_pixelbox.width() * 3) as usize;
 
-        let mut ptr = offset;
-        let mut ptr_data = 0;
+        let mut ptr = offset as usize;
+        let mut ptr_data = 0_usize;
         while (ptr_data + subframe_w) <= data.len() {
             buffer[ptr..ptr + subframe_w].copy_from_slice(&data[ptr_data..ptr_data + subframe_w]);
 
@@ -352,15 +353,15 @@ mod test {
 
     #[test]
     fn slicing_tiles() {
-        let resolution = (700, 700);
+        let resolution = vector![700, 700];
 
         let tile_side = 100;
         let tiles = Canvas::slice_into_tiles(resolution, tile_side);
-        assert_eq!(tiles, (7, 7));
+        assert_eq!(tiles, vector![7, 7]);
 
         let tile_side = 16;
         let tiles = Canvas::slice_into_tiles(resolution, tile_side);
-        assert_eq!(tiles, (44, 44));
+        assert_eq!(tiles, vector![44, 44]);
     }
 
     #[test]

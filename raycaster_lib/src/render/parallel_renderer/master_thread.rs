@@ -24,7 +24,7 @@ const RENDERER_COUNT: u8 = 5;
 const COMPOSITER_COUNT: u8 = 1;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
-const TILE_SIDE: usize = 32;
+const TILE_SIDE: u16 = 32;
 
 pub struct ParalelRenderer {
     volume: BlockVolume,
@@ -58,7 +58,8 @@ impl ParalelRenderer {
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
     ) -> Self {
-        let elements = render_options.resolution.0 * render_options.resolution.1;
+        let elements: usize =
+            (render_options.resolution.x as usize) * (render_options.resolution.y as usize);
         let buffer = Arc::new(Mutex::new(vec![0; elements * 3]));
 
         // Dummy channels
@@ -95,11 +96,6 @@ impl ParalelRenderer {
                     let mut renderers = Vec::with_capacity(RENDERER_COUNT as usize);
                     let mut compositors = Vec::with_capacity(COMPOSITER_COUNT as usize);
 
-                    let resolution = vector![
-                        self.render_options.resolution.0,
-                        self.render_options.resolution.1
-                    ];
-
                     let blocks_ref = &volume.data[..];
 
                     let tf = volume.get_tf();
@@ -119,7 +115,7 @@ impl ParalelRenderer {
                                     id as usize,
                                     camera_ref,
                                     tf,
-                                    resolution,
+                                    self.render_options.resolution,
                                     ren_comms,
                                     blocks_ref,
                                 );

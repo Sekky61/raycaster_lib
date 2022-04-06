@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector4};
+use nalgebra::{vector, Vector2, Vector4};
 
 use crate::{
     common::Ray,
@@ -34,7 +34,7 @@ where
         self.render_options = opts;
     }
 
-    pub fn set_render_resolution(&mut self, res: (usize, usize)) {
+    pub fn set_render_resolution(&mut self, res: Vector2<u16>) {
         self.render_options.resolution = res;
     }
 
@@ -44,7 +44,8 @@ where
 
     // buffer y=0 is up
     fn render(&mut self, camera: &PerspectiveCamera, buffer: &mut [u8]) {
-        let (img_w, img_h) = self.render_options.resolution;
+        let img_w = self.render_options.resolution.x;
+        let img_h = self.render_options.resolution.y;
 
         let (image_width, image_height) = (img_w as f32, img_h as f32);
 
@@ -59,16 +60,12 @@ where
         let bbox = self.volume.get_bound_box();
         let tile = camera.project_box(bbox);
 
-        let res_vec = vector![
-            // todo change resolution from tuple to vector or pixelbox
-            self.render_options.resolution.0,
-            self.render_options.resolution.1
-        ];
-        let pixels = tile.get_pixel_range(res_vec);
+        let pixels = tile.get_pixel_range(self.render_options.resolution);
         let pix_width = pixels.width();
 
-        let width_bytes_skip = 3 * (img_w - pix_width);
-        let mut index = (pixels.x.start + img_w * pixels.y.start) * 3;
+        let width_bytes_skip = (3 * (img_w - pix_width)) as usize;
+        let mut index =
+            ((pixels.x.start as usize) + (img_w as usize) * (pixels.y.start as usize)) * 3;
 
         for y in pixels.y.clone() {
             let y_norm = y as f32 * step_y;

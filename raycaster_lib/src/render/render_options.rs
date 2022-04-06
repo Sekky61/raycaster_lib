@@ -1,12 +1,14 @@
+use nalgebra::Vector2;
+
 pub struct RenderOptions {
-    pub resolution: (usize, usize),
+    pub resolution: Vector2<u16>,
     pub ray_termination: bool,
     pub empty_index: bool,
 }
 
 impl RenderOptions {
     pub fn new(
-        resolution: (usize, usize),
+        resolution: Vector2<u16>,
         ray_termination: bool,
         empty_index: bool,
     ) -> RenderOptions {

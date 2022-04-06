@@ -1,10 +1,10 @@
-use crate::common::{Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, HEIGHT, WIDTH};
+use crate::common::{Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, HEIGHT, RESOLUTION, WIDTH};
 use criterion::Criterion;
 use raycaster_lib::render::RenderOptions;
 
 pub fn render_linear(c: &mut Criterion) {
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: false,
         empty_index: false,
     };
@@ -23,7 +23,7 @@ pub fn render_linear(c: &mut Criterion) {
 
 pub fn render_linear_ert(c: &mut Criterion) {
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: true,
         empty_index: false,
     };
@@ -42,7 +42,7 @@ pub fn render_linear_ert(c: &mut Criterion) {
 
 pub fn render_linear_ei(c: &mut Criterion) {
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: false,
         empty_index: true,
     };
@@ -61,7 +61,7 @@ pub fn render_linear_ei(c: &mut Criterion) {
 
 pub fn render_linear_ert_ei(c: &mut Criterion) {
     let render_options = RenderOptions {
-        resolution: (WIDTH, HEIGHT),
+        resolution: RESOLUTION,
         ray_termination: true,
         empty_index: true,
     };

@@ -50,7 +50,8 @@ where
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
     ) -> Self {
-        let elements = render_options.resolution.0 * render_options.resolution.1;
+        let elements =
+            (render_options.resolution.x as usize) * (render_options.resolution.y as usize);
         let buffer = Arc::new(Mutex::new(vec![0; elements * 3]));
 
         // Dummy channels

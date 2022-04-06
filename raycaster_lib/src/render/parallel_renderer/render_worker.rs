@@ -22,7 +22,7 @@ pub struct RenderWorker<'a> {
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     tf: TF,
-    resolution: Vector2<usize>,
+    resolution: Vector2<u16>,
     comms: RenderWorkerComms,
     blocks: &'a [Block],
 }
@@ -33,7 +33,7 @@ impl<'a> RenderWorker<'a> {
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
         tf: TF,
-        resolution: Vector2<usize>,
+        resolution: Vector2<u16>,
         comms: RenderWorkerComms,
         blocks: &'a [Block],
     ) -> Self {
