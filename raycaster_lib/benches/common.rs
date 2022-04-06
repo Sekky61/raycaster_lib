@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    iter::Cycle,
+    sync::{Arc, RwLock},
+};
 
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector3};
@@ -8,17 +11,31 @@ pub use raycaster_lib::{
     PerspectiveCamera,
 };
 
-pub const WIDTH: usize = 512;
-pub const HEIGHT: usize = 512;
+pub const WIDTH: usize = 700;
+pub const HEIGHT: usize = 700;
 
-pub const POSITION: Point3<f32> = point![300.0, 300.0, 300.0];
+pub const POSITION: Point3<f32> = point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE];
 pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
 
-pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 2] = [
-    (point![100.0, 100.0, 100.0], vector![-1.0, -1.0, -1.0]),
-    (point![100.0, 100.0, 300.0], vector![-0.2, -0.2, -1.0]),
+pub const QUADRANT_DISTANCE: f32 = 300.0;
+
+#[rustfmt::skip]
+pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 11] = [
+    // View volume from each quadrant
+    (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
+    (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0, 1.0]),
+    (point![QUADRANT_DISTANCE, -QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, 1.0, -1.0]),
+    (point![QUADRANT_DISTANCE, -QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, 1.0, 1.0]),
+    (point![-QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![1.0, -1.0, -1.0]),
+    (point![-QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![1.0, -1.0, 1.0]),
+    (point![-QUADRANT_DISTANCE, -QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![1.0, 1.0, -1.0]),
+    (point![-QUADRANT_DISTANCE, -QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![1.0, 1.0, 1.0]),
+    // View volume from each axis
+    (point![QUADRANT_DISTANCE, 0.0, 0.0], vector![-1.0, 0.0, 0.0]),
+    (point![0.0, QUADRANT_DISTANCE, 0.0], vector![0.0, -1.0, 0.0]),
+    (point![0.0, 0.0, QUADRANT_DISTANCE], vector![0.0, 0.0, -1.0]),
 ];
 
 use raycaster_lib::{
@@ -39,44 +56,21 @@ where
 #[derive(Clone)]
 pub struct CameraPositions {
     /// Positions with directions
-    positions: Vec<CamPos>,
-    state: usize,
+    pub it: Cycle<std::vec::IntoIter<(Point3<f32>, Vector3<f32>)>>,
 }
 
 impl CameraPositions {
     pub fn new(positions: Vec<CamPos>) -> Self {
         assert!(!positions.is_empty());
-        Self {
-            positions,
-            state: 0,
-        }
+        let it = positions.into_iter().cycle();
+        Self { it }
     }
 
     pub fn from_slice(slice: &[CamPos]) -> Self {
         assert!(!slice.is_empty());
         let positions = Vec::from(slice);
-        Self {
-            positions,
-            state: 0,
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.state = 1;
-    }
-}
-
-impl Iterator for CameraPositions {
-    type Item = (Point3<f32>, Vector3<f32>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.state < self.positions.len() {
-            let r = Some(self.positions[self.state]);
-            self.state += 1;
-            r
-        } else {
-            None
-        }
+        let it = positions.into_iter().cycle();
+        Self { it }
     }
 }
 
@@ -142,23 +136,20 @@ impl BenchOptions {
             }
 
             // Camera positions
-            let positions = camera_positions;
+            let mut positions = camera_positions;
 
             c.bench_function(&bench_name, move |b| {
                 let sender_in = sender.clone();
                 let receiver = receiver.clone();
                 let cam = cam.clone();
-                let mut positions = positions.clone();
+                let positions = &mut positions;
 
                 b.iter_batched(
                     move || {
                         // Setup
-                        let (pos, dir) = match positions.next() {
+                        let (pos, dir) = match positions.it.next() {
                             Some(t) => t,
-                            None => {
-                                positions.reset();
-                                positions.next().unwrap()
-                            }
+                            None => panic!("End of cyclic iterator, should not happen"),
                         };
                         {
                             // set another cam pos

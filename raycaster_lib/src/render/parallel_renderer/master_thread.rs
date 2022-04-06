@@ -20,11 +20,11 @@ use super::{
 
 pub const PAR_SIDE: usize = 64;
 
-const RENDERER_COUNT: u8 = 4;
-const COMPOSITER_COUNT: u8 = 4;
+const RENDERER_COUNT: u8 = 5;
+const COMPOSITER_COUNT: u8 = 1;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
-const TILE_SIDE: usize = 350;
+const TILE_SIDE: usize = 32;
 
 pub struct ParalelRenderer {
     volume: BlockVolume<PAR_SIDE>,

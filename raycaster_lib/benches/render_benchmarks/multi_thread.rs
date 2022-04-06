@@ -5,8 +5,8 @@ use raycaster_lib::render::RenderOptions;
 pub fn render_parallel(c: &mut Criterion) {
     let render_options = RenderOptions {
         resolution: (WIDTH, HEIGHT),
-        ray_termination: false,
-        empty_index: false,
+        ray_termination: true,
+        empty_index: true,
     };
 
     let bench_options = BenchOptions::new(

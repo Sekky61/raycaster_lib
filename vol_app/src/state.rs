@@ -1,13 +1,14 @@
 use std::{
     cell::RefCell,
     collections::VecDeque,
+    ops::Sub,
     path::{Path, PathBuf},
     rc::Rc,
     sync::{Arc, RwLock},
     time::Instant,
 };
 
-use nalgebra::{point, vector, Vector2, Vector3};
+use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use raycaster_lib::{
     premade::{
         parse::{from_file, generator_parser, skull_parser},
@@ -29,7 +30,21 @@ pub const RENDER_HEIGHT_U: usize = 700;
 
 pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol"
 pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
-const DEFAULT_MULTI_THREAD: bool = false;
+const DEFAULT_MULTI_THREAD: bool = true;
+
+// Workaround
+// Until https://github.com/rust-lang/rust/issues/57241 lands
+pub const CAM_DEFAULT_POS_X: f32 = 300.0;
+pub const CAM_DEFAULT_POS_Y: f32 = 300.0;
+pub const CAM_DEFAULT_POS_Z: f32 = 300.0;
+
+pub const CAM_DEFAULT_POS: Point3<f32> =
+    point![CAM_DEFAULT_POS_X, CAM_DEFAULT_POS_Y, CAM_DEFAULT_POS_Z];
+pub const CAM_DEFAULT_DIR: Vector3<f32> = vector![
+    0.0 - CAM_DEFAULT_POS_X,
+    0.0 - CAM_DEFAULT_POS_Y,
+    0.0 - CAM_DEFAULT_POS_Z
+];
 
 pub enum CameraMovement {
     PositionOrtho(Vector3<f32>),
@@ -231,6 +246,11 @@ impl State {
                 }
             }
             // Drop Write camera guard
+            println!(
+                "Camera coords: {:?} | {:?}",
+                camera.get_pos(),
+                camera.get_dir()
+            );
         }
     }
 
@@ -305,8 +325,8 @@ fn volume_setup_paralel(
     parser: PrewrittenParser,
     tf: PrewrittenTF,
 ) -> ParalelRenderer {
-    let position = point![300.0, 300.0, 300.0];
-    let direction = point![34.0, 128.0, 128.0] - position;
+    let position = CAM_DEFAULT_POS;
+    let direction = CAM_DEFAULT_DIR;
 
     let parser_fn = match parser {
         PrewrittenParser::MyVolParser => generator_parser,

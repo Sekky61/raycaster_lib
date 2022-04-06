@@ -5,3 +5,4 @@ flamegraph.svg
 /volumes
 /.vscode
 *.vol
+benchmark_results

@@ -241,6 +241,11 @@ impl PerspectiveCamera {
     pub fn get_dir(&self) -> Vector3<f32> {
         self.direction
     }
+
+    /// Position getter
+    pub fn get_pos(&self) -> Point3<f32> {
+        self.position
+    }
 }
 
 #[cfg(test)]
