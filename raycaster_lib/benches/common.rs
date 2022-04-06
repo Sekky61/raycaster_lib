@@ -19,6 +19,8 @@ pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
 
+const DEFAULT_BLOCK_SIDE: usize = 32;
+
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
@@ -44,13 +46,26 @@ use raycaster_lib::{
         transfer_functions::skull_tf,
     },
     render::{ParalelRenderer, RendererFront, RendererMessage, SerialRenderer},
+    volumetric::DataSource,
 };
 
 pub fn get_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
 {
-    from_file("../volumes/Skull.vol", skull_parser, skull_tf).unwrap()
+    let parser_add_block_side = move |src: DataSource<u8>| {
+        let mut res = skull_parser(src);
+        match &mut res {
+            Ok(ref mut m) => {
+                if m.block_side.is_none() {
+                    m.block_side = Some(DEFAULT_BLOCK_SIDE);
+                }
+            }
+            Err(_) => (),
+        }
+        res
+    };
+    from_file("../volumes/Skull.vol", parser_add_block_side, skull_tf).unwrap()
 }
 
 #[derive(Clone)]

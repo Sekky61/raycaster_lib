@@ -2,16 +2,22 @@ use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 use crate::common::{BoundBox, Ray, ValueRange};
 
-pub struct Block<const S: usize> {
+pub struct Block {
+    pub block_side: usize,
     pub value_range: ValueRange,
     pub bound_box: BoundBox,
     pub transform: Matrix4<f32>,
     pub data: Vec<f32>,
 }
 
-impl<const S: usize> Block<S> {
-    pub fn from_data(data: Vec<f32>, bound_box: BoundBox, scale: Vector3<f32>) -> Block<S> {
-        assert_eq!(data.len(), S * S * S);
+impl Block {
+    pub fn from_data(
+        data: Vec<f32>,
+        bound_box: BoundBox,
+        scale: Vector3<f32>,
+        block_side: usize,
+    ) -> Block {
+        assert_eq!(data.len(), block_side.pow(3));
         let value_range = ValueRange::from_iter(&data[..]);
 
         let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
@@ -26,6 +32,7 @@ impl<const S: usize> Block<S> {
             bound_box,
             value_range,
             transform,
+            block_side,
         }
     }
 
@@ -48,8 +55,8 @@ impl<const S: usize> Block<S> {
         [
             self.data[start_index],
             self.data[start_index + 1],
-            self.data[start_index + S],
-            self.data[start_index + S + 1],
+            self.data[start_index + self.block_side],
+            self.data[start_index + self.block_side + 1],
         ]
     }
 
@@ -67,7 +74,7 @@ impl<const S: usize> Block<S> {
         let block_offset = self.get_3d_index(x, y, z);
 
         let first_index = block_offset;
-        let second_index = block_offset + S * S;
+        let second_index = block_offset + self.block_side * self.block_side;
 
         let first_data = self.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
@@ -94,6 +101,6 @@ impl<const S: usize> Block<S> {
     }
 
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
-        z + y * S + x * S * S
+        z + y * self.block_side + x * self.block_side * self.block_side
     }
 }

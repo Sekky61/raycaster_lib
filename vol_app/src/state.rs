@@ -15,7 +15,7 @@ use raycaster_lib::{
         transfer_functions,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::LinearVolume,
+    volumetric::{DataSource, LinearVolume},
     PerspectiveCamera,
 };
 use slint::{
@@ -31,6 +31,8 @@ pub const RENDER_HEIGHT_U: usize = 700;
 pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol"
 pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
 const DEFAULT_MULTI_THREAD: bool = true;
+
+const DEFAULT_BLOCK_SIDE: usize = 32;
 
 // Workaround
 // Until https://github.com/rust-lang/rust/issues/57241 lands
@@ -246,11 +248,6 @@ impl State {
                 }
             }
             // Drop Write camera guard
-            println!(
-                "Camera coords: {:?} | {:?}",
-                camera.get_pos(),
-                camera.get_dir()
-            );
         }
     }
 
@@ -339,7 +336,21 @@ fn volume_setup_paralel(
         PrewrittenTF::White => transfer_functions::white_tf,
     };
 
-    let volume = from_file(path, parser_fn, tf_fn).unwrap();
+    // Factor out
+    let parser_add_block_side = move |src: DataSource<u8>| {
+        let mut res = parser_fn(src);
+        match &mut res {
+            Ok(ref mut m) => {
+                if m.block_side.is_none() {
+                    m.block_side = Some(DEFAULT_BLOCK_SIDE);
+                }
+            }
+            Err(_) => (),
+        }
+        res
+    };
+
+    let volume = from_file(path, parser_add_block_side, tf_fn).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));

@@ -21,6 +21,7 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
+        block_side: Some(16),
     }
 }
 
@@ -35,6 +36,7 @@ pub fn empty_vol_meta(size: Vector3<usize>) -> VolumeMetadata<u8> {
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
+        block_side: Some(16),
     }
 }
 
@@ -50,7 +52,7 @@ pub fn white_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
 {
-    let meta = white_vol_meta();
+    let mut meta = white_vol_meta();
     BuildVolume::build(meta).unwrap()
 }
 
@@ -62,6 +64,6 @@ where
     path.push("../volumes/Skull.vol");
     println!("{:?}", path);
     let ds = DataSource::from_file(path).unwrap();
-    let meta = skull_parser(ds).expect("skull error");
+    let mut meta = skull_parser(ds).expect("skull error");
     BuildVolume::build(meta).unwrap()
 }

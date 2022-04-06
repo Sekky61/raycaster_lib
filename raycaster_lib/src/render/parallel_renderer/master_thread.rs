@@ -27,7 +27,7 @@ const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 const TILE_SIDE: usize = 32;
 
 pub struct ParalelRenderer {
-    volume: BlockVolume<PAR_SIDE>,
+    volume: BlockVolume,
     camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
     buffer: Arc<Mutex<Vec<u8>>>,
@@ -54,7 +54,7 @@ impl RenderThread for ParalelRenderer {
 
 impl ParalelRenderer {
     pub fn new(
-        volume: BlockVolume<PAR_SIDE>,
+        volume: BlockVolume,
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
     ) -> Self {

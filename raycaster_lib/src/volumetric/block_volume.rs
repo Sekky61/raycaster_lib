@@ -9,21 +9,23 @@ use super::{
 };
 
 // Default overlap == 1
-pub struct BlockVolume<const S: usize> {
+pub struct BlockVolume {
+    block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    pub data: Vec<Block<S>>,
+    pub data: Vec<Block>,
     tf: TF,
 }
 
-impl<const S: usize> BlockVolume<S> {
+impl BlockVolume {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
-        let jump_per_block = S - 1;
+        let jump_per_block = self.block_side - 1;
         //assert_ne!(jump_per_block, 0);
-        let block_offset =
-            (z % jump_per_block) + (y % jump_per_block) * S + (x % jump_per_block) * S * S;
+        let block_offset = (z % jump_per_block)
+            + (y % jump_per_block) * self.block_side
+            + (x % jump_per_block) * self.block_side * self.block_side;
         let block_index = (z / jump_per_block)
             + (y / jump_per_block) * self.block_size.z
             + (x / jump_per_block) * self.block_size.y * self.block_size.z;
@@ -40,7 +42,7 @@ impl<const S: usize> BlockVolume<S> {
     }
 }
 
-impl<const S: usize> Volume for BlockVolume<S> {
+impl Volume for BlockVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }
@@ -58,7 +60,7 @@ impl<const S: usize> Volume for BlockVolume<S> {
 
         let block = &self.data[block_index];
         let first_index = block_offset;
-        let second_index = block_offset + S * S;
+        let second_index = block_offset + self.block_side * self.block_side;
 
         let first_data = block.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
@@ -105,14 +107,15 @@ impl<const S: usize> Volume for BlockVolume<S> {
     }
 }
 
-impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume<S>, &'static str> {
+impl BuildVolume<u8> for BlockVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
         let offset = metadata.data_offset.unwrap_or(0);
         let tf = metadata.tf.ok_or("No transfer function")?;
+        let block_side = metadata.block_side.ok_or("No block side")?;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
@@ -122,9 +125,9 @@ impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {
 
         let mut blocks = vec![];
 
-        let step_size = S - 1;
+        let step_size = block_side - 1;
 
-        let block_size = blockify(size, S, 1);
+        let block_size = blockify(size, block_side, 1);
 
         let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
 
@@ -132,17 +135,18 @@ impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {
             for y in 0..block_size.y {
                 for z in 0..block_size.z {
                     let block_start = step_size * point![x, y, z];
-                    let block_data = get_block_data(slice, size, block_start, S);
-                    let block_bound_box = get_bound_box(position, scale, block_start, S);
-                    let block = Block::from_data(block_data, block_bound_box, scale);
+                    let block_data = get_block_data(slice, size, block_start, block_side);
+                    let block_bound_box = get_bound_box(position, scale, block_start, block_side);
+                    let block = Block::from_data(block_data, block_bound_box, scale, block_side);
                     blocks.push(block);
                 }
             }
         }
 
         println!(
-            "Built {} blocks of dims {S} blocks ({},{},{}) -> ({},{},{})",
+            "Built {} blocks of dims {} blocks ({},{},{}) -> ({},{},{})",
             blocks.len(),
+            block_side,
             size.x,
             size.y,
             size.z,
@@ -157,6 +161,7 @@ impl<const S: usize> BuildVolume<u8> for BlockVolume<S> {
             block_size,
             data: blocks,
             tf,
+            block_side,
         })
     }
 }

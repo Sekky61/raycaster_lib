@@ -29,6 +29,7 @@ pub struct VolumeMetadata<T> {
     pub data_offset: Option<usize>,
     pub data_shape: Option<StorageShape>,
     pub tf: Option<TF>, // Transfer function
+    pub block_side: Option<usize>,
 }
 
 impl<T> VolumeMetadata<T> {
@@ -66,6 +67,11 @@ impl<T> VolumeMetadata<T> {
 
     pub fn set_tf(&mut self, tf: TF) -> &mut Self {
         self.tf = Some(tf);
+        self
+    }
+
+    pub fn set_block_side(&mut self, block_side: usize) -> &mut Self {
+        self.block_side = Some(block_side);
         self
     }
 }

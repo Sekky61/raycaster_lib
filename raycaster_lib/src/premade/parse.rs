@@ -13,14 +13,11 @@ use crate::volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMet
 use super::transfer_functions::{beetle_tf, skull_tf};
 
 // Common pattern
-pub fn from_file<P, T, M>(
-    path: P,
-    parser: fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
-    tf: TF,
-) -> Result<T, &'static str>
+pub fn from_file<P, T, M, PF>(path: P, parser: PF, tf: TF) -> Result<T, &'static str>
 where
     P: AsRef<Path>,
     T: BuildVolume<M> + Volume,
+    PF: Fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
 {
     let ds: DataSource<u8> = DataSource::from_file(path)?;
     let mut metadata = parser(ds)?;
@@ -70,6 +67,7 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
         data_offset: Some(6),
         data_shape: Some(StorageShape::Linear),
         tf: Some(beetle_tf),
+        block_side: None,
     };
 
     Ok(meta)
@@ -103,6 +101,7 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
         data: Some(data_source),
         data_shape: Some(StorageShape::Linear),
         tf: Some(skull_tf),
+        block_side: None,
     })
 }
 
@@ -147,6 +146,9 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         Err(_) => return Err("Parse error"),
     };
 
+    // todo handle Z sample shape
+    // let block_side
+
     let ExtractedMetaGen {
         offset,
         size,
@@ -170,6 +172,7 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         data: Some(data_source),
         data_shape: Some(data_shape),
         tf: Some(skull_tf),
+        block_side: None,
     })
 }
 

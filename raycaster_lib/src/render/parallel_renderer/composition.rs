@@ -92,7 +92,7 @@ impl Canvas {
     }
 
     // Interior mutability, needs exclusive access
-    pub fn build_queues(&self, camera: &PerspectiveCamera, blocks: &[Block<PAR_SIDE>]) {
+    pub fn build_queues(&self, camera: &PerspectiveCamera, blocks: &[Block]) {
         let mut block_infos = Vec::with_capacity(blocks.len());
         for (i, block) in blocks.iter().enumerate() {
             let distance = camera.box_distance(&block.bound_box);

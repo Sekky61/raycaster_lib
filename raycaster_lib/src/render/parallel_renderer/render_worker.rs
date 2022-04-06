@@ -12,7 +12,6 @@ use crate::{
 use super::{
     communication::RenderWorkerComms,
     composition::SubCanvas,
-    master_thread::PAR_SIDE,
     messages::{SubRenderResult, ToWorkerMsg},
 };
 
@@ -29,7 +28,7 @@ pub struct RenderWorker<'a> {
     tf: TF,
     resolution: Vector2<usize>,
     comms: RenderWorkerComms,
-    blocks: &'a [Block<PAR_SIDE>],
+    blocks: &'a [Block],
 }
 
 impl<'a> RenderWorker<'a> {
@@ -40,7 +39,7 @@ impl<'a> RenderWorker<'a> {
         tf: TF,
         resolution: Vector2<usize>,
         comms: RenderWorkerComms,
-        blocks: &'a [Block<PAR_SIDE>],
+        blocks: &'a [Block],
     ) -> Self {
         Self {
             renderer_id,
@@ -112,12 +111,7 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn render_block(
-        &self,
-        camera: &PerspectiveCamera,
-        subcanvas: &mut SubCanvas,
-        block: &Block<PAR_SIDE>,
-    ) {
+    fn render_block(&self, camera: &PerspectiveCamera, subcanvas: &mut SubCanvas, block: &Block) {
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);
@@ -167,7 +161,7 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn sample_color(&self, block: &Block<PAR_SIDE>, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
+    fn sample_color(&self, block: &Block, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
         let mut accum = vector![0.0, 0.0, 0.0];
 
         let obj_ray = block.transform_ray(ray);
