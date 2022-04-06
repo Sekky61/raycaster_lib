@@ -91,7 +91,7 @@ impl<'a> RenderWorker<'a> {
             // Safety: ref is unique
             let subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
-            let block = &self.blocks[block_id];
+            let block = &self.blocks[block_id as usize];
 
             // Render task
             self.render_block(&camera, subcanvas, block);

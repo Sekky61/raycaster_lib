@@ -16,7 +16,7 @@ use super::{
 };
 
 pub struct SubCanvas {
-    queue: VecDeque<usize>, // indexes into blocks
+    queue: VecDeque<u32>, // indexes into blocks
     pub pixels: PixelBox,
     pub colors: Vec<Vector3<f32>>,
     pub opacities: Vec<f32>,
@@ -102,7 +102,7 @@ impl Canvas {
         for (i, (block, empty)) in blocks.iter().zip(empty_blocks).enumerate() {
             if !empty {
                 let distance = camera.box_distance(&block.bound_box);
-                block_infos.push((i, distance));
+                block_infos.push((i as u32, distance));
             }
         }
 
@@ -120,7 +120,7 @@ impl Canvas {
         }
 
         for (block_id, _) in block_infos {
-            let vpbox = camera.project_box(blocks[block_id].bound_box);
+            let vpbox = camera.project_box(blocks[block_id as usize].bound_box);
             let pixel_box = vpbox.get_pixel_range(res);
             // Count which pixelboxes intersect
             // Assume all tiles are the same size
@@ -216,9 +216,9 @@ impl CompWorker {
             let canvases = &self.canvas.sub_canvases[..];
 
             // relies on compositor ids being continuous, todo fix
-            let mut tile_id = (self.compositor_id % self.compositor_count) as usize; // todo maybe for cache reasons do first 1/n tiles instead
-            while tile_id < canvases.len() {
-                let subcanvas_ptr = canvases[tile_id].get();
+            let mut tile_id = (self.compositor_id % self.compositor_count) as u32; // todo maybe for cache reasons do first 1/n tiles instead
+            while (tile_id as usize) < canvases.len() {
+                let subcanvas_ptr = canvases[tile_id as usize].get();
                 let subcanvas = subcanvas_ptr.as_mut().unwrap();
 
                 // Zero out color and opacity
@@ -233,7 +233,7 @@ impl CompWorker {
                     Some(block_id) => self.send_task(block_id, tile_id, subcanvas_ptr),
                     None => self.tile_finished(subcanvas),
                 }
-                tile_id += self.compositor_count as usize;
+                tile_id += self.compositor_count as u32;
             }
         }
 
@@ -260,7 +260,7 @@ impl CompWorker {
                 // Can another one be dispatched?
 
                 let subcanvases = &self.canvas.sub_canvases[..];
-                let subcanvas_ptr = subcanvases[result.tile_id].get();
+                let subcanvas_ptr = subcanvases[result.tile_id as usize].get();
 
                 let subcanvas = subcanvas_ptr.as_mut().unwrap();
 
@@ -304,7 +304,7 @@ impl CompWorker {
         }
     }
 
-    fn send_task(&self, block_id: usize, tile_id: usize, subcanvas: *mut SubCanvas) {
+    fn send_task(&self, block_id: u32, tile_id: u32, subcanvas: *mut SubCanvas) {
         let task = RenderTask::new(block_id, tile_id, subcanvas);
         #[cfg(debug_assertions)]
         println!(

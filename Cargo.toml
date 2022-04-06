@@ -15,6 +15,7 @@ debug = true # firegraph
 [profile.bench]
 debug = true
 
+# RUSTFLAGS="-C target-cpu=native"
 [profile.release-debug]
 inherits = "release"
 debug-assertions = true
