@@ -40,13 +40,13 @@ pub struct CommsBuilder {
 
 impl CommsBuilder {
     pub fn new(n_of_workers: usize) -> CommsBuilder {
-        let command: Vec<_> = std::iter::repeat_with(crossbeam::channel::unbounded)
+        let command: Vec<_> = std::iter::repeat_with(|| crossbeam::channel::bounded(100))
             .take(n_of_workers)
             .collect();
 
-        let ren_to_comp = crossbeam::channel::unbounded();
-        let comp_to_ren = crossbeam::channel::unbounded();
-        let results = crossbeam::channel::unbounded();
+        let ren_to_comp = crossbeam::channel::bounded(1000);
+        let comp_to_ren = crossbeam::channel::bounded(1000);
+        let results = crossbeam::channel::bounded(1000);
 
         CommsBuilder {
             ren_to_comp,

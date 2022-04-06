@@ -6,3 +6,4 @@ flamegraph.svg
 /.vscode
 *.vol
 benchmark_results
+cachegrind*

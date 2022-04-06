@@ -54,8 +54,8 @@ pub struct RendererFront {
 impl RendererFront {
     /// Create inactive front
     pub fn new() -> Self {
-        let communication_in = crossbeam::channel::unbounded(); // main -> renderer
-        let communication_out = crossbeam::channel::unbounded(); // renderer -> main
+        let communication_in = crossbeam::channel::bounded(100); // main -> renderer
+        let communication_out = crossbeam::channel::bounded(100); // renderer -> main
         Self {
             handle: None,
             buffer: None,
