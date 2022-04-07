@@ -5,7 +5,6 @@ use crate::{common::BoundBox, volumetric::vol_builder::DataSource, TF};
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
-// todo typed mmap
 #[derive(Debug)]
 pub struct StreamVolume {
     bound_box: BoundBox,

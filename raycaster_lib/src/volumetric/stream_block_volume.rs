@@ -1,7 +1,9 @@
-use nalgebra::{point, vector, Point3, Vector3};
+use memmap::Mmap;
+use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 use crate::{
-    common::{blockify, tf_visible_range, BoundBox},
+    common::{blockify, tf_visible_range, BoundBox, ValueRange},
+    volumetric::DataSource,
     TF,
 };
 
@@ -11,18 +13,76 @@ use super::{
     Volume,
 };
 
+pub struct StreamBlock {
+    pub block_side: usize,
+    pub value_range: ValueRange,
+    pub bound_box: BoundBox,
+    pub transform: Matrix4<f32>,
+    pub data: *const u8,
+}
+
+impl StreamBlock {
+    pub fn new(
+        block_side: usize,
+        bound_box: BoundBox,
+        scale: Vector3<f32>,
+        data: *const u8,
+    ) -> Self {
+        let elements = block_side.pow(3);
+        let slice = unsafe { std::slice::from_raw_parts(data, elements) };
+        let value_range = ValueRange::from_iter(slice);
+
+        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
+        let lower_vec = point![0.0, 0.0, 0.0] - bound_box.lower; // todo type workaround
+
+        let transform = Matrix4::identity()
+            .append_translation(&lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
+        Self {
+            block_side,
+            value_range,
+            bound_box,
+            transform,
+            data,
+        }
+    }
+
+    fn get_block_data_half(&self, start_index: usize) -> [u8; 4] {
+        unsafe {
+            let mut ptr = self.data.add(start_index);
+            let d0 = ptr.read();
+
+            ptr.add(1);
+            let d1 = ptr.read();
+
+            ptr.add(self.block_side);
+            let d2 = ptr.read();
+
+            ptr.add(1);
+            let d3 = ptr.read();
+
+            [d0, d1, d2, d3]
+        }
+    }
+}
+
+// Safety: pointer points to memory mapped file, which lives as long as StreamBlockVolume lives
+unsafe impl Send for StreamBlock {}
+
 // Default overlap == 1
-pub struct BlockVolume {
+pub struct StreamBlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     pub empty_blocks: Vec<bool>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    pub data: Vec<Block>,
+    data_owner: Mmap,
+    pub data: Vec<StreamBlock>,
     tf: TF,
 }
 
-impl BlockVolume {
+impl StreamBlockVolume {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = self.block_side - 1; // implicit block overlap of 1
@@ -36,15 +96,13 @@ impl BlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
-        match self.data.get(block_index) {
-            Some(b) => b.data.get(block_offset).copied(),
-            None => None,
-        }
+        let block = &self.data[block_index];
+        unsafe { std::ptr::read(block.data.add(block_offset)) }
     }
 
-    pub fn build_empty(blocks: &[Block], tf: TF) -> Vec<bool> {
+    pub fn build_empty(blocks: &[StreamBlock], tf: TF) -> Vec<bool> {
         let mut v = Vec::with_capacity(blocks.len());
         let vis_ranges = tf_visible_range(tf);
 
@@ -56,7 +114,7 @@ impl BlockVolume {
     }
 }
 
-impl Volume for BlockVolume {
+impl Volume for StreamBlockVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }
@@ -79,6 +137,11 @@ impl Volume for BlockVolume {
         let first_data = block.get_block_data_half(first_index);
         let [c000, c001, c010, c011] = first_data;
 
+        let c000 = c000 as f32;
+        let c001 = c001 as f32;
+        let c010 = c010 as f32;
+        let c011 = c011 as f32;
+
         let inv_z_t = 1.0 - z_t;
         let inv_y_t = 1.0 - y_t;
 
@@ -93,6 +156,11 @@ impl Volume for BlockVolume {
         let second_data = block.get_block_data_half(second_index);
         let [c100, c101, c110, c111] = second_data;
 
+        let c100 = c100 as f32;
+        let c101 = c101 as f32;
+        let c110 = c110 as f32;
+        let c111 = c111 as f32;
+
         let c10 = c100 * inv_z_t + c101 * z_t; // z low
         let c11 = c110 * inv_z_t + c111 * z_t; // z high
         let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
@@ -101,7 +169,8 @@ impl Volume for BlockVolume {
     }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
-        self.get_3d_data(x, y, z)
+        let sample = self.get_3d_data(x, y, z); // todo bounds check
+        Some(sample as f32)
     }
 
     fn get_tf(&self) -> TF {
@@ -118,12 +187,12 @@ impl Volume for BlockVolume {
 
     fn set_tf(&mut self, tf: TF) {
         self.tf = tf;
-        self.empty_blocks = BlockVolume::build_empty(&self.data, self.tf);
+        self.empty_blocks = StreamBlockVolume::build_empty(&self.data, self.tf);
     }
 }
 
-impl BuildVolume<u8> for BlockVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
+impl BuildVolume<u8> for StreamBlockVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamBlockVolume, &'static str> {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
@@ -143,21 +212,28 @@ impl BuildVolume<u8> for BlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
+        let (data_owner, data_offset) = match data {
+            DataSource::Mmap(m) => m.into_inner(),
+            _ => return Err("Data not memory mapped"),
+        };
+        let ptr = unsafe { data_owner.as_ptr().add(offset) }; // todo offset or data_offset?
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {
                 for z in 0..block_size.z {
                     let block_start = step_size * point![x, y, z];
-                    let block_data = get_block_data(slice, size, block_start, block_side);
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
-                    let block = Block::from_data(block_data, block_bound_box, scale, block_side);
+
+                    let block_data_offset = get_3d_index(block_size, block_start);
+                    let block_data_ptr = unsafe { ptr.add(block_data_offset) };
+                    let block =
+                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr);
                     blocks.push(block);
                 }
             }
         }
 
-        let empty_blocks = BlockVolume::build_empty(&blocks, tf);
+        let empty_blocks = StreamBlockVolume::build_empty(&blocks, tf);
 
         println!(
             "Built {} blocks of dims {} blocks ({},{},{}) -> ({},{},{})",
@@ -171,11 +247,12 @@ impl BuildVolume<u8> for BlockVolume {
             block_size.z,
         );
 
-        Ok(BlockVolume {
+        Ok(StreamBlockVolume {
             bound_box,
             data_size: size,
             block_size,
             data: blocks,
+            data_owner,
             tf,
             block_side,
             empty_blocks,
@@ -230,109 +307,4 @@ pub fn get_block_data(
 
 fn get_3d_index(size: Vector3<usize>, pos: Point3<usize>) -> usize {
     pos.z + pos.y * size.z + pos.x * size.y * size.z
-}
-
-#[cfg(test)]
-mod test {
-
-    use nalgebra::{point, vector};
-
-    use super::*;
-
-    // Copy of block indexing for testing (no constants)
-    fn get_indexes(
-        block_side: usize,
-        block_overlap: usize,
-        blocks_size: Vector3<usize>,
-        x: usize,
-        y: usize,
-        z: usize,
-    ) -> (usize, usize) {
-        let jump_per_block = block_side - block_overlap;
-        //assert_ne!(jump_per_block, 0);
-        let block_offset = (z % jump_per_block)
-            + (y % jump_per_block) * block_side
-            + (x % jump_per_block) * block_side * block_side;
-        let block_index = (z / jump_per_block)
-            + (y / jump_per_block) * blocks_size.z
-            + (x / jump_per_block) * blocks_size.y * blocks_size.z;
-        (block_index, block_offset)
-    }
-
-    // #[test]
-    // #[ignore]
-    // fn construction() {
-    //     // Assumes BLOCK_SIDE == 3
-    //     let mut data = [0.0; 3 * 3 * 3];
-    //     data[2] = 1.9;
-    //     data[9] = 1.8;
-    //     data[20] = 0.0;
-    //     let bbox = BoundBox::new(point![0.0, 0.0, 0.0], point![1.0, 1.0, 1.0]);
-    //     let block = Block::from_data(data, bbox);
-
-    //     assert_eq!(block.value_range.limits(), (0.0, 1.9));
-    // }
-
-    #[test]
-    fn build_empty() {
-        let block1 = Block::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let block2 = Block::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let block3 = Block::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let blocks = &[block1, block2, block3];
-
-        let tf = |v: f32| vector![1.0, 1.0, 1.0, v];
-
-        let empty = BlockVolume::build_empty(blocks, tf);
-
-        assert_eq!(empty.len(), 3);
-        assert!(empty[0]);
-        assert!(!empty[1]);
-        assert!(!empty[2]);
-    }
-
-    #[test]
-    fn block_indexing_3() {
-        let block_size = vector![5, 5, 5];
-
-        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 0), (0, 0));
-        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 1), (0, 1));
-        assert_eq!(get_indexes(3, 1, block_size, 0, 0, 2), (1, 0));
-    }
-
-    #[test]
-    fn block_indexing_7() {
-        let block_size = vector![5, 5, 5];
-
-        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 0), (0, 0));
-        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 1), (0, 1));
-        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 2), (0, 2));
-        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 6), (1, 0));
-        assert_eq!(get_indexes(7, 1, block_size, 0, 0, 7), (1, 1));
-        assert_eq!(
-            get_indexes(7, 1, block_size, 0, 7, 7),
-            (block_size.z + 1, 7 + 1)
-        );
-
-        assert_eq!(
-            get_indexes(7, 1, block_size, 4, 3, 2),
-            (0, 7 * 7 * 4 + 7 * 3 + 2)
-        );
-    }
-
-    #[test]
-    fn getting_block_data() {
-        let block_side = 4;
-
-        let v: Vec<u8> = (0..=255).into_iter().cycle().take(10 * 10 * 10).collect();
-        let vol_data = &v[..];
-
-        let size = vector![10, 10, 10];
-
-        let c = get_block_data(vol_data, size, point![0, 0, 0], block_side);
-        assert_eq!(c[0..4], [0.0, 1.0, 2.0, 3.0]);
-        assert_eq!(c[4..8], [10.0, 11.0, 12.0, 13.0]);
-        assert_eq!(c[8], 20.0);
-
-        assert_eq!(c[(4 * 4)..((4 * 4) + 4)], [100.0, 101.0, 102.0, 103.0]);
-    }
 }

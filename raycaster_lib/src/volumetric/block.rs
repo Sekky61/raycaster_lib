@@ -17,6 +17,7 @@ impl Block {
         scale: Vector3<f32>,
         block_side: usize,
     ) -> Block {
+        // todo boundbox and scale has redundant info
         assert_eq!(data.len(), block_side.pow(3));
         let value_range = ValueRange::from_iter(&data[..]);
 

@@ -28,13 +28,14 @@ impl ValueRange {
         }
     }
 
-    pub fn from_iter<T>(iter: impl IntoIterator<Item = T>) -> ValueRange
+    pub fn from_iter<T, I>(iter: impl IntoIterator<Item = T>) -> ValueRange
     where
-        T: Deref<Target = f32>,
+        T: Deref<Target = I>,
+        I: Into<f32> + Copy,
     {
         let mut range = ValueRange::new();
         for val in iter {
-            range.extend(*val);
+            range.extend((*val).into());
         }
         range
     }

@@ -3,6 +3,7 @@ mod block;
 mod block_volume;
 mod empty_index;
 mod linear_volume;
+mod stream_block_volume;
 mod stream_volume;
 mod vol_builder;
 mod volume;
