@@ -36,6 +36,7 @@ impl BlockVolume {
     }
 
     // get voxel
+    // todo make unchecked version
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
         match self.data.get(block_index) {

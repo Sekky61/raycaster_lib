@@ -29,8 +29,8 @@ pub struct VolumeMetadata<T> {
     pub data: Option<DataSource<T>>,
     pub data_offset: Option<usize>,
     pub data_shape: Option<StorageShape>,
-    pub tf: Option<TF>, // Transfer function
-    pub block_side: Option<usize>,
+    pub tf: Option<TF>,            // Transfer function
+    pub block_side: Option<usize>, // todo u16
 }
 
 impl<T> VolumeMetadata<T> {

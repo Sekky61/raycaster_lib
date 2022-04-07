@@ -54,11 +54,18 @@ impl BuildVolume<u8> for StreamVolume {
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No tf")?;
 
+        let scale = vector![scale.x * 0.99, scale.y * 0.99, scale.z * 0.99]; // todo workaround
+
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
             .component_mul(&scale);
 
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
+
+        println!(
+            "Constructed StreamVolume ({}x{}x{})",
+            size.x, size.y, size.z
+        );
 
         Ok(StreamVolume {
             bound_box,

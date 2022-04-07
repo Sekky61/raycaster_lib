@@ -151,7 +151,7 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
     };
 
     // todo handle Z sample shape
-    // let block_side
+    let mut block_side = None;
 
     let ExtractedMetaGen {
         offset,
@@ -161,12 +161,15 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
 
     let data_shape = match slice[24] {
         1 => StorageShape::Linear,
-        2 => StorageShape::Z(slice[25]),
+        2 => {
+            block_side = Some(slice[25] as usize);
+            StorageShape::Z(slice[25])
+        }
         _ => return Err("Unknown data shape"),
     };
 
-    dbg!(slice.len() - offset);
-    assert_eq!(slice.len() - offset, size.x * size.y * size.z); // todo doesnt hold for z shape (padidng to blocks)
+    // todo doesnt hold for z shape (padidng to blocks)
+    //assert_eq!(slice.len() - offset, size.x * size.y * size.z);
 
     Ok(VolumeMetadata {
         position: None,
@@ -176,7 +179,7 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         data: Some(data_source),
         data_shape: Some(data_shape),
         tf: Some(skull_tf),
-        block_side: None,
+        block_side,
     })
 }
 

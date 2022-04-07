@@ -22,14 +22,17 @@ pub struct StreamBlock {
 }
 
 impl StreamBlock {
-    pub fn new(
+    /// # Safety
+    ///
+    /// data has to be pointer into the beginning of memory mapped file
+    pub unsafe fn new(
         block_side: usize,
         bound_box: BoundBox,
         scale: Vector3<f32>,
         data: *const u8,
     ) -> Self {
         let elements = block_side.pow(3);
-        let slice = unsafe { std::slice::from_raw_parts(data, elements) };
+        let slice = std::slice::from_raw_parts(data, elements);
         let value_range = ValueRange::from_iter(slice);
 
         let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
@@ -50,16 +53,16 @@ impl StreamBlock {
 
     fn get_block_data_half(&self, start_index: usize) -> [u8; 4] {
         unsafe {
-            let mut ptr = self.data.add(start_index);
+            let ptr = self.data.add(start_index);
             let d0 = ptr.read();
 
-            ptr.add(1);
+            let ptr = ptr.add(1);
             let d1 = ptr.read();
 
-            ptr.add(self.block_side);
+            let ptr = ptr.add(self.block_side);
             let d2 = ptr.read();
 
-            ptr.add(1);
+            let ptr = ptr.add(1);
             let d3 = ptr.read();
 
             [d0, d1, d2, d3]
@@ -96,10 +99,28 @@ impl StreamBlockVolume {
     }
 
     // get voxel
-    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> u8 {
+    // todo make unchecked version
+    fn get_3d_data_unchecked(&self, x: usize, y: usize, z: usize) -> u8 {
         let (block_index, block_offset) = self.get_indexes(x, y, z);
         let block = &self.data[block_index];
+        // Safety: Assumes block has block_side^3 elements
         unsafe { std::ptr::read(block.data.add(block_offset)) }
+    }
+
+    // get voxel
+    fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<u8> {
+        let (block_index, block_offset) = self.get_indexes(x, y, z);
+        match self.data.get(block_index) {
+            Some(b) => {
+                if block_offset < self.block_side.pow(3) {
+                    let val = unsafe { std::ptr::read(b.data.add(block_offset)) };
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
     }
 
     pub fn build_empty(blocks: &[StreamBlock], tf: TF) -> Vec<bool> {
@@ -170,7 +191,7 @@ impl Volume for StreamBlockVolume {
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
         let sample = self.get_3d_data(x, y, z); // todo bounds check
-        Some(sample as f32)
+        sample.map(|v| v as f32)
     }
 
     fn get_tf(&self) -> TF {
@@ -226,8 +247,9 @@ impl BuildVolume<u8> for StreamBlockVolume {
 
                     let block_data_offset = get_3d_index(block_size, block_start);
                     let block_data_ptr = unsafe { ptr.add(block_data_offset) };
-                    let block =
-                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr);
+                    let block = unsafe {
+                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr)
+                    };
                     blocks.push(block);
                 }
             }

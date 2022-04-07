@@ -1,7 +1,6 @@
 use std::{
     cell::RefCell,
     collections::VecDeque,
-    ops::Sub,
     path::{Path, PathBuf},
     rc::Rc,
     sync::{Arc, RwLock},
@@ -15,7 +14,7 @@ use raycaster_lib::{
         transfer_functions,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{DataSource, LinearVolume},
+    volumetric::{DataSource, LinearVolume, StreamBlockVolume, StreamVolume},
     PerspectiveCamera,
 };
 use slint::{
@@ -28,9 +27,9 @@ use super::App;
 pub const RENDER_WIDTH_U: u16 = 700;
 pub const RENDER_HEIGHT_U: u16 = 700;
 
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol"
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
 pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
-const DEFAULT_MULTI_THREAD: bool = true;
+const DEFAULT_MULTI_THREAD: bool = false;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;
 
@@ -310,6 +309,7 @@ impl State {
         let tf = match tf_name {
             "Green" => PrewrittenTF::Green,
             "Gray" => PrewrittenTF::Gray,
+            "White" => PrewrittenTF::White,
             _ => panic!("Unknown transfer function '{tf_name}'"),
         };
         self.current_tf = tf;

@@ -13,7 +13,7 @@ where
     V: Volume + 'static,
 {
     pub volume: V,
-    pub empty_index: EmptyIndex<3>,
+    pub empty_index: EmptyIndex<4>,
     render_options: RenderOptions,
 }
 

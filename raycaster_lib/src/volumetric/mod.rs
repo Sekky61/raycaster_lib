@@ -13,6 +13,7 @@ pub use block::Block;
 pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex};
 pub use linear_volume::LinearVolume;
+pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
 pub use stream_volume::StreamVolume;
 pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
