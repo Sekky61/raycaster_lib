@@ -27,8 +27,9 @@ use super::App;
 pub const RENDER_WIDTH_U: u16 = 700;
 pub const RENDER_HEIGHT_U: u16 = 700;
 
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
-pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
+// todo may not lead to a file
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/a.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
+pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
 const DEFAULT_MULTI_THREAD: bool = false;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;

@@ -20,7 +20,7 @@ use super::{
 
 pub const PAR_SIDE: usize = 64;
 
-const RENDERER_COUNT: u8 = 5;
+const RENDERER_COUNT: u8 = 5; // todo dynamic
 const COMPOSITER_COUNT: u8 = 1;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
