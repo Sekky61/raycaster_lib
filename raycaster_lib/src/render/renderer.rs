@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use nalgebra::{vector, Vector2, Vector4};
 
 use crate::{
@@ -73,14 +75,11 @@ where
                 let pixel_coord = (x as f32 * step_x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
 
-                // performance: branch gets almost optimized away since it is predictable
-                let ray_color = if self.render_options.empty_index {
-                    self.collect_light_index(&ray)
-                } else {
-                    self.collect_light(&ray)
-                };
+                let ray_color = self.collect_light(&ray, camera);
 
                 let opacity = ray_color.w;
+
+                // Draw boundbox
 
                 // if x == pixels.x.start
                 //     || x == pixels.x.end - 1
@@ -104,7 +103,7 @@ where
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray) -> Vector4<f32> {
+    pub fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera) -> Vector4<f32> {
         let mut rgb = vector![0.0, 0.0, 0.0];
         let mut opacity = 0.0;
 
@@ -112,6 +111,8 @@ where
             Some(e) => e,
             None => return vector![0.0, 0.0, 0.0, 0.0],
         };
+
+        let view_dir_neg = -camera.get_dir();
 
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
@@ -124,37 +125,53 @@ where
         let mut pos = begin;
 
         let tf = self.volume.get_tf();
-        let light_source = vector![1.0, 1.0, 0.0].normalize();
+        let light_dir = vector![-1.0, -1.0, -1.0].normalize(); // light direction
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
 
+            // todo try sampling on integer coords
+            if self.render_options.empty_index && self.empty_index.sample(pos) == BlockType::Empty {
+                pos += step;
+                continue;
+            }
+
             let (sample, grad_samples) = self.volume.sample_at_gradient(pos);
 
-            let color_b = tf(sample);
+            pos += step;
 
+            let color_b = tf(sample);
+            if color_b.w == 0.0 {
+                continue;
+            }
+
+            // Inverted, as low values indicate outside
             let grad = vector![
                 sample - grad_samples.x,
                 sample - grad_samples.y,
                 sample - grad_samples.z
             ];
 
-            let grad = grad.normalize();
+            let grad_magnitude = grad.magnitude();
+            const GRAD_MAG_TRESH: f32 = 0.0; // todo tweak
 
-            let n_dot_l = f32::max(grad.dot(&light_source), 0.2); // todo phong
-            let sample_rgb = color_b.xyz() * n_dot_l;
+            let mut sample_rgb = color_b.xyz();
 
-            pos += step;
+            const albedo: f32 = 0.18 / PI;
+            let grad_norm = grad / grad_magnitude;
+            let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
 
-            if color_b.w == 0.0 {
-                continue;
-            }
+            let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
+            let r_dot_view = reflect.dot(&view_dir_neg);
+            let light_intensity = 200.0;
+            let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
+
+            sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
 
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
             rgb += (1.0 - opacity) * color_b.w * sample_rgb;
-
             opacity += (1.0 - opacity) * color_b.w;
 
             // relying on branch predictor to "eliminate" branch
@@ -167,74 +184,49 @@ where
         }
         vector![rgb.x, rgb.y, rgb.z, opacity]
     }
+}
 
-    pub fn collect_light_index(&self, ray: &Ray) -> Vector4<f32> {
-        let mut rgb = vector![0.0, 0.0, 0.0];
-        let mut opacity = 0.0;
+#[cfg(test)]
+mod test {
 
-        let (obj_ray, t) = match self.volume.intersect_transform(ray) {
-            Some(e) => e,
-            None => return vector![0.0, 0.0, 0.0, 0.0],
-        };
+    use nalgebra::Vector3;
 
-        let begin = obj_ray.origin;
-        let direction = ray.get_direction();
+    use super::*;
 
-        let step_size = 0.5;
-        let max_n_of_steps = (t / step_size) as usize;
+    fn compare_float(actual: f32, expected: f32, error: f32) {
+        let err = f32::abs(actual - expected);
+        assert!(err < error * f32::EPSILON);
+    }
 
-        let step = direction * step_size; // normalized
+    #[test]
+    fn phong() {
+        // view    light
+        //    \ | /
+        //     \|/
+        // ------------ 0
+        //
+        // x is right, y is up, z=0
 
-        let mut pos = begin;
+        let mut sample_rgb = vector![255.0, 0.0, 0.0];
 
-        let tf = self.volume.get_tf();
-        let light_source = vector![1.0, 1.0, 0.0].normalize();
+        let view_dir = vector![0.4, -1.0, 0.0];
+        let view_dir_neg = -view_dir;
 
-        for _ in 0..max_n_of_steps {
-            // todo try sampling on integer coords
-            if self.empty_index.sample(pos) == BlockType::Empty {
-                pos += step;
-                continue;
-            }
+        let light_dir = vector![-1.0, -1.0, 0.0].normalize();
 
-            //let sample = self.volume.sample_at(pos);
+        let grad: Vector3<f32> = vector![0.0, 1.0, 0.0];
+        let grad_magnitude = grad.magnitude();
 
-            let (sample, grad_samples) = self.volume.sample_at_gradient(pos);
+        let grad_norm = grad / grad_magnitude;
+        let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
 
-            let color_b = tf(sample);
+        let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
+        let r_dot_view = reflect.dot(&view_dir_neg);
+        let light_intensity = 15.0;
+        let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
 
-            let grad = vector![
-                sample - grad_samples.x,
-                sample - grad_samples.y,
-                sample - grad_samples.z
-            ];
+        sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
 
-            let grad = grad.normalize();
-
-            let n_dot_l = f32::max(grad.dot(&light_source), 0.2);
-            let sample_rgb = color_b.xyz() * n_dot_l;
-
-            pos += step;
-
-            if color_b.w == 0.0 {
-                continue;
-            }
-
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
-            rgb += (1.0 - opacity) * color_b.w * sample_rgb;
-
-            opacity += (1.0 - opacity) * color_b.w;
-
-            // relying on branch predictor to "eliminate" branch
-            if self.render_options.ray_termination {
-                // early ray termination
-                if opacity > 0.99 {
-                    break;
-                }
-            }
-        }
-        vector![rgb.x, rgb.y, rgb.z, opacity]
+        println!("rgb: {sample_rgb:?}");
     }
 }

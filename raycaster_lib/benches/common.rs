@@ -27,7 +27,7 @@ const DEFAULT_BLOCK_SIDE: usize = 32;
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
-pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 11] = [
+pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 11] = [ // todo average 11 samples together
     // View volume from each quadrant
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0, 1.0]),

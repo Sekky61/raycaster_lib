@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{vector, Vector3};
 
 use crate::config::{Config, GeneratorConfig};
 
@@ -9,6 +9,8 @@ use super::SampleGenerator;
 pub struct SolidGenerator {
     /// The sample value
     sample: u8,
+    pad: u32,
+    dims: Vector3<u32>,
 }
 
 impl SolidGenerator {
@@ -18,12 +20,27 @@ impl SolidGenerator {
             _ => panic!("Bad generator config"),
         };
 
-        SolidGenerator { sample }
+        SolidGenerator {
+            sample,
+            pad: 5,
+            dims: config.dims,
+        } // todo configurable
     }
 }
 
 impl SampleGenerator for SolidGenerator {
-    fn sample_at(&self, _coords: Vector3<u32>) -> u8 {
-        self.sample
+    fn sample_at(&self, coords: Vector3<u32>) -> u8 {
+        let pad_end = self.dims - vector![self.pad, self.pad, self.pad];
+        if coords.x < self.pad
+            || coords.y < self.pad
+            || coords.z < self.pad
+            || coords.x > pad_end.x
+            || coords.y > pad_end.y
+            || coords.z > pad_end.z
+        {
+            0
+        } else {
+            self.sample
+        }
     }
 }

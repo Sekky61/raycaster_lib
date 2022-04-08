@@ -28,8 +28,8 @@ pub const RENDER_WIDTH_U: u16 = 700;
 pub const RENDER_HEIGHT_U: u16 = 700;
 
 // todo may not lead to a file
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/a.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
-pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
+pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
 const DEFAULT_MULTI_THREAD: bool = false;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;
@@ -97,7 +97,7 @@ pub struct State {
     pub mouse: Option<Vector2<f32>>,
     // Vol picker
     pub file_picked: Option<PathBuf>,
-    pub parser_picked: Option<PrewrittenParser>,
+    pub parser_picked: Option<PrewrittenParser>, // todo current parser to fix switching TF
     pub current_tf: PrewrittenTF,
 }
 

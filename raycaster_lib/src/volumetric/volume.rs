@@ -35,26 +35,29 @@ pub trait Volume: Send {
     fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
         // Default implementation, can be replaced with a more effective one for concrete volume types
         let sample = self.sample_at(pos);
-        let mut grad_dir = vector![0.05, 0.05, 0.05]; // todo get scale / voxel shape
+        let grad_dir = 0.4; // todo take into account voxel shape
 
         let size = self.get_size().map(|v| v as f32);
-        // todo change from sampling to gradient compute and optimise, use background values outside
+        // todo change from sampling to gradient compute and optimise
 
-        if pos.x + grad_dir.x > size.x {
-            grad_dir.x *= -1.0;
-        }
+        let sample_x = if pos.x + grad_dir > size.x {
+            0.0 // background value
+        } else {
+            self.sample_at(pos + vector![grad_dir, 0.0, 0.0])
+        };
 
-        if pos.y + grad_dir.y > size.y {
-            grad_dir.y *= -1.0;
-        }
+        let sample_y = if pos.y + grad_dir > size.y {
+            0.0 // background value
+        } else {
+            self.sample_at(pos + vector![0.0, grad_dir, 0.0])
+        };
 
-        if pos.z + grad_dir.z > size.z {
-            grad_dir.z *= -1.0;
-        }
+        let sample_z = if pos.z + grad_dir > size.z {
+            0.0 // background value
+        } else {
+            self.sample_at(pos + vector![0.0, 0.0, grad_dir])
+        };
 
-        let sample_x = self.sample_at(pos + vector![grad_dir.x, 0.0, 0.0]);
-        let sample_y = self.sample_at(pos + vector![0.0, grad_dir.y, 0.0]);
-        let sample_z = self.sample_at(pos + vector![0.0, 0.0, grad_dir.z]);
         let grad_samples = vector![sample_x, sample_y, sample_z];
 
         (sample, grad_samples)
