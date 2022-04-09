@@ -70,7 +70,7 @@ pub fn main() {
         let shared_buffer = state_ref.renderer_front.get_buffer_handle().unwrap();
 
         {
-            let mut lock = shared_buffer.lock().unwrap();
+            let mut lock = shared_buffer.lock();
             let slice = lock.as_mut_slice();
             pixel_buffer.make_mut_bytes().clone_from_slice(slice);
             // mutex drop

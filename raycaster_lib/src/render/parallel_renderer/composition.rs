@@ -2,11 +2,15 @@ use std::{
     cell::UnsafeCell,
     cmp::min,
     collections::VecDeque,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
 };
 
 use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
+use parking_lot::Mutex;
 
 use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
 
@@ -40,7 +44,7 @@ impl SubCanvas {
 pub struct Canvas {
     size: PixelBox,
     sub_canvases: Vec<UnsafeCell<SubCanvas>>,
-    remaining_subs: Mutex<u32>,
+    remaining_subs: AtomicU32,
     tile_side: u16,
     tiles_x: u16, // number of tiles in one row
 }
@@ -79,7 +83,7 @@ impl Canvas {
         let remaining_subs = sub_canvases.len() as u32;
         Canvas {
             sub_canvases,
-            remaining_subs: Mutex::new(remaining_subs),
+            remaining_subs: AtomicU32::new(remaining_subs),
             size,
             tile_side,
             tiles_x: tiles.x,
@@ -115,8 +119,10 @@ impl Canvas {
 
         // Reset done subcanvases counter
         {
-            let mut remaining = self.remaining_subs.lock().unwrap();
-            *remaining = self.sub_canvases.len() as u32;
+            self.remaining_subs.store(
+                self.sub_canvases.len() as u32,
+                std::sync::atomic::Ordering::Relaxed,
+            );
         }
 
         for (block_id, _) in block_infos {
@@ -278,7 +284,7 @@ impl CompWorker {
     unsafe fn tile_finished(&self, subcanvas: &mut SubCanvas) {
         // copy color to main canvas
         {
-            let mut buffer_g = self.main_buffer.lock().unwrap();
+            let mut buffer_g = self.main_buffer.lock();
             let buffer = &mut (*buffer_g)[..];
 
             self.copy_subframe(buffer, subcanvas);
@@ -287,14 +293,19 @@ impl CompWorker {
         // Increment canvas counter for finished tiles
         {
             // mutex guard
-            let mut remaining_tiles = self.canvas.remaining_subs.lock().unwrap();
-            *remaining_tiles -= 1;
+            let mut remaining_tiles = self.canvas.remaining_subs.load(Ordering::Relaxed);
+            remaining_tiles -= 1;
+            self.canvas
+                .remaining_subs
+                .store(remaining_tiles, Ordering::Relaxed);
+
             #[cfg(debug_assertions)]
             println!(
                 "Comp {}: tile done, remaining {}",
-                self.compositor_id, *remaining_tiles
+                self.compositor_id, remaining_tiles
             );
-            if *remaining_tiles == 0 {
+            if remaining_tiles == 0 {
+                // Render is done
                 // Send message to master, render is done
                 #[cfg(debug_assertions)]
                 println!("Comp {}: sent render done message", self.compositor_id);

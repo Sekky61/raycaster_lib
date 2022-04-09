@@ -1,9 +1,7 @@
-use std::{
-    sync::{Arc, Mutex, RwLock},
-    thread::JoinHandle,
-};
+use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
+use parking_lot::{Mutex, RwLock};
 
 use crate::{volumetric::Volume, PerspectiveCamera};
 
@@ -83,10 +81,10 @@ where
 
                 {
                     // Lock buffer
-                    let mut buffer = self.shared_buffer.lock().unwrap();
+                    let mut buffer = self.shared_buffer.lock();
 
                     // Lock camera
-                    let camera = self.camera.read().unwrap();
+                    let camera = self.camera.read();
 
                     // Render
                     renderer.render_to_buffer(&camera, &mut buffer[..]);

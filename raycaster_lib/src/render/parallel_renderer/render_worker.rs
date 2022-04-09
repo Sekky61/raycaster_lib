@@ -1,7 +1,8 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
+use parking_lot::RwLock;
 
 use crate::{common::Ray, volumetric::Block, PerspectiveCamera, TF};
 
@@ -68,10 +69,7 @@ impl<'a> RenderWorker<'a> {
     }
 
     fn active_state(&self) -> ToWorkerMsg {
-        let camera = self
-            .camera
-            .read()
-            .expect("Cannot acquire read lock to camera");
+        let camera = self.camera.read();
 
         #[cfg(debug_assertions)]
         println!("Render {}: entering main loop", self.renderer_id);

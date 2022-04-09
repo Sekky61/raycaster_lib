@@ -3,11 +3,12 @@ use std::{
     collections::VecDeque,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Instant,
 };
 
 use nalgebra::{point, vector, Point3, Vector2, Vector3};
+use parking_lot::RwLock;
 use raycaster_lib::{
     premade::{
         parse::{from_file, generator_parser, skull_parser},
@@ -30,7 +31,7 @@ pub const RENDER_HEIGHT_U: u16 = 700;
 // todo may not lead to a file
 pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
 pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
-const DEFAULT_MULTI_THREAD: bool = false;
+const DEFAULT_MULTI_THREAD: bool = true;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;
 
@@ -238,7 +239,7 @@ impl State {
     fn apply_cam_change(&mut self) {
         let camera = self.renderer_front.get_camera_handle().unwrap();
         {
-            let mut camera = camera.write().unwrap();
+            let mut camera = camera.write();
             while let Some(movement) = self.camera_buffer.buffer.pop_front() {
                 match movement {
                     CameraMovement::PositionOrtho(d) => camera.change_pos(d),

@@ -1,10 +1,8 @@
-use std::{
-    sync::{Arc, Mutex, RwLock},
-    thread::JoinHandle,
-};
+use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
 use nalgebra::vector;
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
@@ -178,7 +176,7 @@ impl ParalelRenderer {
 
                     // Prepare canvas (mainly queues)
                     {
-                        let camera = self.camera.read().unwrap();
+                        let camera = self.camera.read();
                         canvas.build_queues(
                             &camera,
                             &self.volume.data[..],

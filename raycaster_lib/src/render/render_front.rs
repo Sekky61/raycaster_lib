@@ -1,9 +1,7 @@
-use std::{
-    sync::{Arc, Mutex, RwLock},
-    thread::JoinHandle,
-};
+use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
+use parking_lot::{Mutex, RwLock};
 
 use crate::PerspectiveCamera;
 

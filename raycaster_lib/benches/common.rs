@@ -1,11 +1,9 @@
-use std::{
-    iter::Cycle,
-    sync::{Arc, RwLock},
-};
+use std::{iter::Cycle, sync::Arc};
 
 pub use criterion::{criterion_group, criterion_main, Criterion};
 use nalgebra::Vector2;
 pub use nalgebra::{point, vector, Point3, Vector3};
+use parking_lot::RwLock;
 pub use raycaster_lib::{
     render::{RenderOptions, Renderer},
     volumetric::{BlockVolume, BuildVolume, LinearVolume, Volume, VolumeMetadata},
@@ -150,7 +148,7 @@ impl BenchOptions {
                     for (pos, dir) in pos_iter.by_ref() {
                         {
                             // set another cam pos
-                            let mut cam_guard = cam.write().unwrap();
+                            let mut cam_guard = cam.write();
                             cam_guard.set_pos(*pos);
                             cam_guard.set_direction(*dir);
                         }
