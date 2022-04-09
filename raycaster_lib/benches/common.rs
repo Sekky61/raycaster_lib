@@ -27,7 +27,7 @@ const DEFAULT_BLOCK_SIDE: usize = 32;
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
-pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 11] = [ // todo average 11 samples together
+pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 14] = [ // todo average 14 samples together
     // View volume from each quadrant
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0, 1.0]),
@@ -41,6 +41,9 @@ pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 11] = [ // tod
     (point![QUADRANT_DISTANCE, 0.0, 0.0], vector![-1.0, 0.0, 0.0]),
     (point![0.0, QUADRANT_DISTANCE, 0.0], vector![0.0, -1.0, 0.0]),
     (point![0.0, 0.0, QUADRANT_DISTANCE], vector![0.0, 0.0, -1.0]),
+    (point![-QUADRANT_DISTANCE, 0.0, 0.0], vector![1.0, 0.0, 0.0]),
+    (point![0.0, -QUADRANT_DISTANCE, 0.0], vector![0.0, 1.0, 0.0]),
+    (point![0.0, 0.0, -QUADRANT_DISTANCE], vector![0.0, 0.0, 1.0]),
 ];
 
 use raycaster_lib::{
@@ -71,36 +74,15 @@ where
     from_file("../volumes/Skull.vol", parser_add_block_side, skull_tf).unwrap()
 }
 
-#[derive(Clone)]
-pub struct CameraPositions {
-    /// Positions with directions
-    pub it: Cycle<std::vec::IntoIter<(Point3<f32>, Vector3<f32>)>>,
-}
-
-impl CameraPositions {
-    pub fn new(positions: Vec<CamPos>) -> Self {
-        assert!(!positions.is_empty());
-        let it = positions.into_iter().cycle();
-        Self { it }
-    }
-
-    pub fn from_slice(slice: &[CamPos]) -> Self {
-        assert!(!slice.is_empty());
-        let positions = Vec::from(slice);
-        let it = positions.into_iter().cycle();
-        Self { it }
-    }
-}
-
 pub enum Algorithm {
     Linear,
     Parallel,
 }
 pub struct BenchOptions {
     pub render_options: RenderOptions,
-    pub bench_name: String,
+    pub bench_name: String, // todo build signature from render_options
     pub algorithm: Algorithm,
-    pub camera_positions: CameraPositions,
+    pub camera_positions: Vec<CamPos>,
 }
 
 impl BenchOptions {
@@ -110,7 +92,7 @@ impl BenchOptions {
         algorithm: Algorithm,
         camera_positions: &[CamPos],
     ) -> Self {
-        let camera_positions = CameraPositions::from_slice(camera_positions);
+        let camera_positions = Vec::from(camera_positions);
         Self {
             render_options,
             bench_name,
@@ -162,28 +144,22 @@ impl BenchOptions {
                 let cam = cam.clone();
                 let positions = &mut positions;
 
-                b.iter_batched(
-                    move || {
-                        // Setup
-                        let (pos, dir) = match positions.it.next() {
-                            Some(t) => t,
-                            None => panic!("End of cyclic iterator, should not happen"),
-                        };
+                b.iter(move || {
+                    let mut pos_iter = positions.iter();
+                    // Setup
+                    for (pos, dir) in pos_iter.by_ref() {
                         {
                             // set another cam pos
                             let mut cam_guard = cam.write().unwrap();
-
-                            cam_guard.set_pos(pos);
-                            cam_guard.set_direction(dir);
+                            cam_guard.set_pos(*pos);
+                            cam_guard.set_direction(*dir);
                         }
-                    },
-                    move |()| {
-                        // measured part
+
+                        // Render
                         sender_in.send(RendererMessage::StartRendering).unwrap();
                         receiver.recv().unwrap();
-                    },
-                    criterion::BatchSize::PerIteration,
-                );
+                    }
+                });
             });
             // Cleanup
             finish_sender.send(RendererMessage::ShutDown).unwrap();
