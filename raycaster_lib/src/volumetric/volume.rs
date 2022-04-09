@@ -111,6 +111,8 @@ pub trait Volume: Send {
             iter_progress: 0,
         }
     }
+
+    fn get_name(&self) -> &str;
 }
 
 // Warning: Returns None if block element is outside the volume

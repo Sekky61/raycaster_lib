@@ -121,6 +121,10 @@ impl Volume for BlockVolume {
         self.tf = tf;
         self.empty_blocks = BlockVolume::build_empty(&self.data, self.tf);
     }
+
+    fn get_name(&self) -> &str {
+        "BlockVolume"
+    }
 }
 
 impl BuildVolume<u8> for BlockVolume {

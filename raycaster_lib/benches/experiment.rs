@@ -2,6 +2,7 @@
 
 mod common;
 use common::*;
+use raycaster_lib::{render::Renderer, PerspectiveCamera};
 
 fn get_ui_from_usize(c: &mut Criterion) {
     return;

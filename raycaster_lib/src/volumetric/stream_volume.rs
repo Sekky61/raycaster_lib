@@ -7,6 +7,7 @@ use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 #[derive(Debug)]
 pub struct StreamVolume {
+    // todo rename to streamlinearvolume
     bound_box: BoundBox,
     size: Vector3<usize>,
     file_map: Mmap,
@@ -137,5 +138,9 @@ impl Volume for StreamVolume {
 
     fn get_scale(&self) -> Vector3<f32> {
         vector![1.0, 1.0, 1.0]
+    }
+
+    fn get_name(&self) -> &str {
+        "StreamVolume"
     }
 }

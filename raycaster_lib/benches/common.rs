@@ -1,12 +1,18 @@
-use std::{iter::Cycle, sync::Arc};
+// Wrong behavior
+#![allow(dead_code)]
+
+use std::sync::Arc;
 
 pub use criterion::{criterion_group, criterion_main, Criterion};
-use nalgebra::Vector2;
-pub use nalgebra::{point, vector, Point3, Vector3};
+pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use parking_lot::RwLock;
 pub use raycaster_lib::{
-    render::{RenderOptions, Renderer},
-    volumetric::{BlockVolume, BuildVolume, LinearVolume, Volume, VolumeMetadata},
+    premade::{
+        parse::{from_file, skull_parser},
+        transfer_functions::skull_tf,
+    },
+    render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
+    volumetric::{BlockVolume, BuildVolume, DataSource, LinearVolume, Volume, VolumeMetadata},
     PerspectiveCamera,
 };
 
@@ -44,15 +50,6 @@ pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 14] = [ // tod
     (point![0.0, 0.0, -QUADRANT_DISTANCE], vector![0.0, 0.0, 1.0]),
 ];
 
-use raycaster_lib::{
-    premade::{
-        parse::{from_file, skull_parser},
-        transfer_functions::skull_tf,
-    },
-    render::{ParalelRenderer, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::DataSource,
-};
-
 pub fn get_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
@@ -76,26 +73,29 @@ pub enum Algorithm {
     Linear,
     Parallel,
 }
-pub struct BenchOptions {
+pub struct BenchOptions<V> {
     pub render_options: RenderOptions,
-    pub bench_name: String, // todo build signature from render_options
     pub algorithm: Algorithm,
     pub camera_positions: Vec<CamPos>,
+    volume: V,
 }
 
-impl BenchOptions {
+impl<V> BenchOptions<V>
+where
+    V: Volume + BuildVolume<u8> + 'static,
+{
     pub fn new(
         render_options: RenderOptions,
-        bench_name: String,
         algorithm: Algorithm,
         camera_positions: &[CamPos],
+        volume: V,
     ) -> Self {
         let camera_positions = Vec::from(camera_positions);
         Self {
             render_options,
-            bench_name,
             algorithm,
             camera_positions,
+            volume,
         }
     }
 
@@ -105,11 +105,13 @@ impl BenchOptions {
             let camera = PerspectiveCamera::new(POSITION, DIRECTION);
             let shared_camera = Arc::new(RwLock::new(camera));
 
+            let bench_name = self.generate_bench_name();
+
             let BenchOptions {
                 render_options,
-                bench_name,
                 algorithm,
                 camera_positions,
+                volume,
             } = self;
 
             let mut front = RendererFront::new();
@@ -122,12 +124,11 @@ impl BenchOptions {
 
             match algorithm {
                 Algorithm::Parallel => {
-                    let volume = get_volume();
+                    let volume = get_volume(); // todo stream vol
                     let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
                     front.start_rendering(par_ren);
                 }
                 Algorithm::Linear => {
-                    let volume: LinearVolume = get_volume();
                     let serial_r = SerialRenderer::new(volume, shared_camera, render_options);
                     front.start_rendering(serial_r);
                 }
@@ -163,5 +164,42 @@ impl BenchOptions {
             finish_sender.send(RendererMessage::ShutDown).unwrap();
             front.finish();
         }
+    }
+
+    fn generate_bench_name(&self) -> String {
+        let st_mt = match self.algorithm {
+            Algorithm::Linear => "ST",
+            Algorithm::Parallel => "MT",
+        };
+
+        let volume_type = self.volume.get_name();
+
+        let optim = match self.render_options {
+            RenderOptions {
+                ray_termination: false,
+                empty_index: false,
+                ..
+            } => "no_optim",
+            RenderOptions {
+                ray_termination: true,
+                empty_index: false,
+                ..
+            } => "ERT",
+            RenderOptions {
+                ray_termination: false,
+                empty_index: true,
+                ..
+            } => "EI",
+            RenderOptions {
+                ray_termination: true,
+                empty_index: true,
+                ..
+            } => "ERT + EI",
+        };
+
+        let w = self.render_options.resolution.x;
+        let h = self.render_options.resolution.y;
+
+        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim}")
     }
 }

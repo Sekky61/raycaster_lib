@@ -110,6 +110,10 @@ impl Volume for LinearVolume {
     fn set_tf(&mut self, tf: TF) {
         self.tf = tf;
     }
+
+    fn get_name(&self) -> &str {
+        "LinearVolume"
+    }
 }
 
 impl BuildVolume<u8> for LinearVolume {

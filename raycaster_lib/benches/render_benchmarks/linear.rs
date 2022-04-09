@@ -1,6 +1,6 @@
-use crate::common::{Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, HEIGHT, RESOLUTION, WIDTH};
+use crate::common::{get_volume, Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::render::RenderOptions;
+use raycaster_lib::{render::RenderOptions, volumetric::LinearVolume};
 
 pub fn render_linear(c: &mut Criterion) {
     let render_options = RenderOptions {
@@ -9,11 +9,13 @@ pub fn render_linear(c: &mut Criterion) {
         empty_index: false,
     };
 
+    let volume: LinearVolume = get_volume();
+
     let bench_options = BenchOptions::new(
         render_options,
-        format!("Render ST | linear | {WIDTH}x{HEIGHT} | no optim"),
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
+        volume,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -28,11 +30,13 @@ pub fn render_linear_ert(c: &mut Criterion) {
         empty_index: false,
     };
 
+    let volume: LinearVolume = get_volume();
+
     let bench_options = BenchOptions::new(
         render_options,
-        format!("Render ST | linear | {WIDTH}x{HEIGHT} | ERT"),
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
+        volume,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -47,11 +51,13 @@ pub fn render_linear_ei(c: &mut Criterion) {
         empty_index: true,
     };
 
+    let volume: LinearVolume = get_volume();
+
     let bench_options = BenchOptions::new(
         render_options,
-        format!("Render ST | linear | {WIDTH}x{HEIGHT} | EI"),
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
+        volume,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -66,11 +72,13 @@ pub fn render_linear_ert_ei(c: &mut Criterion) {
         empty_index: true,
     };
 
+    let volume: LinearVolume = get_volume();
+
     let bench_options = BenchOptions::new(
         render_options,
-        format!("Render ST | linear | {WIDTH}x{HEIGHT} | ERT + EI"),
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
+        volume,
     );
 
     let benchmark = bench_options.get_benchmark();

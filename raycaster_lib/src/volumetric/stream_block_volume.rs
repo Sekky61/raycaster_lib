@@ -210,6 +210,10 @@ impl Volume for StreamBlockVolume {
         self.tf = tf;
         self.empty_blocks = StreamBlockVolume::build_empty(&self.data, self.tf);
     }
+
+    fn get_name(&self) -> &str {
+        "StreamBlockVolume"
+    }
 }
 
 impl BuildVolume<u8> for StreamBlockVolume {
