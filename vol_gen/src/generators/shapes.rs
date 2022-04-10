@@ -96,7 +96,7 @@ impl ShapeInfo {
         }
     }
 
-    fn render_cuboid(&self, offset: Vector3<u32>) -> u8 {
+    fn render_cuboid(&self, _offset: Vector3<u32>) -> u8 {
         self.sample
     }
 }

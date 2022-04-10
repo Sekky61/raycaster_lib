@@ -12,7 +12,7 @@ use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::Mutex;
 
-use crate::{common::PixelBox, volumetric::Block, PerspectiveCamera};
+use crate::{common::PixelBox, volumetric::volumes::Block, PerspectiveCamera};
 
 use super::{
     communication::CompWorkerComms,

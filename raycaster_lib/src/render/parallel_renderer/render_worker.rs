@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use crossbeam::select;
-use nalgebra::{vector, Vector2, Vector3};
+use nalgebra::{vector, Vector3};
 use parking_lot::RwLock;
 
 use crate::{
     common::Ray,
     render::RenderOptions,
-    volumetric::{Block, Volume},
+    volumetric::{volumes::Block, Volume},
     PerspectiveCamera, TF,
 };
 

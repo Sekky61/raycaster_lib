@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use nalgebra::{vector, Vector2, Vector4};
 
 use crate::{
@@ -171,7 +169,7 @@ where
             let mut sample_rgb = color_b.xyz();
 
             if grad_magnitude > GRAD_MAG_THRESH {
-                const albedo: f32 = 0.18 / PI;
+                // todo const albedo: f32 = 0.18 / PI;
                 let grad_norm = grad / grad_magnitude;
                 let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
 
@@ -204,14 +202,8 @@ where
 #[cfg(test)]
 mod test {
 
-    use nalgebra::Vector3;
-
     use super::*;
-
-    fn compare_float(actual: f32, expected: f32, error: f32) {
-        let err = f32::abs(actual - expected);
-        assert!(err < error * f32::EPSILON);
-    }
+    use nalgebra::Vector3;
 
     #[test]
     fn phong() {

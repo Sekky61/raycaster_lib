@@ -15,7 +15,7 @@ use raycaster_lib::{
         transfer_functions,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{DataSource, LinearVolume, StreamBlockVolume, StreamVolume},
+    volumetric::{volumes::*, DataSource},
     PerspectiveCamera,
 };
 use slint::{

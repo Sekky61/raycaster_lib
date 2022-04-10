@@ -16,7 +16,7 @@ pub fn render_frame(resolution: Vector2<u16>) -> Vec<u8> {
             transfer_functions::skull_tf,
         },
         render::{RenderOptions, Renderer},
-        volumetric::LinearVolume,
+        volumetric::volumes::*,
         PerspectiveCamera,
     };
     use nalgebra::point;

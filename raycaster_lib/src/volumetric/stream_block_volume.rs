@@ -8,7 +8,6 @@ use crate::{
 };
 
 use super::{
-    block::Block,
     vol_builder::{BuildVolume, VolumeMetadata},
     Volume,
 };
@@ -80,7 +79,7 @@ pub struct StreamBlockVolume {
     data_size: Vector3<usize>,
     pub empty_blocks: Vec<bool>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    data_owner: Mmap,
+    _data_owner: Mmap,
     pub data: Vec<StreamBlock>,
     tf: TF,
 }
@@ -96,15 +95,6 @@ impl StreamBlockVolume {
             + (y / jump_per_block) * self.block_size.z
             + (x / jump_per_block) * self.block_size.y * self.block_size.z;
         (block_index, block_offset)
-    }
-
-    // get voxel
-    // todo make unchecked version
-    fn get_3d_data_unchecked(&self, x: usize, y: usize, z: usize) -> u8 {
-        let (block_index, block_offset) = self.get_indexes(x, y, z);
-        let block = &self.data[block_index];
-        // Safety: Assumes block has block_side^3 elements
-        unsafe { std::ptr::read(block.data.add(block_offset)) }
     }
 
     // get voxel
@@ -278,7 +268,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
             data_size: size,
             block_size,
             data: blocks,
-            data_owner,
+            _data_owner: data_owner,
             tf,
             block_side,
             empty_blocks,
@@ -304,31 +294,6 @@ fn get_bound_box(
     let block_pos = vol_position + block_lower.component_mul(&vol_scale);
 
     BoundBox::from_position_dims(block_pos, block_dims)
-}
-
-// todo redo
-pub fn get_block_data(
-    volume: &[u8],
-    size: Vector3<usize>,
-    block_start: Point3<usize>,
-    side: usize,
-) -> Vec<f32> {
-    let mut data = Vec::with_capacity(side * side * side); // todo background value
-    for off_x in 0..side {
-        for off_y in 0..side {
-            for off_z in 0..side {
-                let pos = block_start + vector![off_x, off_y, off_z];
-                if pos.x < size.x && pos.y < size.y && pos.z < size.z {
-                    let index = get_3d_index(size, pos);
-                    let value = volume[index];
-                    data.push(value as f32);
-                } else {
-                    data.push(0.0);
-                }
-            }
-        }
-    }
-    data
 }
 
 fn get_3d_index(size: Vector3<usize>, pos: Point3<usize>) -> usize {

@@ -1,9 +1,6 @@
 use crate::common::{get_volume, Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{
-    render::RenderOptions,
-    volumetric::{BlockVolume, StreamBlockVolume},
-};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::*};
 
 pub fn render_parallel_mem(c: &mut Criterion) {
     let render_options = RenderOptions::builder()

@@ -110,7 +110,7 @@ impl RenderOptionsBuilder {
             None => return None,
         };
 
-        let EARLY_RAY_TERMINATION = self
+        let early_ray_termination = self
             .early_ray_termination
             .unwrap_or(DEFAULT_EARLY_RAY_TERMINATION);
         let empty_space_skipping = self
@@ -121,7 +121,7 @@ impl RenderOptionsBuilder {
 
         Some(RenderOptions::new(
             resolution,
-            EARLY_RAY_TERMINATION,
+            early_ray_termination,
             empty_space_skipping,
             ray_step_quality,
             ray_step_fast,

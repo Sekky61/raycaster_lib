@@ -1,6 +1,6 @@
 use crate::common::{get_volume, Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::LinearVolume};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::LinearVolume};
 
 pub fn render_linear(c: &mut Criterion) {
     let render_options = RenderOptions::builder()

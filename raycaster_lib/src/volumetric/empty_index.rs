@@ -81,12 +81,12 @@ impl<const S: usize> EmptyIndex<S> {
 mod test {
 
     use super::*;
-    use crate::test_helpers::*;
+    use crate::{test_helpers::*, volumetric::linear_volume::LinearVolume};
     use nalgebra::vector;
 
     use crate::volumetric::{
         vol_builder::{BuildVolume, DataSource},
-        LinearVolume, RGBA,
+        RGBA,
     };
 
     fn dark_tf(_sample: f32) -> RGBA {

@@ -52,7 +52,7 @@ pub fn white_volume<V>() -> V
 where
     V: Volume + BuildVolume<u8>,
 {
-    let mut meta = white_vol_meta();
+    let meta = white_vol_meta();
     BuildVolume::build(meta).unwrap()
 }
 
@@ -64,6 +64,6 @@ where
     path.push("../volumes/Skull.vol");
     println!("{:?}", path);
     let ds = DataSource::from_file(path).unwrap();
-    let mut meta = skull_parser(ds).expect("skull error");
+    let meta = skull_parser(ds).expect("skull error");
     BuildVolume::build(meta).unwrap()
 }

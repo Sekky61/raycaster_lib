@@ -12,7 +12,7 @@ pub use raycaster_lib::{
         transfer_functions::skull_tf,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{BlockVolume, BuildVolume, DataSource, LinearVolume, Volume, VolumeMetadata},
+    volumetric::{volumes::*, BuildVolume, DataSource, Volume, VolumeMetadata},
     PerspectiveCamera,
 };
 

@@ -1,12 +1,11 @@
 use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
-use nalgebra::vector;
 use parking_lot::{Mutex, RwLock};
 
 use crate::{
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
-    volumetric::{BlockVolume, Volume},
+    volumetric::{volumes::BlockVolume, Volume},
     PerspectiveCamera,
 };
 
@@ -15,8 +14,6 @@ use super::{
     composition::Canvas,
     workers::{CompWorker, RenderWorker},
 };
-
-pub const PAR_SIDE: usize = 64;
 
 const RENDERER_COUNT: u8 = 5; // todo dynamic
 const COMPOSITER_COUNT: u8 = 1;

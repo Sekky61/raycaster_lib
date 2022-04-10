@@ -9,23 +9,28 @@ mod vol_builder;
 mod volume;
 
 pub use crate::color::RGBA;
-pub use block::Block;
-pub use block_volume::BlockVolume;
 pub use empty_index::{BlockType, EmptyIndex};
-pub use linear_volume::LinearVolume;
-pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
-pub use stream_volume::StreamVolume;
 pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
 pub use volume::Volume;
+
+pub mod volumes {
+    use super::*;
+
+    pub use block::Block;
+    pub use block_volume::BlockVolume;
+    pub use linear_volume::LinearVolume;
+    pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
+    pub use stream_volume::StreamVolume;
+}
 
 #[cfg(test)]
 mod test {
 
     use super::*;
     use crate::test_helpers::*;
-    use crate::volumetric::LinearVolume;
     use nalgebra::{point, vector};
+    use volumes::*;
 
     fn compare_samples(s1: Option<f32>, s2: Option<f32>) -> bool {
         match (s1, s2) {
