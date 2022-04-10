@@ -1,4 +1,6 @@
-use crate::common::{get_volume, Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
+use crate::common::{
+    get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
+};
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::*};
 
@@ -16,6 +18,7 @@ pub fn render_parallel_mem(c: &mut Criterion) {
         Algorithm::Parallel,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Ram,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -37,6 +40,7 @@ pub fn render_parallel_stream(c: &mut Criterion) {
         Algorithm::Parallel,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Stream,
     );
 
     let benchmark = bench_options.get_benchmark();

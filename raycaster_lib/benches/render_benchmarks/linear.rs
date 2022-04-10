@@ -1,4 +1,6 @@
-use crate::common::{get_volume, Algorithm, BenchOptions, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
+use crate::common::{
+    get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
+};
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::LinearVolume};
 
@@ -16,6 +18,7 @@ pub fn render_linear(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Ram,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -37,6 +40,7 @@ pub fn render_linear_ert(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Ram,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -58,6 +62,7 @@ pub fn render_linear_ei(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Ram,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -79,6 +84,7 @@ pub fn render_linear_ert_ei(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         volume,
+        Memory::Ram,
     );
 
     let benchmark = bench_options.get_benchmark();

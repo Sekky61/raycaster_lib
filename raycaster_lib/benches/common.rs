@@ -6,6 +6,7 @@ use std::sync::Arc;
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use parking_lot::RwLock;
+use raycaster_lib::volumetric::Blocked;
 pub use raycaster_lib::{
     premade::{
         parse::{from_file, skull_parser},
@@ -73,11 +74,19 @@ pub enum Algorithm {
     Linear,
     Parallel,
 }
+
+#[derive(PartialEq, Eq)]
+pub enum Memory {
+    Stream,
+    Ram,
+}
+
 pub struct BenchOptions<V> {
     pub render_options: RenderOptions,
     pub algorithm: Algorithm,
     pub camera_positions: Vec<CamPos>,
-    volume: V,
+    volume: V, // Ignored if rendering is parallel
+    pub memory: Memory,
 }
 
 impl<V> BenchOptions<V>
@@ -89,6 +98,7 @@ where
         algorithm: Algorithm,
         camera_positions: &[CamPos],
         volume: V,
+        memory: Memory,
     ) -> Self {
         let camera_positions = Vec::from(camera_positions);
         Self {
@@ -96,6 +106,7 @@ where
             algorithm,
             camera_positions,
             volume,
+            memory,
         }
     }
 
@@ -112,6 +123,7 @@ where
                 algorithm,
                 camera_positions,
                 volume,
+                memory,
             } = self;
 
             let mut front = RendererFront::new();
@@ -124,9 +136,15 @@ where
 
             match algorithm {
                 Algorithm::Parallel => {
-                    let volume = get_volume(); // todo stream vol
-                    let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
-                    front.start_rendering(par_ren);
+                    if memory == Memory::Stream {
+                        let volume: StreamBlockVolume = get_volume();
+                        let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
+                        front.start_rendering(par_ren);
+                    } else {
+                        let volume: BlockVolume = get_volume();
+                        let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
+                        front.start_rendering(par_ren);
+                    };
                 }
                 Algorithm::Linear => {
                     let serial_r = SerialRenderer::new(volume, shared_camera, render_options);
@@ -174,6 +192,11 @@ where
 
         let volume_type = self.volume.get_name();
 
+        let memory = match self.memory {
+            Memory::Stream => "Stream",
+            Memory::Ram => "Ram",
+        };
+
         let optim = match self.render_options {
             RenderOptions {
                 early_ray_termination: false,
@@ -200,6 +223,6 @@ where
         let w = self.render_options.resolution.x;
         let h = self.render_options.resolution.y;
 
-        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim}")
+        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim} | {memory}")
     }
 }
