@@ -4,7 +4,7 @@ use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::RwLock;
 
-use crate::{common::Ray, volumetric::Block, PerspectiveCamera, TF};
+use crate::{common::Ray, render::RenderOptions, volumetric::Block, PerspectiveCamera, TF};
 
 use super::{
     communication::RenderWorkerComms,
@@ -22,8 +22,9 @@ pub struct RenderWorker<'a> {
     // todo render options?
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
+    render_quality: bool,
+    render_options: RenderOptions,
     tf: TF,
-    resolution: Vector2<u16>,
     comms: RenderWorkerComms,
     blocks: &'a [Block],
 }
@@ -33,22 +34,23 @@ impl<'a> RenderWorker<'a> {
     pub fn new(
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
+        render_options: RenderOptions,
         tf: TF,
-        resolution: Vector2<u16>,
         comms: RenderWorkerComms,
         blocks: &'a [Block],
     ) -> Self {
         Self {
             renderer_id,
             camera,
+            render_quality: true,
+            render_options,
             tf,
-            resolution,
             comms,
             blocks,
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         let mut command = None;
         loop {
             let msg = match command.take() {
@@ -57,7 +59,10 @@ impl<'a> RenderWorker<'a> {
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::GoLive => Run::Render,
+                ToWorkerMsg::GoLive { quality } => {
+                    self.render_quality = quality;
+                    Run::Render
+                }
                 ToWorkerMsg::Finish => Run::Stop,
             };
             command = match cont {
@@ -108,7 +113,7 @@ impl<'a> RenderWorker<'a> {
     fn render_block(&self, camera: &PerspectiveCamera, subcanvas: &mut SubCanvas, block: &Block) {
         // todo use renderoptions properly
         // Image size, todo move to property
-        let res_f = self.resolution.map(|v| v as f32);
+        let res_f = self.render_options.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);
 
         // todo waiting for opacities can be done here, render and send back immediately
@@ -166,7 +171,12 @@ impl<'a> RenderWorker<'a> {
             None => return accum,
         };
 
-        let step_size = 0.5;
+        let step_size = if self.render_quality {
+            // todo more render_options
+            self.render_options.ray_step_quality
+        } else {
+            self.render_options.ray_step_fast
+        };
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = obj_ray.direction * step_size; // normalized

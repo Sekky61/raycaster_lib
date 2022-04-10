@@ -40,12 +40,13 @@ where
         self.render_options.resolution = res;
     }
 
-    pub fn render_to_buffer(&mut self, camera: &PerspectiveCamera, buffer: &mut [u8]) {
-        self.render(camera, buffer);
-    }
-
     // buffer y=0 is up
-    fn render(&mut self, camera: &PerspectiveCamera, buffer: &mut [u8]) {
+    pub fn render_to_buffer(
+        &mut self,
+        camera: &PerspectiveCamera,
+        buffer: &mut [u8],
+        quality: bool,
+    ) {
         let img_w = self.render_options.resolution.x;
         let img_h = self.render_options.resolution.y;
 
@@ -75,7 +76,7 @@ where
                 let pixel_coord = (x as f32 * step_x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
 
-                let ray_color = self.collect_light(&ray, camera);
+                let ray_color = self.collect_light(&ray, camera, quality);
 
                 let opacity = ray_color.w;
 
@@ -103,7 +104,12 @@ where
         }
     }
 
-    pub fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera) -> Vector4<f32> {
+    pub fn collect_light(
+        &self,
+        ray: &Ray,
+        camera: &PerspectiveCamera,
+        quality: bool,
+    ) -> Vector4<f32> {
         let mut rgb = vector![0.0, 0.0, 0.0];
         let mut opacity = 0.0;
 
@@ -117,7 +123,12 @@ where
         let begin = obj_ray.origin;
         let direction = ray.get_direction();
 
-        let step_size = 0.5;
+        let step_size = if quality {
+            self.render_options.ray_step_quality
+        } else {
+            self.render_options.ray_step_fast
+        };
+
         let max_n_of_steps = (t / step_size) as usize;
 
         let step = direction * step_size; // normalized

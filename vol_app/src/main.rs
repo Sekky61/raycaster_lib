@@ -84,6 +84,8 @@ pub fn main() {
         // Frame time
         let elapsed = state_ref.timer.elapsed();
         app.set_frame_time(elapsed.as_millis().try_into().unwrap());
+
+        state_ref.check_inputs();
     });
 
     // React to mouse move in render area

@@ -74,10 +74,11 @@ where
             loop {
                 // Gather input
                 let msg = self.communication.1.recv().unwrap();
-                match msg {
-                    RendererMessage::StartRendering => (),
+                let quality = match msg {
+                    RendererMessage::StartRendering => true,
+                    RendererMessage::StartRenderingFast => false,
                     RendererMessage::ShutDown => break,
-                }
+                };
 
                 {
                     // Lock buffer
@@ -87,7 +88,7 @@ where
                     let camera = self.camera.read();
 
                     // Render
-                    renderer.render_to_buffer(&camera, &mut buffer[..]);
+                    renderer.render_to_buffer(&camera, &mut buffer[..], quality);
                 }
 
                 // Send result

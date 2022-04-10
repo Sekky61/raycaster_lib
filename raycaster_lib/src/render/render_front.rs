@@ -11,6 +11,8 @@ use crate::PerspectiveCamera;
 pub enum RendererMessage {
     /// Start rendering
     StartRendering,
+    /// Start rendering a lower quality image
+    StartRenderingFast,
     /// Shut down, thread will get ready to be joined
     ShutDown,
 }

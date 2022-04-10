@@ -35,6 +35,9 @@ const DEFAULT_MULTI_THREAD: bool = true;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;
 
+const RAY_STEP_FAST: f32 = 1.0;
+const RAY_STEP_QUALITY: f32 = 0.5;
+
 // Workaround
 // Until https://github.com/rust-lang/rust/issues/57241 lands
 pub const CAM_DEFAULT_POS_X: f32 = 300.0;
@@ -90,6 +93,7 @@ pub struct State {
     pub camera_buffer: CameraBuffer,
     pub multi_thread: bool,
     pub render_resolution: Vector2<u16>,
+    pub quality_render: bool, // todo toggle if we want adaptive samples
     // GUI
     pub timer: Instant,
     pub slider: Vector3<f32>,
@@ -116,6 +120,7 @@ impl State {
             renderer_front,
             is_rendering: false,
             camera_buffer: CameraBuffer::new(),
+            quality_render: true,
             left_mouse_held: false,
             right_mouse_held: false,
             mouse: None,
@@ -142,7 +147,8 @@ impl State {
         self.camera_buffer.add_movement(movement);
         if !self.is_rendering {
             self.apply_cam_change();
-            self.start_render();
+            self.start_render(false);
+            self.quality_render = false;
         }
     }
 
@@ -253,11 +259,31 @@ impl State {
     }
 
     // Instruct renderer to start rendering next frame
-    fn start_render(&mut self) {
+    fn start_render(&mut self, quality: bool) {
         // todo rename
         self.is_rendering = true;
-        self.render_thread_send_message(RendererMessage::StartRendering);
+        let msg = if quality {
+            RendererMessage::StartRendering
+        } else {
+            RendererMessage::StartRenderingFast
+        };
+        println!("Starting render - quality {quality}");
+        self.render_thread_send_message(msg);
         self.timer = Instant::now();
+    }
+
+    /// Called after receiving render result
+    ///
+    /// Checks if all inputs have been handled and if current displayed frame is a high quality one
+    pub fn check_inputs(&mut self) {
+        if !self.camera_buffer.buffer.is_empty() {
+            self.apply_cam_change();
+            self.quality_render = false;
+            self.start_render(false);
+        } else if !self.quality_render {
+            self.quality_render = true;
+            self.start_render(true);
+        }
     }
 
     pub fn initial_render_call(&mut self) {
@@ -361,6 +387,8 @@ fn volume_setup_paralel(
         .resolution(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U])
         .early_ray_termination(true)
         .empty_space_skipping(true)
+        .ray_step_quality(RAY_STEP_QUALITY)
+        .ray_step_fast(RAY_STEP_FAST)
         .build_unchecked();
 
     ParalelRenderer::new(volume, camera, render_options)
@@ -395,6 +423,8 @@ fn volume_setup_linear(
         .resolution(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U])
         .early_ray_termination(true)
         .empty_space_skipping(true)
+        .ray_step_quality(RAY_STEP_QUALITY)
+        .ray_step_fast(RAY_STEP_FAST)
         .build_unchecked();
 
     SerialRenderer::new(volume, camera, render_options)

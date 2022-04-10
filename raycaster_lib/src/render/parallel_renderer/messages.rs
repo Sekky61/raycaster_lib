@@ -23,7 +23,7 @@ unsafe impl Send for RenderTask {}
 
 pub enum ToWorkerMsg {
     GoIdle,
-    GoLive, // Go to active state, mainly seize camera and recalc distances
+    GoLive { quality: bool }, // Go to active state, mainly seize camera and recalc distances
     Finish,
 }
 

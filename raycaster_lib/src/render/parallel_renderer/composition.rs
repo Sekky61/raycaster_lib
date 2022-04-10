@@ -201,7 +201,7 @@ impl CompWorker {
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::GoLive => Run::Render,
+                ToWorkerMsg::GoLive { .. } => Run::Render, // Ignore quality setting
                 ToWorkerMsg::Finish => Run::Stop,
             };
             command = match cont {

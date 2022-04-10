@@ -109,11 +109,11 @@ impl ParalelRenderer {
                                 #[cfg(debug_assertions)]
                                 println!("Started renderer {id}");
 
-                                let renderer = RenderWorker::new(
+                                let mut renderer = RenderWorker::new(
                                     id as usize,
                                     camera_ref,
+                                    self.render_options,
                                     tf,
-                                    self.render_options.resolution,
                                     ren_comms,
                                     blocks_ref,
                                 );
@@ -166,10 +166,12 @@ impl ParalelRenderer {
                     #[cfg(debug_assertions)]
                     println!("Master : waiting for input");
                     let msg = self.communication.1.recv().unwrap();
-                    match msg {
-                        RendererMessage::StartRendering => (),
+
+                    let quality = match msg {
+                        RendererMessage::StartRendering => true,
+                        RendererMessage::StartRenderingFast => false,
                         RendererMessage::ShutDown => break,
-                    }
+                    };
 
                     #[cfg(debug_assertions)]
                     println!("Master : start rendering");
@@ -189,7 +191,7 @@ impl ParalelRenderer {
 
                     // Send go live messages
                     for worker in master_comms.command_sender.iter() {
-                        worker.send(ToWorkerMsg::GoLive).unwrap();
+                        worker.send(ToWorkerMsg::GoLive { quality }).unwrap();
                     }
 
                     #[cfg(debug_assertions)]
