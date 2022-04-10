@@ -1,6 +1,11 @@
 use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
-use crate::common::{BoundBox, Ray, ValueRange};
+use crate::{
+    common::{BoundBox, Ray, ValueRange},
+    TF,
+};
+
+use super::Volume;
 
 pub struct Block {
     pub block_side: usize,
@@ -27,6 +32,8 @@ impl Block {
         let transform = Matrix4::identity()
             .append_translation(&lower_vec)
             .append_nonuniform_scaling(&scale_inv);
+
+        println!("New block {bound_box:?}");
 
         Block {
             data,
@@ -61,7 +68,25 @@ impl Block {
         ]
     }
 
-    pub fn sample_at(&self, pos: Point3<f32>) -> f32 {
+    fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
+        z + y * self.block_side + x * self.block_side * self.block_side
+    }
+}
+
+impl Volume for Block {
+    fn get_size(&self) -> Vector3<usize> {
+        vector![self.block_side, self.block_side, self.block_side]
+    }
+
+    fn get_tf(&self) -> TF {
+        unimplemented!()
+    }
+
+    fn set_tf(&mut self, tf: TF) {
+        unimplemented!()
+    }
+
+    fn sample_at(&self, pos: Point3<f32>) -> f32 {
         //let data = self.get_block_data(pos);
 
         let x = pos.x as usize;
@@ -101,7 +126,20 @@ impl Block {
         c0 * (1.0 - x_t) + c1 * x_t
     }
 
-    fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
-        z + y * self.block_side + x * self.block_side * self.block_side
+    fn get_bound_box(&self) -> BoundBox {
+        self.bound_box
+    }
+
+    fn get_scale(&self) -> Vector3<f32> {
+        unimplemented!()
+    }
+
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
+        let index = self.get_3d_index(x, y, z);
+        self.data.get(index).cloned()
+    }
+
+    fn get_name(&self) -> &str {
+        "Block"
     }
 }

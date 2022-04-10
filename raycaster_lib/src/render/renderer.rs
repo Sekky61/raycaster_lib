@@ -166,20 +166,22 @@ where
             ];
 
             let grad_magnitude = grad.magnitude();
-            const GRAD_MAG_TRESH: f32 = 0.0; // todo tweak
+            const GRAD_MAG_THRESH: f32 = 10.0; // todo tweak
 
             let mut sample_rgb = color_b.xyz();
 
-            const albedo: f32 = 0.18 / PI;
-            let grad_norm = grad / grad_magnitude;
-            let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
+            if grad_magnitude > GRAD_MAG_THRESH {
+                const albedo: f32 = 0.18 / PI;
+                let grad_norm = grad / grad_magnitude;
+                let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
 
-            let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
-            let r_dot_view = reflect.dot(&view_dir_neg);
-            let light_intensity = 200.0;
-            let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
+                let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
+                let r_dot_view = reflect.dot(&view_dir_neg);
+                let light_intensity = 200.0;
+                let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
 
-            sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
+                sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
+            }
 
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;

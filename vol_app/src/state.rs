@@ -36,7 +36,7 @@ const DEFAULT_MULTI_THREAD: bool = true;
 const DEFAULT_BLOCK_SIDE: usize = 32;
 
 const RAY_STEP_FAST: f32 = 1.0;
-const RAY_STEP_QUALITY: f32 = 0.5;
+const RAY_STEP_QUALITY: f32 = 0.2;
 
 // Workaround
 // Until https://github.com/rust-lang/rust/issues/57241 lands

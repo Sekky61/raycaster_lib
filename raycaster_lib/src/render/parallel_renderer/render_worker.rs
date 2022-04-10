@@ -4,7 +4,12 @@ use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::RwLock;
 
-use crate::{common::Ray, render::RenderOptions, volumetric::Block, PerspectiveCamera, TF};
+use crate::{
+    common::Ray,
+    render::RenderOptions,
+    volumetric::{Block, Volume},
+    PerspectiveCamera, TF,
+};
 
 use super::{
     communication::RenderWorkerComms,
@@ -140,7 +145,7 @@ impl<'a> RenderWorker<'a> {
                 }
 
                 // Adds to opacity buffer
-                let color = self.sample_color(block, &ray, &mut opacities[ptr]);
+                let color = self.sample_color(block, &ray, camera, &mut opacities[ptr]);
 
                 // TODO multiply color with opacity ??
                 // TODO results seem ok
@@ -161,10 +166,19 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn sample_color(&self, block: &Block, ray: &Ray, opacity: &mut f32) -> Vector3<f32> {
+    fn sample_color(
+        &self,
+        block: &Block,
+        ray: &Ray,
+        camera: &PerspectiveCamera,
+        opacity: &mut f32,
+    ) -> Vector3<f32> {
         let mut accum = vector![0.0, 0.0, 0.0];
 
         let obj_ray = block.transform_ray(ray);
+
+        let view_dir_neg = -camera.get_dir();
+        let light_dir = vector![-1.0, -1.0, -1.0].normalize(); // light direction
 
         let (obj_ray, t) = match obj_ray {
             Some(r) => r,
@@ -183,26 +197,51 @@ impl<'a> RenderWorker<'a> {
 
         let mut pos = obj_ray.origin;
 
+        let tf = self.tf;
+
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
             if *opacity > 0.99 {
                 break;
             }
 
-            let sample = block.sample_at(pos);
-
-            let color_b = (self.tf)(sample);
+            let (sample, grad_samples) = block.sample_at_gradient(pos);
 
             pos += step;
 
+            let color_b = tf(sample);
             if color_b.w == 0.0 {
                 continue;
+            }
+
+            // Inverted, as low values indicate outside
+            let grad = vector![
+                sample - grad_samples.x,
+                sample - grad_samples.y,
+                sample - grad_samples.z
+            ];
+
+            let grad_magnitude = grad.magnitude();
+            const GRAD_MAG_THRESH: f32 = 10.0; // todo tweak
+
+            let mut sample_rgb = color_b.xyz();
+
+            if grad_magnitude > GRAD_MAG_THRESH {
+                let grad_norm = grad / grad_magnitude;
+                let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
+
+                let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
+                let r_dot_view = reflect.dot(&view_dir_neg);
+                let light_intensity = 200.0;
+                let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
+
+                sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
             }
 
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum += (1.0 - *opacity) * color_b.w * color_b.xyz();
+            accum += (1.0 - *opacity) * color_b.w * sample_rgb;
 
             *opacity += (1.0 - *opacity) * color_b.w;
         }

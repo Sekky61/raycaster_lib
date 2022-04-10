@@ -37,23 +37,24 @@ pub trait Volume: Send {
         let sample = self.sample_at(pos);
         let grad_dir = 0.4; // todo take into account voxel shape
 
-        let size = self.get_size().map(|v| v as f32);
+        // Samples are taken on higher coordinates, cap safe sample coord range
+        let safe_size = self.get_size().map(|v| v as f32 - 1.01);
         // todo change from sampling to gradient compute and optimise
 
-        let sample_x = if pos.x + grad_dir > size.x {
-            0.0 // background value
+        let sample_x = if pos.x + grad_dir > safe_size.x {
+            -self.sample_at(pos - vector![grad_dir, 0.0, 0.0])
         } else {
             self.sample_at(pos + vector![grad_dir, 0.0, 0.0])
         };
 
-        let sample_y = if pos.y + grad_dir > size.y {
-            0.0 // background value
+        let sample_y = if pos.y + grad_dir > safe_size.y {
+            -self.sample_at(pos - vector![0.0, grad_dir, 0.0])
         } else {
             self.sample_at(pos + vector![0.0, grad_dir, 0.0])
         };
 
-        let sample_z = if pos.z + grad_dir > size.z {
-            0.0 // background value
+        let sample_z = if pos.z + grad_dir > safe_size.z {
+            -self.sample_at(pos - vector![0.0, 0.0, grad_dir])
         } else {
             self.sample_at(pos + vector![0.0, 0.0, grad_dir])
         };
