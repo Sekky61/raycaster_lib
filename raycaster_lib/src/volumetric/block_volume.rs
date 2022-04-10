@@ -1,13 +1,14 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::{
-    common::{blockify, tf_visible_range, BoundBox},
+    common::{blockify, tf_visible_range, BoundBox, Ray},
     TF,
 };
 
 use super::{
     block::Block,
     vol_builder::{BuildVolume, VolumeMetadata},
+    volume::Blocked,
     Volume,
 };
 
@@ -57,7 +58,23 @@ impl BlockVolume {
     }
 }
 
+impl Blocked for BlockVolume {
+    type BlockType = Block;
+
+    fn get_blocks(&self) -> &[Self::BlockType] {
+        &self.data
+    }
+
+    fn get_empty_blocks(&self) -> &[bool] {
+        &self.empty_blocks
+    }
+}
+
 impl Volume for BlockVolume {
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        unimplemented!()
+    }
+
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }

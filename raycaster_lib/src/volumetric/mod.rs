@@ -12,7 +12,7 @@ pub use crate::color::RGBA;
 pub use empty_index::{BlockType, EmptyIndex};
 pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
-pub use volume::Volume;
+pub use volume::{Blocked, Volume};
 
 pub mod volumes {
     use super::*;

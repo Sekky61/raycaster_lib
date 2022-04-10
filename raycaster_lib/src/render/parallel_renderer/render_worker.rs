@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use crate::{
     common::Ray,
     render::RenderOptions,
-    volumetric::{volumes::Block, Volume},
+    volumetric::{volumes::Block, Blocked, Volume},
     PerspectiveCamera, TF,
 };
 
@@ -23,35 +23,39 @@ enum Run {
     Render,
 }
 
-pub struct RenderWorker<'a> {
+pub struct RenderWorker<'a, BV>
+where
+    BV: Volume + Blocked,
+{
+    // todo generic blocktype
     // todo render options?
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     render_quality: bool,
     render_options: RenderOptions,
-    tf: TF,
     comms: RenderWorkerComms,
-    blocks: &'a [Block],
+    volume: &'a BV,
 }
 
-impl<'a> RenderWorker<'a> {
+impl<'a, BV> RenderWorker<'a, BV>
+where
+    BV: Volume + Blocked,
+{
     #[must_use]
     pub fn new(
         renderer_id: usize,
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
-        tf: TF,
         comms: RenderWorkerComms,
-        blocks: &'a [Block],
+        volume: &'a BV,
     ) -> Self {
         Self {
             renderer_id,
             camera,
             render_quality: true,
             render_options,
-            tf,
             comms,
-            blocks,
+            volume,
         }
     }
 
@@ -84,6 +88,8 @@ impl<'a> RenderWorker<'a> {
         #[cfg(debug_assertions)]
         println!("Render {}: entering main loop", self.renderer_id);
 
+        let blocks = self.volume.get_blocks();
+
         loop {
             // Wait for task from master thread or finish call
             let task = select! {
@@ -99,7 +105,7 @@ impl<'a> RenderWorker<'a> {
             // Safety: ref is unique
             let subcanvas = unsafe { task.subcanvas.as_mut().unwrap() };
 
-            let block = &self.blocks[block_id as usize];
+            let block = &blocks[block_id as usize];
 
             // Render task
             self.render_block(&camera, subcanvas, block);
@@ -115,7 +121,12 @@ impl<'a> RenderWorker<'a> {
         }
     }
 
-    fn render_block(&self, camera: &PerspectiveCamera, subcanvas: &mut SubCanvas, block: &Block) {
+    fn render_block(
+        &self,
+        camera: &PerspectiveCamera,
+        subcanvas: &mut SubCanvas,
+        block: &<BV as Blocked>::BlockType,
+    ) {
         // todo use renderoptions properly
         // Image size, todo move to property
         let res_f = self.render_options.resolution.map(|v| v as f32);
@@ -168,7 +179,7 @@ impl<'a> RenderWorker<'a> {
 
     fn sample_color(
         &self,
-        block: &Block,
+        block: &<BV as Blocked>::BlockType,
         ray: &Ray,
         camera: &PerspectiveCamera,
         opacity: &mut f32,
@@ -197,7 +208,7 @@ impl<'a> RenderWorker<'a> {
 
         let mut pos = obj_ray.origin;
 
-        let tf = self.tf;
+        let tf = self.volume.get_tf();
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);

@@ -5,7 +5,7 @@ use parking_lot::{Mutex, RwLock};
 
 use crate::{
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
-    volumetric::{volumes::BlockVolume, Volume},
+    volumetric::{volumes::BlockVolume, Blocked, Volume},
     PerspectiveCamera,
 };
 
@@ -21,15 +21,21 @@ const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
 const TILE_SIDE: u16 = 32;
 
-pub struct ParalelRenderer {
-    volume: BlockVolume,
+pub struct ParalelRenderer<BV>
+where
+    BV: Volume + Blocked,
+{
+    volume: BV,
     camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
     buffer: Arc<Mutex<Vec<u8>>>,
     communication: (Sender<()>, Receiver<RendererMessage>),
 }
 
-impl RenderThread for ParalelRenderer {
+impl<BV> RenderThread for ParalelRenderer<BV>
+where
+    BV: Volume + Blocked + 'static,
+{
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>> {
         self.buffer.clone()
     }
@@ -39,6 +45,7 @@ impl RenderThread for ParalelRenderer {
     }
 
     fn start(self) -> JoinHandle<()> {
+        println!("Starting renderer | {}", self.volume.get_name());
         self.start_rendering()
     }
 
@@ -47,9 +54,12 @@ impl RenderThread for ParalelRenderer {
     }
 }
 
-impl ParalelRenderer {
+impl<BV> ParalelRenderer<BV>
+where
+    BV: Volume + Blocked + 'static,
+{
     pub fn new(
-        volume: BlockVolume,
+        volume: BV,
         camera: Arc<RwLock<PerspectiveCamera>>,
         render_options: RenderOptions,
     ) -> Self {
@@ -91,10 +101,6 @@ impl ParalelRenderer {
                     let mut renderers = Vec::with_capacity(RENDERER_COUNT as usize);
                     let mut compositors = Vec::with_capacity(COMPOSITER_COUNT as usize);
 
-                    let blocks_ref = &volume.data[..];
-
-                    let tf = volume.get_tf();
-
                     for id in 0..RENDERER_COUNT {
                         // Create render thread
                         let ren_comms = comms.renderer(id as usize);
@@ -110,9 +116,8 @@ impl ParalelRenderer {
                                     id as usize,
                                     camera_ref,
                                     self.render_options,
-                                    tf,
                                     ren_comms,
-                                    blocks_ref,
+                                    volume,
                                 );
 
                                 renderer.run();
@@ -175,12 +180,11 @@ impl ParalelRenderer {
 
                     // Prepare canvas (mainly queues)
                     {
+                        let blocks = volume.get_blocks();
+                        let empty_blocks_index = volume.get_empty_blocks();
                         let camera = self.camera.read();
-                        canvas.build_queues(
-                            &camera,
-                            &self.volume.data[..],
-                            &self.volume.empty_blocks[..],
-                        );
+
+                        canvas.build_queues(&camera, blocks, empty_blocks_index);
                     }
 
                     #[cfg(debug_assertions)]

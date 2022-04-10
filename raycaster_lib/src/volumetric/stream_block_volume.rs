@@ -2,13 +2,14 @@ use memmap::Mmap;
 use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 use crate::{
-    common::{blockify, tf_visible_range, BoundBox, ValueRange},
+    common::{blockify, tf_visible_range, BoundBox, Ray, ValueRange},
     volumetric::DataSource,
     TF,
 };
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
+    volume::Blocked,
     Volume,
 };
 
@@ -67,10 +68,113 @@ impl StreamBlock {
             [d0, d1, d2, d3]
         }
     }
+
+    fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
+        z + y * self.block_side + x * self.block_side * self.block_side
+    }
 }
 
 // Safety: pointer points to memory mapped file, which lives as long as StreamBlockVolume lives
 unsafe impl Send for StreamBlock {}
+
+impl Volume for StreamBlock {
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        let (t0, t1) = match self.bound_box.intersect(ray) {
+            Some(t) => t,
+            None => return None,
+        };
+
+        let obj_origin = ray.point_from_t(t0);
+        let obj_origin = self.transform.transform_point(&obj_origin);
+
+        let t = t1 - t0;
+
+        Some((Ray::from_3(obj_origin, ray.direction), t))
+    }
+
+    fn get_size(&self) -> Vector3<usize> {
+        vector![self.block_side, self.block_side, self.block_side]
+    }
+
+    fn get_tf(&self) -> TF {
+        unimplemented!()
+    }
+
+    fn set_tf(&mut self, tf: TF) {
+        unimplemented!()
+    }
+
+    fn sample_at(&self, pos: Point3<f32>) -> f32 {
+        //let data = self.get_block_data(pos);
+
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
+
+        let x_t = pos.x.fract();
+        let y_t = pos.y.fract();
+        let z_t = pos.z.fract();
+
+        let block_offset = self.get_3d_index(x, y, z);
+
+        let first_index = block_offset;
+        let second_index = block_offset + self.block_side * self.block_side;
+
+        let first_data = self.get_block_data_half(first_index);
+        let [c000, c001, c010, c011] = [
+            first_data[0] as f32,
+            first_data[1] as f32,
+            first_data[2] as f32,
+            first_data[3] as f32,
+        ];
+
+        let inv_z_t = 1.0 - z_t;
+        let inv_y_t = 1.0 - y_t;
+
+        // first plane
+
+        let c00 = c000 * inv_z_t + c001 * z_t; // z low
+        let c01 = c010 * inv_z_t + c011 * z_t; // z high
+        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+
+        // second plane
+
+        let second_data = self.get_block_data_half(second_index);
+        let [c100, c101, c110, c111] = [
+            second_data[0] as f32,
+            second_data[1] as f32,
+            second_data[2] as f32,
+            second_data[3] as f32,
+        ];
+
+        let c10 = c100 * inv_z_t + c101 * z_t; // z low
+        let c11 = c110 * inv_z_t + c111 * z_t; // z high
+        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+
+        c0 * (1.0 - x_t) + c1 * x_t
+    }
+
+    fn get_bound_box(&self) -> BoundBox {
+        self.bound_box
+    }
+
+    fn get_scale(&self) -> Vector3<f32> {
+        unimplemented!()
+    }
+
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
+        let index = self.get_3d_index(x, y, z);
+        if index >= self.block_side * self.block_side * self.block_side {
+            return None;
+        }
+        let sample = unsafe { self.data.add(index).read() };
+        Some(sample as f32)
+    }
+
+    fn get_name(&self) -> &str {
+        "StreamBlock"
+    }
+}
 
 // Default overlap == 1
 pub struct StreamBlockVolume {
@@ -83,6 +187,8 @@ pub struct StreamBlockVolume {
     pub data: Vec<StreamBlock>,
     tf: TF,
 }
+
+unsafe impl Sync for StreamBlockVolume {}
 
 impl StreamBlockVolume {
     // returns (block index, block offset)
@@ -125,7 +231,23 @@ impl StreamBlockVolume {
     }
 }
 
+impl Blocked for StreamBlockVolume {
+    type BlockType = StreamBlock;
+
+    fn get_blocks(&self) -> &[Self::BlockType] {
+        &self.data
+    }
+
+    fn get_empty_blocks(&self) -> &[bool] {
+        &self.empty_blocks
+    }
+}
+
 impl Volume for StreamBlockVolume {
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        unimplemented!()
+    }
+
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }

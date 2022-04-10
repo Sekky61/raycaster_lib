@@ -15,7 +15,7 @@ use raycaster_lib::{
         transfer_functions,
     },
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{volumes::*, DataSource},
+    volumetric::{volumes::*, Blocked, BuildVolume, DataSource, Volume},
     PerspectiveCamera,
 };
 use slint::{
@@ -29,14 +29,16 @@ pub const RENDER_WIDTH_U: u16 = 700;
 pub const RENDER_HEIGHT_U: u16 = 700;
 
 // todo may not lead to a file
-pub const DEFAULT_VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
-pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
+pub const DEFAULT_VOLUME_PATH: &str = "volumes/solid_blocks_32.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
+pub const DEFAULT_VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
 const DEFAULT_MULTI_THREAD: bool = true;
 
 const DEFAULT_BLOCK_SIDE: usize = 32;
 
 const RAY_STEP_FAST: f32 = 1.0;
 const RAY_STEP_QUALITY: f32 = 0.2;
+
+const DEFAULT_STREAM: bool = true;
 
 // Workaround
 // Until https://github.com/rust-lang/rust/issues/57241 lands
@@ -94,6 +96,7 @@ pub struct State {
     pub multi_thread: bool,
     pub render_resolution: Vector2<u16>,
     pub quality_render: bool, // todo toggle if we want adaptive samples
+    pub stream_volume: bool,
     // GUI
     pub timer: Instant,
     pub slider: Vector3<f32>,
@@ -131,6 +134,7 @@ impl State {
             multi_thread: DEFAULT_MULTI_THREAD,
             current_tf: PrewrittenTF::Green,
             render_resolution: vector![RENDER_WIDTH_U, RENDER_HEIGHT_U],
+            stream_volume: DEFAULT_STREAM,
         }
     }
 
@@ -318,13 +322,26 @@ impl State {
     }
 
     fn start_renderer(&mut self, path: PathBuf, parser: PrewrittenParser) {
-        if self.multi_thread {
-            let renderer = volume_setup_paralel(&path, parser, self.current_tf);
-            self.renderer_front.start_rendering(renderer);
-        } else {
-            let renderer = volume_setup_linear(&path, parser, self.current_tf);
-            self.renderer_front.start_rendering(renderer);
+        match (self.stream_volume, self.multi_thread) {
+            (true, true) => {
+                let renderer =
+                    volume_setup_paralel::<StreamBlockVolume>(&path, parser, self.current_tf); // todo tf redundant
+                self.renderer_front.start_rendering(renderer);
+            }
+            (false, true) => {
+                let renderer = volume_setup_paralel::<BlockVolume>(&path, parser, self.current_tf);
+                self.renderer_front.start_rendering(renderer);
+            }
+            (true, false) => {
+                let renderer = volume_setup_linear::<StreamVolume>(&path, parser, self.current_tf);
+                self.renderer_front.start_rendering(renderer);
+            }
+            (false, false) => {
+                let renderer = volume_setup_linear::<LinearVolume>(&path, parser, self.current_tf);
+                self.renderer_front.start_rendering(renderer);
+            }
         }
+
         self.renderer_front
             .send_message(RendererMessage::StartRendering);
         println!(
@@ -345,11 +362,14 @@ impl State {
     }
 }
 
-fn volume_setup_paralel(
+fn volume_setup_paralel<V>(
     path: &Path,
     parser: PrewrittenParser,
     tf: PrewrittenTF,
-) -> ParalelRenderer {
+) -> ParalelRenderer<V>
+where
+    V: Volume + Blocked + BuildVolume<u8> + 'static,
+{
     let position = CAM_DEFAULT_POS;
     let direction = CAM_DEFAULT_DIR;
 
@@ -378,7 +398,7 @@ fn volume_setup_paralel(
         res
     };
 
-    let volume = from_file(path, parser_add_block_side, tf_fn).unwrap();
+    let volume: V = from_file(path, parser_add_block_side, tf_fn).unwrap();
 
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
@@ -394,11 +414,14 @@ fn volume_setup_paralel(
     ParalelRenderer::new(volume, camera, render_options)
 }
 
-fn volume_setup_linear(
+fn volume_setup_linear<V>(
     path: &Path,
     parser: PrewrittenParser,
     tf: PrewrittenTF,
-) -> SerialRenderer<LinearVolume> {
+) -> SerialRenderer<V>
+where
+    V: Volume + BuildVolume<u8>,
+{
     let position = point![300.0, 300.0, 300.0];
     let direction = point![34.0, 128.0, 128.0] - position; // vector![-0.8053911, -0.357536, -0.47277182]
 

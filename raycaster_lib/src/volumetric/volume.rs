@@ -3,11 +3,21 @@ use crate::common::{BoundBox, Ray};
 use crate::TF;
 use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
+pub trait Blocked: Send + Sync {
+    type BlockType: Volume;
+
+    fn get_blocks(&self) -> &[Self::BlockType];
+
+    fn get_empty_blocks(&self) -> &[bool];
+}
+
 // Volume assumes f32 data
 // Volume is axis aligned
 pub trait Volume: Send {
     // get data dimensions
     fn get_size(&self) -> Vector3<usize>;
+
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)>;
 
     // get volume position
     // axis aligned, lowest corner

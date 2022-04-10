@@ -1,6 +1,9 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::{common::BoundBox, TF};
+use crate::{
+    common::{BoundBox, Ray},
+    TF,
+};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
@@ -113,6 +116,10 @@ impl Volume for LinearVolume {
 
     fn get_name(&self) -> &str {
         "LinearVolume"
+    }
+
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        unimplemented!()
     }
 }
 

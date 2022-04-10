@@ -44,21 +44,6 @@ impl Block {
         }
     }
 
-    // TODO assumes scale == 1
-    pub fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        let (t0, t1) = match self.bound_box.intersect(ray) {
-            Some(t) => t,
-            None => return None,
-        };
-
-        let obj_origin = ray.point_from_t(t0);
-        let obj_origin = self.transform.transform_point(&obj_origin);
-
-        let t = t1 - t0;
-
-        Some((Ray::from_3(obj_origin, ray.direction), t))
-    }
-
     pub fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
         [
             self.data[start_index],
@@ -74,6 +59,21 @@ impl Block {
 }
 
 impl Volume for Block {
+    // TODO assumes scale == 1
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        let (t0, t1) = match self.bound_box.intersect(ray) {
+            Some(t) => t,
+            None => return None,
+        };
+
+        let obj_origin = ray.point_from_t(t0);
+        let obj_origin = self.transform.transform_point(&obj_origin);
+
+        let t = t1 - t0;
+
+        Some((Ray::from_3(obj_origin, ray.direction), t))
+    }
+
     fn get_size(&self) -> Vector3<usize> {
         vector![self.block_side, self.block_side, self.block_side]
     }

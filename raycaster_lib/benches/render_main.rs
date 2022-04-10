@@ -19,5 +19,5 @@ criterion_group! {
     targets = render_parallel_mem, render_parallel_stream
 }
 
-criterion_main!(sequential_linear, parallel);
-//criterion_main!(parallel);
+//criterion_main!(sequential_linear, parallel);
+criterion_main!(parallel);

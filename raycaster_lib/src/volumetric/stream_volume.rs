@@ -1,7 +1,11 @@
 use memmap::Mmap;
 use nalgebra::{point, vector, Vector3};
 
-use crate::{common::BoundBox, volumetric::vol_builder::DataSource, TF};
+use crate::{
+    common::{BoundBox, Ray},
+    volumetric::vol_builder::DataSource,
+    TF,
+};
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
@@ -79,6 +83,10 @@ impl BuildVolume<u8> for StreamVolume {
 }
 
 impl Volume for StreamVolume {
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        unimplemented!()
+    }
+
     fn get_size(&self) -> Vector3<usize> {
         self.size
     }

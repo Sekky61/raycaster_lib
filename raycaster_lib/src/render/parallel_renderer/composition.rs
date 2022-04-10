@@ -12,7 +12,11 @@ use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::Mutex;
 
-use crate::{common::PixelBox, volumetric::volumes::Block, PerspectiveCamera};
+use crate::{
+    common::PixelBox,
+    volumetric::{volumes::Block, Volume},
+    PerspectiveCamera,
+};
 
 use super::{
     communication::CompWorkerComms,
@@ -96,16 +100,15 @@ impl Canvas {
     }
 
     // Interior mutability, needs exclusive access
-    pub fn build_queues(
-        &self,
-        camera: &PerspectiveCamera,
-        blocks: &[Block],
-        empty_blocks: &[bool],
-    ) {
+    pub fn build_queues<V>(&self, camera: &PerspectiveCamera, blocks: &[V], empty_blocks: &[bool])
+    where
+        V: Volume,
+    {
         let mut block_infos = Vec::with_capacity(blocks.len());
         for (i, (block, empty)) in blocks.iter().zip(empty_blocks).enumerate() {
             if !empty {
-                let distance = camera.box_distance(&block.bound_box);
+                let bbox = &block.get_bound_box();
+                let distance = camera.box_distance(bbox);
                 block_infos.push((i as u32, distance));
             }
         }
@@ -126,7 +129,7 @@ impl Canvas {
         }
 
         for (block_id, _) in block_infos {
-            let vpbox = camera.project_box(blocks[block_id as usize].bound_box);
+            let vpbox = camera.project_box(blocks[block_id as usize].get_bound_box());
             let pixel_box = vpbox.get_pixel_range(res);
             // Count which pixelboxes intersect
             // Assume all tiles are the same size
