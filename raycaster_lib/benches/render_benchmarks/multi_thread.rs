@@ -6,11 +6,11 @@ use raycaster_lib::{
 };
 
 pub fn render_parallel_mem(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let volume: BlockVolume = get_volume();
 
@@ -27,11 +27,11 @@ pub fn render_parallel_mem(c: &mut Criterion) {
 }
 
 pub fn render_parallel_stream(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let volume: StreamBlockVolume = get_volume();
 

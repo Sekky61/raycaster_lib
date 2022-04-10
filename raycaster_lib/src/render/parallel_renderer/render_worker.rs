@@ -106,6 +106,7 @@ impl<'a> RenderWorker<'a> {
     }
 
     fn render_block(&self, camera: &PerspectiveCamera, subcanvas: &mut SubCanvas, block: &Block) {
+        // todo use renderoptions properly
         // Image size, todo move to property
         let res_f = self.resolution.map(|v| v as f32);
         let step_f = res_f.map(|v| 1.0 / v);

@@ -176,23 +176,23 @@ where
 
         let optim = match self.render_options {
             RenderOptions {
-                ray_termination: false,
-                empty_index: false,
+                early_ray_termination: false,
+                empty_space_skipping: false,
                 ..
             } => "no_optim",
             RenderOptions {
-                ray_termination: true,
-                empty_index: false,
+                early_ray_termination: true,
+                empty_space_skipping: false,
                 ..
             } => "ERT",
             RenderOptions {
-                ray_termination: false,
-                empty_index: true,
+                early_ray_termination: false,
+                empty_space_skipping: true,
                 ..
             } => "EI",
             RenderOptions {
-                ray_termination: true,
-                empty_index: true,
+                early_ray_termination: true,
+                empty_space_skipping: true,
                 ..
             } => "ERT + EI",
         };

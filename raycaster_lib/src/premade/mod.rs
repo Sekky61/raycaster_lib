@@ -33,14 +33,14 @@ pub fn render_frame(resolution: Vector2<u16>) -> Vec<u8> {
     let volume = from_file("volumes/Skull.vol", skull_parser, skull_tf).unwrap();
 
     // Render options - set resolution and optimisations
-    let ren_opts = RenderOptions {
-        resolution,
-        ray_termination: true,
-        empty_index: false,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(resolution)
+        .early_ray_termination(true)
+        .empty_space_skipping(false)
+        .build_unchecked();
 
     // Instantiate a renderer, framebuffer
-    let mut renderer = Renderer::<LinearVolume>::new(volume, ren_opts);
+    let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
     let mut buffer = vec![0; 3 * (resolution.x as usize) * (resolution.y as usize)]; // 3 bytes per pixel
 
     // Run rendering (blocking)

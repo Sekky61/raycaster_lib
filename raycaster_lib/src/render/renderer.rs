@@ -131,7 +131,9 @@ where
             //let sample = self.volume.sample_at(pos);
 
             // todo try sampling on integer coords
-            if self.render_options.empty_index && self.empty_index.sample(pos) == BlockType::Empty {
+            if self.render_options.empty_space_skipping
+                && self.empty_index.sample(pos) == BlockType::Empty
+            {
                 pos += step;
                 continue;
             }
@@ -175,7 +177,7 @@ where
             opacity += (1.0 - opacity) * color_b.w;
 
             // relying on branch predictor to "eliminate" branch
-            if self.render_options.ray_termination {
+            if self.render_options.early_ray_termination {
                 // early ray termination
                 if opacity > 0.99 {
                     break;

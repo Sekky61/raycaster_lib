@@ -3,11 +3,11 @@ use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::LinearVolume};
 
 pub fn render_linear(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: false,
-        empty_index: false,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(false)
+        .empty_space_skipping(false)
+        .build_unchecked();
 
     let volume: LinearVolume = get_volume();
 
@@ -24,11 +24,11 @@ pub fn render_linear(c: &mut Criterion) {
 }
 
 pub fn render_linear_ert(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: false,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(false)
+        .build_unchecked();
 
     let volume: LinearVolume = get_volume();
 
@@ -45,11 +45,11 @@ pub fn render_linear_ert(c: &mut Criterion) {
 }
 
 pub fn render_linear_ei(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: false,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(false)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let volume: LinearVolume = get_volume();
 
@@ -66,11 +66,11 @@ pub fn render_linear_ei(c: &mut Criterion) {
 }
 
 pub fn render_linear_ert_ei(c: &mut Criterion) {
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let volume: LinearVolume = get_volume();
 

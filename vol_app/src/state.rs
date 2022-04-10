@@ -357,7 +357,11 @@ fn volume_setup_paralel(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U], true, true);
+    let render_options = RenderOptions::builder()
+        .resolution(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U])
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     ParalelRenderer::new(volume, camera, render_options)
 }
@@ -387,7 +391,11 @@ fn volume_setup_linear(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::new(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U], true, true);
+    let render_options = RenderOptions::builder()
+        .resolution(vector![RENDER_WIDTH_U, RENDER_HEIGHT_U])
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     SerialRenderer::new(volume, camera, render_options)
 }

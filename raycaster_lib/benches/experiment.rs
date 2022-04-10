@@ -10,11 +10,11 @@ fn get_ui_from_usize(c: &mut Criterion) {
     let volume = get_volume();
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
@@ -31,11 +31,11 @@ fn get_ui_from_float(c: &mut Criterion) {
     let volume = get_volume();
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
-    let render_options = RenderOptions {
-        resolution: RESOLUTION,
-        ray_termination: true,
-        empty_index: true,
-    };
+    let render_options = RenderOptions::builder()
+        .resolution(RESOLUTION)
+        .early_ray_termination(true)
+        .empty_space_skipping(true)
+        .build_unchecked();
 
     let mut renderer = Renderer::<LinearVolume>::new(volume, render_options);
 
