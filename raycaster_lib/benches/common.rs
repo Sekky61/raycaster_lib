@@ -27,7 +27,7 @@ pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
 
-const DEFAULT_BLOCK_SIDE: usize = 32;
+const BLOCK_SIDE: usize = 32;
 
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
@@ -60,7 +60,7 @@ where
         match &mut res {
             Ok(ref mut m) => {
                 if m.block_side.is_none() {
-                    m.block_side = Some(DEFAULT_BLOCK_SIDE);
+                    m.block_side = Some(BLOCK_SIDE);
                 }
             }
             Err(_) => (),
