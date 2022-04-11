@@ -111,10 +111,24 @@ impl RendererFront {
         self.buffer.as_ref().cloned()
     }
 
+    /// Borrow buffer handle
+    /// Avoids incrementing atomic reference counter
+    /// Otherwise equivalent to `get_buffer_handle`
+    pub fn get_buffer_handle_borrow(&self) -> Option<&Arc<Mutex<Vec<u8>>>> {
+        self.buffer.as_ref()
+    }
+
     /// Getter for camera handle
     /// /// If front is inactive, return `None`
     pub fn get_camera_handle(&self) -> Option<Arc<RwLock<PerspectiveCamera>>> {
         self.camera.as_ref().cloned()
+    }
+
+    /// Borrow camera handle
+    /// Avoids incrementing atomic reference counter
+    /// Otherwise equivalent to `get_camera_handle`
+    pub fn get_camera_handle_borrow(&self) -> Option<&Arc<RwLock<PerspectiveCamera>>> {
+        self.camera.as_ref()
     }
 
     /// Start `renderer`

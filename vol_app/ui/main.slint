@@ -26,7 +26,7 @@ App := Window {
 
     // Just declaration, body is in Rust code
     callback render_area_move_event(MousePos);
-    callback render_key_pressed <=> render_key_handler.key-pressed;
+    callback key_pressed <=> render_key_handler.key-pressed;
 
     callback x_slider_new_value <=> x_slider.changed; // float
     callback y_slider_new_value <=> y_slider.changed; // float
@@ -129,18 +129,17 @@ App := Window {
 
         VerticalLayout {
 
-            width: 700px;
-            height: 700px;
-            padding-top: 50px;
-            padding-bottom: 50px;
+            padding: 50px;
             
             RenTar := Image {
                 source: root.render_target;
-                max-width: 700px;
-                max-height: 700px;
+                width: 700px;
+                height: 700px;
+
+                image-rendering: pixelated; // No smoothing, image is rendered 1:1
 
                 Rectangle { 
-                    x: 50px; // offset to corner of render screen
+                    x: 0px; // offset to corner of render screen
                     y: 0px;
                     width: 40px;
                     height: 20px;
