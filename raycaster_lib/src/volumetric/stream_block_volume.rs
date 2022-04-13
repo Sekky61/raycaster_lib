@@ -31,6 +31,7 @@ impl StreamBlock {
         bound_box: BoundBox,
         scale: Vector3<f32>,
         data: *const u8,
+        tf: TF,
     ) -> Self {
         let elements = block_side.pow(3);
         let slice = std::slice::from_raw_parts(data, elements);
@@ -52,7 +53,7 @@ impl StreamBlock {
             empty_index: EmptyIndex::dummy(),
         };
 
-        block.empty_index = EmptyIndex::from_volume(&block);
+        block.empty_index = EmptyIndex::<4>::from_volume_without_tf(&block, tf);
         block
     }
 
@@ -375,7 +376,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
                     let block_data_offset = get_3d_index(block_size, block_start);
                     let block_data_ptr = unsafe { ptr.add(block_data_offset) };
                     let block = unsafe {
-                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr)
+                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr, tf)
                     };
                     blocks.push(block);
                 }

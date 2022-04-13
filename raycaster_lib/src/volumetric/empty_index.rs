@@ -1,8 +1,8 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::common::blockify;
+use crate::{common::blockify, TF};
 
-use super::Volume;
+use super::{block::Block, Volume};
 
 // generic argument S is side of block in voxels, not cells
 #[derive(Debug)]
@@ -33,11 +33,13 @@ impl<const S: usize> EmptyIndex<S> {
         let cell_count = index_size.iter().product();
         let mut blocks = Vec::with_capacity(cell_count);
 
+        let tf = volume.get_tf();
+
         for x in 0..index_size.x {
             for y in 0..index_size.y {
                 for z in 0..index_size.z {
                     let block_type =
-                        EmptyIndex::<S>::block_type_from_volume(volume, S * point![x, y, z], S);
+                        EmptyIndex::<S>::block_type_from_volume(volume, S * point![x, y, z], S, tf);
                     blocks.push(block_type);
                 }
             }
@@ -50,9 +52,13 @@ impl<const S: usize> EmptyIndex<S> {
     }
 
     /// returns true if block is empty
-    pub fn block_type_from_volume(volume: &impl Volume, base: Point3<usize>, side: usize) -> bool {
+    pub fn block_type_from_volume(
+        volume: &impl Volume,
+        base: Point3<usize>,
+        side: usize,
+        tf: TF,
+    ) -> bool {
         let block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
-        let tf = volume.get_tf();
 
         // True if empty
         block_iter.map(tf).all(|f| f.w == 0.0)
@@ -80,6 +86,35 @@ impl<const S: usize> EmptyIndex<S> {
         let pos_conv = pos / S;
         let index = self.index_3d(pos_conv.x, pos_conv.y, pos_conv.z);
         self.blocks[index]
+    }
+
+    pub fn from_volume_without_tf(volume: &impl Volume, tf: TF) -> EmptyIndex<4> {
+        let vol_size = volume.get_size();
+        let index_size = blockify(vol_size, S, 1);
+
+        #[cfg(debug_assertions)]
+        println!(
+            "Generating index, vol [{},{},{}] size [{},{},{}]",
+            vol_size.x, vol_size.y, vol_size.z, index_size.x, index_size.y, index_size.z
+        );
+
+        let cell_count = index_size.iter().product();
+        let mut blocks = Vec::with_capacity(cell_count);
+
+        for x in 0..index_size.x {
+            for y in 0..index_size.y {
+                for z in 0..index_size.z {
+                    let block_type =
+                        EmptyIndex::<S>::block_type_from_volume(volume, S * point![x, y, z], S, tf);
+                    blocks.push(block_type);
+                }
+            }
+        }
+
+        EmptyIndex {
+            size: index_size,
+            blocks,
+        }
     }
 }
 

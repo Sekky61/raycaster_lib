@@ -32,7 +32,7 @@ const BLOCK_SIDE: usize = 32;
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
-pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 14] = [ // todo average 14 samples together
+pub const DEFAULT_CAMERA_POSITIONS_MULTIPLE: [(Point3<f32>, Vector3<f32>); 14] = [ // todo average 14 samples together
     // View volume from each quadrant
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0, 1.0]),
@@ -50,6 +50,11 @@ pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 14] = [ // tod
     (point![0.0, -QUADRANT_DISTANCE, 0.0], vector![0.0, 1.0, 0.0]),
     (point![0.0, 0.0, -QUADRANT_DISTANCE], vector![0.0, 0.0, 1.0]),
 ];
+
+pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 1] = [(
+    point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE],
+    vector![-1.0, -1.0, -1.0],
+)];
 
 pub fn get_volume<V>() -> V
 where

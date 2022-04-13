@@ -177,7 +177,8 @@ impl BuildVolume<u8> for BlockVolume {
                     let block_start = step_size * point![x, y, z];
                     let block_data = get_block_data(slice, size, block_start, block_side);
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
-                    let block = Block::from_data(block_data, block_bound_box, scale, block_side);
+                    let block =
+                        Block::from_data(block_data, block_bound_box, scale, block_side, tf);
                     blocks.push(block);
                 }
             }
@@ -301,12 +302,11 @@ mod test {
 
     #[test]
     fn build_empty() {
-        let block1 = Block::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let block2 = Block::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let block3 = Block::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1);
-        let blocks = &[block1, block2, block3];
-
         let tf = |v: f32| vector![1.0, 1.0, 1.0, v];
+        let block1 = Block::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let block2 = Block::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let block3 = Block::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let blocks = &[block1, block2, block3];
 
         let empty = BlockVolume::build_empty(blocks, tf);
 

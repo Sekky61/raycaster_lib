@@ -22,6 +22,7 @@ impl Block {
         bound_box: BoundBox,
         scale: Vector3<f32>,
         block_side: usize,
+        tf: TF,
     ) -> Block {
         // todo boundbox and scale has redundant info
         assert_eq!(data.len(), block_side.pow(3));
@@ -34,8 +35,6 @@ impl Block {
             .append_translation(&lower_vec)
             .append_nonuniform_scaling(&scale_inv);
 
-        println!("New block {bound_box:?}");
-
         let mut block = Block {
             data,
             bound_box,
@@ -45,7 +44,7 @@ impl Block {
             empty_index: EmptyIndex::dummy(),
         };
 
-        block.empty_index = EmptyIndex::from_volume(&block);
+        block.empty_index = EmptyIndex::<4>::from_volume_without_tf(&block, tf);
         block
     }
 
@@ -63,6 +62,7 @@ impl Block {
     }
 }
 
+// todo subvolume trait?
 impl Volume for Block {
     // A more optimal specialization
     fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
