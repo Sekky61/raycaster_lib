@@ -11,12 +11,9 @@ use std::{
 use crossbeam::select;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::Mutex;
+use render_options::RenderOptions;
 
-use crate::{
-    common::PixelBox,
-    volumetric::{volumes::Block, Volume},
-    PerspectiveCamera,
-};
+use crate::{common::PixelBox, render::render_options, volumetric::Volume, PerspectiveCamera};
 
 use super::{
     communication::CompWorkerComms,
@@ -100,13 +97,19 @@ impl Canvas {
     }
 
     // Interior mutability, needs exclusive access
-    pub fn build_queues<V>(&self, camera: &PerspectiveCamera, blocks: &[V], empty_blocks: &[bool])
-    where
+    pub fn build_queues<V>(
+        &self,
+        camera: &PerspectiveCamera,
+        blocks: &[V],
+        empty_blocks: &[bool],
+        render_options: RenderOptions,
+    ) where
         V: Volume,
     {
+        let dont_skip_empty = !render_options.empty_space_skipping;
         let mut block_infos = Vec::with_capacity(blocks.len());
         for (i, (block, empty)) in blocks.iter().zip(empty_blocks).enumerate() {
-            if !empty {
+            if !empty || dont_skip_empty {
                 let bbox = &block.get_bound_box();
                 let distance = camera.box_distance(bbox);
                 block_infos.push((i as u32, distance));

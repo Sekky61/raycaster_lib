@@ -7,8 +7,8 @@ use parking_lot::RwLock;
 use crate::{
     common::Ray,
     render::RenderOptions,
-    volumetric::{volumes::Block, Blocked, Volume},
-    PerspectiveCamera, TF,
+    volumetric::{Blocked, Volume},
+    PerspectiveCamera,
 };
 
 use super::{
@@ -150,7 +150,7 @@ where
                 let ray = camera.get_ray(pixel_coord);
 
                 // Early opacity check
-                if opacities[ptr] > 0.99 {
+                if self.render_options.early_ray_termination && opacities[ptr] > 0.99 {
                     ptr += 1;
                     continue;
                 }
@@ -212,7 +212,7 @@ where
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
-            if *opacity > 0.99 {
+            if self.render_options.early_ray_termination && *opacity > 0.99 {
                 break;
             }
 

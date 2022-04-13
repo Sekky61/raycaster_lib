@@ -5,7 +5,7 @@ use parking_lot::{Mutex, RwLock};
 
 use crate::{
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
-    volumetric::{volumes::BlockVolume, Blocked, Volume},
+    volumetric::{Blocked, Volume},
     PerspectiveCamera,
 };
 
@@ -184,7 +184,12 @@ where
                         let empty_blocks_index = volume.get_empty_blocks();
                         let camera = self.camera.read();
 
-                        canvas.build_queues(&camera, blocks, empty_blocks_index);
+                        canvas.build_queues(
+                            &camera,
+                            blocks,
+                            empty_blocks_index,
+                            self.render_options,
+                        );
                     }
 
                     #[cfg(debug_assertions)]

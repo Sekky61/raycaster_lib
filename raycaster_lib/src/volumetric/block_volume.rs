@@ -1,7 +1,7 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::{
-    common::{blockify, tf_visible_range, BoundBox, Ray},
+    common::{blockify, tf_visible_range, BoundBox},
     TF,
 };
 
