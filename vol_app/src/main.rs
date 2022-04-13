@@ -50,7 +50,7 @@ pub fn main() {
 
     state.register_callbacks(&app);
 
-    // Run app
+    // Run app, main event loop
     app.show();
     slint::run_event_loop();
     app.hide();

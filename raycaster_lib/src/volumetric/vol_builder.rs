@@ -35,6 +35,7 @@ pub struct VolumeMetadata<T> {
 
 impl<T> VolumeMetadata<T> {
     pub fn new<U>() -> VolumeMetadata<U>
+    // todo ??
     where
         U: Default,
     {

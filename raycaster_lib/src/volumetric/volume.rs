@@ -3,45 +3,74 @@ use crate::common::{BoundBox, Ray};
 use crate::TF;
 use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
+/// Interface for blocked volume types
+///
+/// Used by multithreaded renderer
 pub trait Blocked: Send + Sync {
+    /// Type of block
     type BlockType: Volume;
 
+    /// Getter for all blocks in a volume
     fn get_blocks(&self) -> &[Self::BlockType];
 
+    /// Getter for block visibility information
     fn get_empty_blocks(&self) -> &[bool];
 }
 
-// Volume assumes f32 data
-// Volume is axis aligned
+/// Interface for all volume types
+///
+/// Getters and sampling functions to be used by renderers
+/// Returned samples are always `f32`
 pub trait Volume: Send {
-    // get data dimensions
-    fn get_size(&self) -> Vector3<usize>;
+    /// Returns volume's grid size
+    fn get_size(&self) -> Vector3<usize>; // todo u32
 
-    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)>;
+    /// Transform ray from world coordinates into volume coordinates
+    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        let bbox = self.get_bound_box();
 
-    // get volume position
-    // axis aligned, lowest corner
+        let (t0, t1) = bbox.intersect(ray)?;
+
+        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&self.get_scale());
+        let lower_vec = bbox.lower - point![0.0, 0.0, 0.0];
+
+        let transform = Matrix4::identity()
+            .append_translation(&-lower_vec)
+            .append_nonuniform_scaling(&scale_inv);
+
+        let obj_origin = ray.point_from_t(t0);
+
+        let origin = transform.transform_point(&obj_origin);
+
+        let direction = ray.direction.component_mul(&scale_inv);
+        let direction = direction.normalize();
+
+        let obj_ray = Ray::from_3(origin, direction);
+
+        Some((obj_ray, t1 - t0))
+    }
+
+    /// Returns volume position
+    /// Volume position is the lower corner of `BoundBox`
     fn get_pos(&self) -> Point3<f32> {
         self.get_bound_box().lower
     }
 
-    // get scaled size
-    fn get_dims(&self) -> Vector3<f32> {
-        self.get_bound_box().dims()
-    }
-
-    // get transfer function
+    /// Returns transfer function
     fn get_tf(&self) -> TF;
 
-    // set transfer function
-    fn set_tf(&mut self, tf: TF);
+    /// Sets new transfer function
+    /// If volume uses indexing, the indexes are rebuilt
+    fn set_tf(&mut self, tf: TF); // todo check that indexes are rebuilt
 
-    // trilinear interpolation sample, zero if outside
-    // pos in volume coordinates
+    /// Sample the volume at `pos`.
+    /// Panics if `pos` is outside the volume.
+    ///
+    /// # Arguments
+    /// * `pos` - Sampling point in volume coordinates (grid coordinates)
     fn sample_at(&self, pos: Point3<f32>) -> f32;
 
-    // trilinear interpolation sample, zero if outside
-    // pos in volume coordinates
+    /// Sample the volume at `pos` and sample surroundings to get gradient.
     fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
         // Default implementation, can be replaced with a more effective one for concrete volume types
         let sample = self.sample_at(pos);
@@ -74,46 +103,22 @@ pub trait Volume: Send {
         (sample, grad_samples)
     }
 
-    fn get_bound_box(&self) -> BoundBox; // todo ref
+    /// Returns bounding box of volume
+    fn get_bound_box(&self) -> BoundBox;
 
-    fn get_scale(&self) -> Vector3<f32>; // todo ref
+    /// Returns shape of voxels/cells
+    fn get_scale(&self) -> Vector3<f32>;
 
-    fn intersect_transform(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        let bbox = self.get_bound_box();
+    /// Less efficient sampling
+    /// Checks bounds and returns `None` if position is outside the volume.
+    /// Used for building indexes.
+    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32>; // todo pos: Point3
 
-        let (t0, t1) = bbox.intersect(ray)?;
-
-        let scale_inv = vector![1.0, 1.0, 1.0].component_div(&self.get_scale());
-        let lower_vec = bbox.lower - point![0.0, 0.0, 0.0];
-
-        let transform = Matrix4::identity()
-            .append_translation(&-lower_vec)
-            .append_nonuniform_scaling(&scale_inv);
-
-        let obj_origin = ray.point_from_t(t0);
-
-        let origin = transform.transform_point(&obj_origin);
-
-        let direction = ray.direction.component_mul(&scale_inv);
-        let direction = direction.normalize();
-
-        let obj_ray = Ray::from_3(origin, direction);
-
-        Some((obj_ray, t1 - t0))
-    }
-
-    // position is inside volume
-    fn is_in(&self, pos: &Point3<f32>) -> bool {
-        self.get_bound_box().is_in(pos)
-    }
-
-    // For building and tests, mostly
-    fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32>;
-
-    fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
-        self.get_bound_box().intersect(ray)
-    }
-
+    /// Returns iterator of values in block specified by `side` and `base`
+    ///
+    /// # Params
+    /// * `side` - length of the side of the block
+    /// * `base` - lowest point of the block
     fn get_block(&self, side: usize, base: Point3<usize>) -> VolumeBlockIter<Self> {
         VolumeBlockIter {
             volume: self,
@@ -123,6 +128,7 @@ pub trait Volume: Send {
         }
     }
 
+    /// Returns the name of the volume
     fn get_name(&self) -> &str;
 }
 

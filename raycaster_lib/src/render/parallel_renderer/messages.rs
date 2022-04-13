@@ -17,7 +17,7 @@ impl RenderTask {
         }
     }
 }
-
+// todo send reference to unsafecell, less unsafe code
 /// Safety: subcanvas is read by at most one thread, 'ownership' is passed by channels
 unsafe impl Send for RenderTask {}
 

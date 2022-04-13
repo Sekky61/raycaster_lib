@@ -17,8 +17,8 @@ pub struct BlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
-    pub empty_blocks: Vec<bool>,
-    block_size: Vector3<usize>, // Number of blocks in structure (.data)
+    pub empty_blocks: Vec<bool>, // todo try bitvec
+    block_size: Vector3<usize>,  // Number of blocks in structure (.data)
     pub data: Vec<Block>,
     tf: TF,
 }
@@ -71,10 +71,6 @@ impl Blocked for BlockVolume {
 }
 
 impl Volume for BlockVolume {
-    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        unimplemented!()
-    }
-
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }

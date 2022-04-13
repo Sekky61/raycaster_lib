@@ -111,7 +111,7 @@ where
         let mut rgb = vector![0.0, 0.0, 0.0];
         let mut opacity = 0.0;
 
-        let (obj_ray, t) = match self.volume.intersect_transform(ray) {
+        let (obj_ray, t) = match self.volume.transform_ray(ray) {
             Some(e) => e,
             None => return vector![0.0, 0.0, 0.0, 0.0],
         };

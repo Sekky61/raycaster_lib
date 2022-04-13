@@ -14,7 +14,7 @@ use super::{
 };
 
 pub struct StreamBlock {
-    pub block_side: usize,
+    pub block_side: usize, // todo empty index
     pub value_range: ValueRange,
     pub bound_box: BoundBox,
     pub transform: Matrix4<f32>,
@@ -78,6 +78,7 @@ impl StreamBlock {
 unsafe impl Send for StreamBlock {}
 
 impl Volume for StreamBlock {
+    // A more optimal specialization
     fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
         let (t0, t1) = match self.bound_box.intersect(ray) {
             Some(t) => t,
@@ -244,10 +245,6 @@ impl Blocked for StreamBlockVolume {
 }
 
 impl Volume for StreamBlockVolume {
-    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        unimplemented!()
-    }
-
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }

@@ -12,7 +12,7 @@ use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 #[derive(Debug)]
 pub struct StreamVolume {
     // todo rename to streamlinearvolume
-    bound_box: BoundBox,
+    bound_box: BoundBox, // todo empty index
     size: Vector3<usize>,
     file_map: Mmap,
     map_offset: usize,
@@ -83,10 +83,6 @@ impl BuildVolume<u8> for StreamVolume {
 }
 
 impl Volume for StreamVolume {
-    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        unimplemented!()
-    }
-
     fn get_size(&self) -> Vector3<usize> {
         self.size
     }

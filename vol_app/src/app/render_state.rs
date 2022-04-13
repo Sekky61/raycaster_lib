@@ -21,6 +21,7 @@ use super::{
 
 /// Queue of not yet applied camera movements
 pub struct CameraBuffer {
+    // todo instead of buffering, keep copy of camera, manipulate it and switch them
     buffer: VecDeque<CameraMovement>,
 }
 
@@ -222,7 +223,8 @@ where
 {
     let (camera, render_options, parser_fn, tf_fn) = construct_common(parser, tf);
 
-    // Factor out
+    // Example of custom parsing on client side
+    // If volume is not blocked, build blocks in memory
     let parser_add_block_side = move |src: DataSource<u8>| {
         let mut res = parser_fn(src);
         match &mut res {

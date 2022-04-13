@@ -48,6 +48,9 @@ impl BoundBox {
     }
 
     pub fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
+        // Source: An Efficient and Robust Ray–Box Intersection Algorithm. Amy Williams et al. 2004.
+        // http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.64.7663
+
         // t value of intersection with the 6 planes of a bounding box
         let t0 = (self.lower - ray.origin).component_div(&ray.direction);
         let t1 = (self.upper - ray.origin).component_div(&ray.direction);

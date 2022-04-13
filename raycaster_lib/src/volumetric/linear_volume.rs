@@ -117,10 +117,6 @@ impl Volume for LinearVolume {
     fn get_name(&self) -> &str {
         "LinearVolume"
     }
-
-    fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
-        unimplemented!()
-    }
 }
 
 impl BuildVolume<u8> for LinearVolume {
@@ -162,6 +158,7 @@ impl BuildVolume<u8> for LinearVolume {
 
 #[cfg(test)]
 mod test {
+    // todo move tests to boundbox
 
     use nalgebra::{point, vector};
 
@@ -170,7 +167,8 @@ mod test {
 
     #[test]
     fn intersect_works() {
-        let bbox: LinearVolume = white_volume();
+        let vol: LinearVolume = white_volume();
+        let bbox = vol.get_bound_box();
         let ray = Ray {
             origin: point![-1.0, -1.0, 0.0],
             direction: vector![1.0, 1.0, 1.0],
@@ -187,7 +185,8 @@ mod test {
             origin: point![-0.4, 0.73, 0.0],
             direction: vector![1.0, 0.0, 1.0],
         };
-        let inter = vol.intersect(&ray);
+        let bbox = vol.get_bound_box();
+        let inter = bbox.intersect(&ray);
         println!("intersection: {:?}", inter);
         assert!(inter.is_some());
     }
@@ -199,7 +198,9 @@ mod test {
             origin: point![200.0, 200.0, 200.0],
             direction: vector![1.0, 0.0, 0.0],
         };
+        let bbox = vol.get_bound_box();
+        let inter = bbox.intersect(&ray);
 
-        assert!(vol.intersect(&ray).is_none());
+        assert!(inter.is_none());
     }
 }

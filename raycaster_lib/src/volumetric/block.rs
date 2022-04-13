@@ -59,8 +59,9 @@ impl Block {
 }
 
 impl Volume for Block {
-    // TODO assumes scale == 1
+    // A more optimal specialization
     fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
+        // TODO assumes scale == 1
         let (t0, t1) = match self.bound_box.intersect(ray) {
             Some(t) => t,
             None => return None,
