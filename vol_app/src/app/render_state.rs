@@ -86,8 +86,8 @@ impl RenderState {
     /// Uses constants from `defaults`
     pub fn new() -> Self {
         let render_options = RenderOptions::builder()
-            .early_ray_termination(true)
-            .empty_space_skipping(true)
+            .early_ray_termination(defaults::ERT)
+            .empty_space_skipping(defaults::EI)
             .resolution(defaults::RENDER_RESOLUTION)
             .build_unchecked();
 
@@ -176,23 +176,52 @@ impl RenderState {
     /// # Params
     /// * `path` - path of file to parse
     /// * `parser` - parser to use
-    pub fn start_renderer(&mut self, path: PathBuf, parser: PrewrittenParser) {
+    pub fn start_renderer(&mut self, path: &Path, parser: PrewrittenParser) {
+        print!(
+            "GUI: starting renderer: MT {} | ERT {} | EI {} | ",
+            self.multi_thread,
+            self.render_options.early_ray_termination,
+            self.render_options.empty_space_skipping
+        );
         match (self.stream_volume, self.multi_thread) {
             (true, true) => {
-                let renderer =
-                    volume_setup_paralel::<StreamBlockVolume>(&path, parser, self.current_tf); // todo tf redundant
+                println!("StreamBlockVolume");
+                let renderer = volume_setup_paralel::<StreamBlockVolume>(
+                    &path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                ); // todo tf redundant
                 self.renderer_front.start_rendering(renderer);
             }
             (false, true) => {
-                let renderer = volume_setup_paralel::<BlockVolume>(&path, parser, self.current_tf);
+                println!("BlockVolume");
+                let renderer = volume_setup_paralel::<BlockVolume>(
+                    &path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                );
                 self.renderer_front.start_rendering(renderer);
             }
             (true, false) => {
-                let renderer = volume_setup_linear::<StreamVolume>(&path, parser, self.current_tf);
+                println!("StreamVolume");
+                let renderer = volume_setup_linear::<StreamVolume>(
+                    &path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                );
                 self.renderer_front.start_rendering(renderer);
             }
             (false, false) => {
-                let renderer = volume_setup_linear::<LinearVolume>(&path, parser, self.current_tf);
+                println!("LinearVolume");
+                let renderer = volume_setup_linear::<LinearVolume>(
+                    &path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                );
                 self.renderer_front.start_rendering(renderer);
             }
         }
@@ -216,12 +245,13 @@ impl RenderState {
 fn volume_setup_paralel<V>(
     path: &Path,
     parser: PrewrittenParser,
+    render_options: RenderOptions,
     tf: PrewrittenTF,
 ) -> ParalelRenderer<V>
 where
     V: Volume + Blocked + BuildVolume<u8> + 'static,
 {
-    let (camera, render_options, parser_fn, tf_fn) = construct_common(parser, tf);
+    let (camera, parser_fn, tf_fn) = construct_common(parser, tf);
 
     // Example of custom parsing on client side
     // If volume is not blocked, build blocks in memory
@@ -247,12 +277,13 @@ where
 fn volume_setup_linear<V>(
     path: &Path,
     parser: PrewrittenParser,
+    render_options: RenderOptions,
     tf: PrewrittenTF,
 ) -> SerialRenderer<V>
 where
     V: Volume + BuildVolume<u8>,
 {
-    let (camera, render_options, parser_fn, tf_fn) = construct_common(parser, tf);
+    let (camera, parser_fn, tf_fn) = construct_common(parser, tf);
 
     let volume = from_file(path, parser_fn, tf_fn).unwrap();
 
@@ -262,7 +293,7 @@ where
 fn construct_common(
     parser: PrewrittenParser,
     tf: PrewrittenTF,
-) -> (Arc<RwLock<PerspectiveCamera>>, RenderOptions, ParserFn, TF) {
+) -> (Arc<RwLock<PerspectiveCamera>>, ParserFn, TF) {
     let position = defaults::CAM_POS;
     let direction = defaults::CAM_DIR;
 
@@ -272,13 +303,5 @@ fn construct_common(
     let camera = PerspectiveCamera::new(position, direction);
     let camera = Arc::new(RwLock::new(camera));
 
-    let render_options = RenderOptions::builder()
-        .resolution(defaults::RENDER_RESOLUTION)
-        .early_ray_termination(true)
-        .empty_space_skipping(true)
-        .ray_step_quality(defaults::RAY_STEP_QUALITY)
-        .ray_step_fast(defaults::RAY_STEP_FAST)
-        .build_unchecked();
-
-    (camera, render_options, parser_fn, tf_fn)
+    (camera, parser_fn, tf_fn)
 }

@@ -139,6 +139,24 @@ impl StateRef {
             state.set_mt(checked);
         });
 
+        // ERT checkbox changed callback
+        let state_clone = self.clone();
+        app.on_ert_changed(move || {
+            let mut state = state_clone.borrow_mut();
+            let app = state.get_app();
+            let checked = app.get_ert_checked();
+            state.set_ert(checked);
+        });
+
+        // EI checkbox changed callback
+        let state_clone = self.clone();
+        app.on_ei_changed(move || {
+            let mut state = state_clone.borrow_mut();
+            let app = state.get_app();
+            let checked = app.get_ei_checked();
+            state.set_ei(checked);
+        });
+
         // New TF selected callback
         let state_clone = self.clone();
         app.on_tf_selected(move |tf_name| {
@@ -156,5 +174,9 @@ impl StateRef {
 
         let state_clone = self.clone();
         app.on_z_slider_new_value(move |f| state_clone.borrow_mut().slider_event(2, f));
+    }
+
+    pub fn sync_state_with_gui(&self) {
+        self.borrow_mut().sync_state_with_gui()
     }
 }

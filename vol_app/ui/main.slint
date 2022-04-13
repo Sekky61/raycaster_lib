@@ -40,10 +40,16 @@ App := Window {
     callback mt_changed <=> mt_checkbox.toggled;
     property<bool> mt_checked: false;
 
+    callback ert_changed <=> ert_checkbox.toggled;
+    property<bool> ert_checked: false;
+
+    callback ei_changed <=> ei_checkbox.toggled;
+    property<bool> ei_checked: false;
+
     callback tf_selected <=> tf_box.selected;
 
     HorizontalLayout {
-        padding-left: 10px;
+        padding-left: 15px;
         spacing: 20px;
         TabWidget {
             width: 390px;
@@ -69,9 +75,28 @@ App := Window {
                         current-item <=> root.parser_picked_index;
                     }
 
-                    mt_checkbox := CheckBox {
-                        text: "Multi-threaded rendering";
-                        checked <=> root.mt_checked;
+                    VerticalLayout {
+
+                        padding-top: 20px;
+                        padding-bottom: 20px;
+                        padding-left: 5px;
+
+                        spacing: 10px;
+                        
+                        mt_checkbox := CheckBox {
+                            text: "Multi-threaded rendering";
+                            checked <=> root.mt_checked;
+                        }
+
+                        ert_checkbox := CheckBox {
+                            text: "Early ray termination";
+                            checked <=> root.ert_checked;
+                        }
+
+                        ei_checkbox := CheckBox {
+                            text: "Empty space skipping";
+                            checked <=> root.ei_checked;
+                        }
                     }
 
                     open_file := Button { 

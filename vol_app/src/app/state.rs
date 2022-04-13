@@ -26,6 +26,9 @@ pub struct State {
     left_mouse_held: bool,
     right_mouse_held: bool,
     mouse: Option<Vector2<f32>>,
+    // Current volume
+    current_vol_path: PathBuf,
+    current_parser: PrewrittenParser,
     // Vol picker
     file_picked: Option<PathBuf>,
     parser_picked: Option<PrewrittenParser>, // todo current parser to fix switching TF
@@ -47,8 +50,10 @@ impl State {
             slider: Default::default(),
             file_picked: None,
             parser_picked: None,
-            current_tf: PrewrittenTF::Green,
+            current_tf: PrewrittenTF::Skull,
             rendering: RenderState::new(),
+            current_vol_path: defaults::VOLUME_PATH.into(),
+            current_parser: defaults::VOLUME_PARSER,
         }
     }
 
@@ -180,7 +185,7 @@ impl State {
     /// Start renderer with default values
     pub fn initial_render_call(&mut self) {
         self.rendering
-            .start_renderer(defaults::VOLUME_PATH.into(), defaults::VOLUME_PARSER);
+            .start_renderer(&self.current_vol_path, self.current_parser);
     }
 
     /// Setter
@@ -213,20 +218,24 @@ impl State {
             _ => panic!("Unexpected parser"),
         };
 
-        self.rendering.start_renderer(path, parser);
+        self.current_vol_path = path;
+        self.current_parser = parser;
+
+        self.rendering
+            .start_renderer(&self.current_vol_path, self.current_parser);
     }
 
     /// Restart renderer with new transfer function
     pub fn handle_tf_changed(&mut self, tf_name: &str) {
         let tf = match tf_name {
-            "Green" => PrewrittenTF::Green,
+            "Green" => PrewrittenTF::Skull,
             "Gray" => PrewrittenTF::Gray,
             "White" => PrewrittenTF::White,
             _ => panic!("Unknown transfer function '{tf_name}'"),
         };
         self.current_tf = tf;
         self.rendering
-            .start_renderer(defaults::VOLUME_PATH.into(), PrewrittenParser::SkullParser);
+            .start_renderer(&self.current_vol_path, self.current_parser);
     }
 
     pub fn get_renderer_receiver(&self) -> Receiver<()> {
@@ -254,6 +263,25 @@ impl State {
 
     pub fn set_mt(&mut self, multi_thread: bool) {
         self.rendering.multi_thread = multi_thread;
+    }
+
+    pub fn set_ert(&mut self, ert: bool) {
+        self.rendering.render_options.early_ray_termination = ert;
+    }
+
+    pub fn set_ei(&mut self, ei: bool) {
+        self.rendering.render_options.empty_space_skipping = ei;
+    }
+
+    pub fn sync_state_with_gui(&self) {
+        let app = self.app.upgrade().unwrap();
+        let mt = self.rendering.multi_thread;
+        let ert = self.rendering.render_options.early_ray_termination;
+        let ei = self.rendering.render_options.empty_space_skipping;
+
+        app.set_mt_checked(mt);
+        app.set_ert_checked(ert);
+        app.set_ei_checked(ei);
     }
 
     /// Shutdown renderer

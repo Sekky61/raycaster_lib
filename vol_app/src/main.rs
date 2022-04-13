@@ -23,6 +23,8 @@ pub fn main() {
 
     state.initial_render_call();
 
+    state.sync_state_with_gui();
+
     // Start thread listening for messages from renderer
     let (shutdown_send, shutdown_recv): (Sender<_>, Receiver<()>) = crossbeam_channel::bounded(2);
     let render_msg_recv_thread = {

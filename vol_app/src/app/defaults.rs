@@ -17,9 +17,11 @@ pub const VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volum
 pub const VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
 
 pub const MULTI_THREAD: bool = false;
+pub const ERT: bool = true;
+pub const EI: bool = true;
 pub const BLOCK_SIDE: usize = 32;
 pub const STREAM: bool = false;
-pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Green;
+pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
 
