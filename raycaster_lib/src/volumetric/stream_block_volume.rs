@@ -10,7 +10,7 @@ use crate::{
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
     volume::Blocked,
-    Volume,
+    EmptyIndex, Volume,
 };
 
 pub struct StreamBlock {
@@ -19,6 +19,7 @@ pub struct StreamBlock {
     pub bound_box: BoundBox,
     pub transform: Matrix4<f32>,
     pub data: *const u8,
+    empty_index: EmptyIndex<4>,
 }
 
 impl StreamBlock {
@@ -42,13 +43,17 @@ impl StreamBlock {
             .append_translation(&lower_vec)
             .append_nonuniform_scaling(&scale_inv);
 
-        Self {
+        let mut block = Self {
             block_side,
             value_range,
             bound_box,
             transform,
             data,
-        }
+            empty_index: EmptyIndex::dummy(),
+        };
+
+        block.empty_index = EmptyIndex::from_volume(&block);
+        block
     }
 
     fn get_block_data_half(&self, start_index: usize) -> [u8; 4] {
@@ -175,6 +180,10 @@ impl Volume for StreamBlock {
     fn get_name(&self) -> &str {
         "StreamBlock"
     }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        self.empty_index.is_empty(pos)
+    }
 }
 
 // Default overlap == 1
@@ -183,6 +192,7 @@ pub struct StreamBlockVolume {
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     pub empty_blocks: Vec<bool>,
+    empty_index: EmptyIndex<4>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
     _data_owner: Mmap,
     pub data: Vec<StreamBlock>,
@@ -323,6 +333,10 @@ impl Volume for StreamBlockVolume {
     fn get_name(&self) -> &str {
         "StreamBlockVolume"
     }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        self.empty_index.is_empty(pos)
+    }
 }
 
 impl BuildVolume<u8> for StreamBlockVolume {
@@ -382,7 +396,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
             block_size.z,
         );
 
-        Ok(StreamBlockVolume {
+        let mut volume = StreamBlockVolume {
             bound_box,
             data_size: size,
             block_size,
@@ -391,7 +405,11 @@ impl BuildVolume<u8> for StreamBlockVolume {
             tf,
             block_side,
             empty_blocks,
-        })
+            empty_index: EmptyIndex::dummy(),
+        };
+
+        volume.empty_index = EmptyIndex::from_volume(&volume);
+        Ok(volume)
     }
 }
 

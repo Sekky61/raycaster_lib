@@ -14,10 +14,17 @@ criterion_group! {
 }
 
 criterion_group! {
+    name = sequential_ei;
+    config = Criterion::default().significance_level(0.1).sample_size(10);
+    targets = render_linear_ei
+}
+
+criterion_group! {
     name = parallel;
     config = Criterion::default().significance_level(0.1).sample_size(10);
     targets = render_parallel_mem, render_parallel_stream
 }
 
-//criterion_main!(sequential_linear, parallel);
-criterion_main!(parallel);
+criterion_main!(sequential_linear, parallel);
+//criterion_main!(parallel);
+//criterion_main!(sequential_ei);

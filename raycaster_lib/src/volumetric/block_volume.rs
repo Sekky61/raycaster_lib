@@ -17,7 +17,7 @@ pub struct BlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
-    pub empty_blocks: Vec<bool>, // todo try bitvec
+    pub empty_blocks: Vec<bool>, // todo use empty index, but first remove generics from emptyindex
     block_size: Vector3<usize>,  // Number of blocks in structure (.data)
     pub data: Vec<Block>,
     tf: TF,
@@ -137,6 +137,14 @@ impl Volume for BlockVolume {
 
     fn get_name(&self) -> &str {
         "BlockVolume"
+    }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
+        let (block_index, block_offset) = self.get_indexes(x, y, z);
+        self.empty_blocks[block_index]
     }
 }
 

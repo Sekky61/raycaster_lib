@@ -1,9 +1,9 @@
 use memmap::Mmap;
-use nalgebra::{point, vector, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::{
     common::{BoundBox, Ray},
-    volumetric::vol_builder::DataSource,
+    volumetric::{vol_builder::DataSource, EmptyIndex},
     TF,
 };
 
@@ -14,6 +14,7 @@ pub struct StreamVolume {
     // todo rename to streamlinearvolume
     bound_box: BoundBox, // todo empty index
     size: Vector3<usize>,
+    empty_index: EmptyIndex<4>,
     file_map: Mmap,
     map_offset: usize,
     tf: TF,
@@ -72,13 +73,19 @@ impl BuildVolume<u8> for StreamVolume {
             size.x, size.y, size.z
         );
 
-        Ok(StreamVolume {
+        let mut volume = StreamVolume {
             bound_box,
             size,
             file_map: mmap,
             map_offset,
             tf,
-        })
+            empty_index: EmptyIndex::dummy(),
+        };
+
+        let empty_index = EmptyIndex::from_volume(&volume);
+        volume.empty_index = empty_index;
+
+        Ok(volume)
     }
 }
 
@@ -146,5 +153,9 @@ impl Volume for StreamVolume {
 
     fn get_name(&self) -> &str {
         "StreamVolume"
+    }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        self.empty_index.is_empty(pos)
     }
 }

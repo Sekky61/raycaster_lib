@@ -5,7 +5,7 @@ use crate::{
     TF,
 };
 
-use super::Volume;
+use super::{EmptyIndex, Volume};
 
 pub struct Block {
     pub block_side: usize,
@@ -13,6 +13,7 @@ pub struct Block {
     pub bound_box: BoundBox,
     pub transform: Matrix4<f32>,
     pub data: Vec<f32>,
+    empty_index: EmptyIndex<4>,
 }
 
 impl Block {
@@ -35,13 +36,17 @@ impl Block {
 
         println!("New block {bound_box:?}");
 
-        Block {
+        let mut block = Block {
             data,
             bound_box,
             value_range,
             transform,
             block_side,
-        }
+            empty_index: EmptyIndex::dummy(),
+        };
+
+        block.empty_index = EmptyIndex::from_volume(&block);
+        block
     }
 
     pub fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
@@ -142,5 +147,9 @@ impl Volume for Block {
 
     fn get_name(&self) -> &str {
         "Block"
+    }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        self.empty_index.is_empty(pos)
     }
 }

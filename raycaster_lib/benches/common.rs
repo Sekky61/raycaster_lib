@@ -67,7 +67,9 @@ where
         }
         res
     };
-    from_file("../volumes/Skull.vol", parser_add_block_side, skull_tf).unwrap()
+    let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")); // should be library root (!not workspace dir!)
+    path.push("../volumes/Skull.vol");
+    from_file(path, parser_add_block_side, skull_tf).unwrap()
 }
 
 pub enum Algorithm {

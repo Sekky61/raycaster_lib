@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},
-    Volume,
+    EmptyIndex, Volume,
 };
 
 pub struct LinearVolume {
@@ -15,6 +15,7 @@ pub struct LinearVolume {
     size: Vector3<usize>,
     data: Vec<f32>,
     tf: TF,
+    empty_index: EmptyIndex<4>,
 }
 
 impl std::fmt::Debug for LinearVolume {
@@ -53,6 +54,14 @@ impl Volume for LinearVolume {
         let x_low = pos.x as usize;
         let y_low = pos.y as usize;
         let z_low = pos.z as usize;
+
+        // if let Some(ref ei) = self.empty_index {
+        //     let x = ei.sample_int(point![x_low, y_low, z_low]);
+        //     match x {
+        //         super::BlockType::Empty => return 0.0,
+        //         super::BlockType::NonEmpty => (),
+        //     }
+        // }
 
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
@@ -117,6 +126,10 @@ impl Volume for LinearVolume {
     fn get_name(&self) -> &str {
         "LinearVolume"
     }
+
+    fn is_empty(&self, pos: Point3<f32>) -> bool {
+        self.empty_index.is_empty(pos)
+    }
 }
 
 impl BuildVolume<u8> for LinearVolume {
@@ -147,14 +160,87 @@ impl BuildVolume<u8> for LinearVolume {
 
         println!("New linear volume, size {size:?} scale {scale:?} bound_box {bound_box:?}");
 
-        Ok(LinearVolume {
+        let mut volume = LinearVolume {
             bound_box,
             size,
             data,
             tf,
-        })
+            empty_index: EmptyIndex::dummy(),
+        };
+
+        let empty_index = EmptyIndex::from_volume(&volume);
+        volume.empty_index = empty_index;
+
+        Ok(volume)
     }
 }
+
+// pub struct LinearVolumeHitIterator<'a> {
+//     pos: Point3<f32>,
+//     step: Vector3<f32>,
+//     current_step: u32,
+//     n_of_steps: u32,
+//     volume: &'a LinearVolume,
+// }
+
+// impl<'a> LinearVolumeHitIterator<'a> {
+//     pub fn new(
+//         pos: Point3<f32>,
+//         step: Vector3<f32>,
+//         n_of_steps: u32,
+//         volume: &'a LinearVolume,
+//     ) -> Self {
+//         Self {
+//             pos,
+//             step,
+//             current_step: 0,
+//             n_of_steps,
+//             volume,
+//         }
+//     }
+// }
+
+// impl Iterator for LinearVolumeHitIterator<'_> {
+//     fn next(&mut self) -> Option<Self::Item> {
+//         while self.current_step < self.n_of_steps {
+//             let pos_int: Point3<usize> = self.pos.map(|v| v as usize);
+
+//             // Empty index, loop until end of ray or visible part
+//             if self.volume.empty_index.is_empty_int(pos_int) {
+//                 // next step
+//                 self.pos += self.step;
+//                 self.current_step += 1;
+//             }
+
+//             // Sample
+//             // Gradient
+
+//             let (sample, grad_samples) = self.volume.sample_at_gradient(self.pos);
+
+//             let color = (self.volume.tf)(sample);
+
+//             if color.w == 0.0 {
+//                 self.pos += self.step;
+//                 self.current_step += 1;
+//                 continue;
+//             }
+
+//             // Inverted, as low values indicate outside
+//             let gradient = vector![
+//                 sample - grad_samples.x,
+//                 sample - grad_samples.y,
+//                 sample - grad_samples.z
+//             ];
+
+//             self.pos += self.step;
+//             self.current_step += 1;
+
+//             // Construct VolumeHit
+//             return Some(VolumeHit::new(color, gradient));
+//         }
+//         None
+//     }
+// }
 
 #[cfg(test)]
 mod test {

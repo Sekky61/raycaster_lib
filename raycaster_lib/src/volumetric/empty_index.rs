@@ -1,36 +1,26 @@
-use nalgebra::{point, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::common::blockify;
 
 use super::Volume;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum BlockType {
-    Empty,
-    NonEmpty,
-}
-
-impl BlockType {
-    pub fn from_volume(volume: &impl Volume, base: Point3<usize>, side: usize) -> BlockType {
-        let block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
-        let tf = volume.get_tf();
-        let is_empty = block_iter.map(tf).all(|f| f.w == 0.0);
-        match is_empty {
-            true => BlockType::Empty,
-            false => BlockType::NonEmpty,
-        }
-    }
-}
-
 // generic argument S is side of block in voxels, not cells
 #[derive(Debug)]
 pub struct EmptyIndex<const S: usize> {
     size: Vector3<usize>,
-    blocks: Vec<BlockType>,
+    blocks: Vec<bool>, // True if empty
 }
 
 impl<const S: usize> EmptyIndex<S> {
     const DEM: f32 = 1.0 / (S as f32);
+
+    /// Placeholder
+    pub fn dummy() -> EmptyIndex<S> {
+        EmptyIndex {
+            size: vector![0, 0, 0],
+            blocks: vec![],
+        }
+    }
 
     pub fn from_volume(volume: &impl Volume) -> EmptyIndex<S> {
         let vol_size = volume.get_size();
@@ -46,7 +36,8 @@ impl<const S: usize> EmptyIndex<S> {
         for x in 0..index_size.x {
             for y in 0..index_size.y {
                 for z in 0..index_size.z {
-                    let block_type = BlockType::from_volume(volume, S * point![x, y, z], S);
+                    let block_type =
+                        EmptyIndex::<S>::block_type_from_volume(volume, S * point![x, y, z], S);
                     blocks.push(block_type);
                 }
             }
@@ -56,6 +47,15 @@ impl<const S: usize> EmptyIndex<S> {
             size: index_size,
             blocks,
         }
+    }
+
+    /// returns true if block is empty
+    pub fn block_type_from_volume(volume: &impl Volume, base: Point3<usize>, side: usize) -> bool {
+        let block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
+        let tf = volume.get_tf();
+
+        // True if empty
+        block_iter.map(tf).all(|f| f.w == 0.0)
     }
 
     fn index_3d(&self, x: usize, y: usize, z: usize) -> usize {
@@ -71,14 +71,23 @@ impl<const S: usize> EmptyIndex<S> {
         self.index_3d(x, y, z)
     }
 
-    pub fn sample(&self, pos: Point3<f32>) -> BlockType {
+    pub fn is_empty(&self, pos: Point3<f32>) -> bool {
         let index = self.pos_to_index(pos);
+        self.blocks[index]
+    }
+
+    pub fn is_empty_int(&self, pos: Point3<usize>) -> bool {
+        let pos_conv = pos / S;
+        let index = self.index_3d(pos_conv.x, pos_conv.y, pos_conv.z);
         self.blocks[index]
     }
 }
 
 #[cfg(test)]
 mod test {
+
+    const EMPTY: bool = true;
+    const NONEMPTY: bool = false;
 
     use super::*;
     use crate::{test_helpers::*, volumetric::linear_volume::LinearVolume};
@@ -122,7 +131,7 @@ mod test {
 
             assert_eq!(volume.get_size().iter().product::<usize>(), 8);
             assert_eq!(empty_index.blocks.len(), 1);
-            assert_eq!(empty_index.blocks[0], BlockType::Empty);
+            assert_eq!(empty_index.blocks[0], EMPTY);
             assert_eq!(empty_index.size, vector![1, 1, 1]);
         }
 
@@ -132,7 +141,7 @@ mod test {
             let empty_index = EmptyIndex::<3>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
-            assert_eq!(empty_index.blocks[0], BlockType::Empty);
+            assert_eq!(empty_index.blocks[0], EMPTY);
             assert_eq!(empty_index.size, vector![12, 12, 5]);
         }
 
@@ -142,7 +151,7 @@ mod test {
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 1);
-            assert_eq!(empty_index.blocks[0], BlockType::NonEmpty);
+            assert_eq!(empty_index.blocks[0], NONEMPTY);
             assert_eq!(empty_index.size, vector![1, 1, 1]);
         }
 
@@ -153,7 +162,7 @@ mod test {
             let empty_index = EmptyIndex::<4>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
-            assert_eq!(empty_index.blocks[4], BlockType::Empty);
+            assert_eq!(empty_index.blocks[4], EMPTY);
             assert_eq!(empty_index.size, vector![3, 2, 6]);
         }
 
@@ -164,7 +173,7 @@ mod test {
             let empty_index = EmptyIndex::<7>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
-            assert_eq!(empty_index.blocks[2], BlockType::Empty);
+            assert_eq!(empty_index.blocks[2], EMPTY);
             assert_eq!(empty_index.size, vector![4, 3, 2]);
         }
 
@@ -187,7 +196,7 @@ mod test {
 
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
-            assert!(empty_index.blocks.iter().all(|&b| b == BlockType::Empty));
+            assert!(empty_index.blocks.iter().all(|&b| b == EMPTY));
         }
     }
 
@@ -200,17 +209,11 @@ mod test {
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 4 * 4);
-            assert_eq!(
-                empty_index.sample(point![0.0, 0.0, 0.0]),
-                BlockType::NonEmpty
-            );
-            assert_eq!(
-                empty_index.sample(point![1.7, 1.5, 1.4]),
-                BlockType::NonEmpty
-            );
-            assert_eq!(empty_index.sample(point![2.1, 1.55, 1.4]), BlockType::Empty);
-            assert_eq!(empty_index.sample(point![0.1, 2.2, 1.4]), BlockType::Empty);
-            assert_eq!(empty_index.sample(point![0.1, 1.5, 2.4]), BlockType::Empty);
+            assert_eq!(empty_index.is_empty(point![0.0, 0.0, 0.0]), NONEMPTY);
+            assert_eq!(empty_index.is_empty(point![1.7, 1.5, 1.4]), NONEMPTY);
+            assert_eq!(empty_index.is_empty(point![2.1, 1.55, 1.4]), EMPTY);
+            assert_eq!(empty_index.is_empty(point![0.1, 2.2, 1.4]), EMPTY);
+            assert_eq!(empty_index.is_empty(point![0.1, 1.5, 2.4]), EMPTY);
         }
 
         #[test]
@@ -221,19 +224,10 @@ mod test {
             println!("blocks: {:?}", &empty_index.blocks[..]);
 
             assert_eq!(empty_index.blocks.len(), 4 * 4 * 4);
-            assert_eq!(
-                empty_index.sample(point![0.0, 0.0, 0.0]),
-                BlockType::NonEmpty
-            );
-            assert_eq!(
-                empty_index.sample(point![1.7, 1.5, 1.4]),
-                BlockType::NonEmpty
-            );
-            assert_eq!(
-                empty_index.sample(point![0.1, 0.5, 2.4]),
-                BlockType::NonEmpty
-            );
-            assert_eq!(empty_index.sample(point![2.1, 1.55, 1.4]), BlockType::Empty);
+            assert_eq!(empty_index.is_empty(point![0.0, 0.0, 0.0]), NONEMPTY);
+            assert_eq!(empty_index.is_empty(point![1.7, 1.5, 1.4]), NONEMPTY);
+            assert_eq!(empty_index.is_empty(point![0.1, 0.5, 2.4]), NONEMPTY);
+            assert_eq!(empty_index.is_empty(point![2.1, 1.55, 1.4]), EMPTY);
         }
     }
 }

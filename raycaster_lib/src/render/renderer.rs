@@ -1,10 +1,6 @@
 use nalgebra::{vector, Vector2, Vector4};
 
-use crate::{
-    common::Ray,
-    volumetric::{BlockType, EmptyIndex, Volume},
-    PerspectiveCamera,
-};
+use crate::{common::Ray, volumetric::Volume, PerspectiveCamera};
 
 use super::RenderOptions;
 
@@ -13,7 +9,6 @@ where
     V: Volume + 'static,
 {
     pub volume: V,
-    pub empty_index: EmptyIndex<4>,
     render_options: RenderOptions,
 }
 
@@ -22,10 +17,8 @@ where
     V: Volume,
 {
     pub fn new(volume: V, render_options: RenderOptions) -> Renderer<V> {
-        let empty_index = EmptyIndex::from_volume(&volume);
         Renderer {
             volume,
-            empty_index,
             render_options,
         }
     }
@@ -140,9 +133,7 @@ where
             //let sample = self.volume.sample_at(pos);
 
             // todo try sampling on integer coords
-            if self.render_options.empty_space_skipping
-                && self.empty_index.sample(pos) == BlockType::Empty
-            {
+            if self.render_options.empty_space_skipping && self.volume.is_empty(pos) {
                 pos += step;
                 continue;
             }

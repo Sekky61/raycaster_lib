@@ -9,7 +9,7 @@ mod vol_builder;
 mod volume;
 
 pub use crate::color::RGBA;
-pub use empty_index::{BlockType, EmptyIndex};
+pub use empty_index::EmptyIndex;
 pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
 pub use volume::{Blocked, Volume};

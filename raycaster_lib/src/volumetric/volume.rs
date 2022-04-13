@@ -1,7 +1,7 @@
 use crate::common::{BoundBox, Ray};
 
 use crate::TF;
-use nalgebra::{point, vector, Matrix4, Point3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
 
 /// Interface for blocked volume types
 ///
@@ -62,6 +62,9 @@ pub trait Volume: Send {
     /// Sets new transfer function
     /// If volume uses indexing, the indexes are rebuilt
     fn set_tf(&mut self, tf: TF); // todo check that indexes are rebuilt
+
+    /// Returns `true` if volume is indexed as empty in `pos`
+    fn is_empty(&self, pos: Point3<f32>) -> bool;
 
     /// Sample the volume at `pos`.
     /// Panics if `pos` is outside the volume.
@@ -131,6 +134,17 @@ pub trait Volume: Send {
     /// Returns the name of the volume
     fn get_name(&self) -> &str;
 }
+
+// pub struct VolumeHit {
+//     color: Vector4<f32>,
+//     gradient: Vector3<f32>, // not normalized
+// }
+
+// impl VolumeHit {
+//     pub fn new(color: Vector4<f32>, gradient: Vector3<f32>) -> Self {
+//         Self { color, gradient }
+//     }
+// }
 
 // Warning: Returns None if block element is outside the volume
 // In other words, returned None option does not necesarily mean the iterator is exhausted
