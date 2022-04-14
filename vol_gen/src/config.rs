@@ -89,7 +89,7 @@ impl Config {
 }
 
 /// Settings specific to generator variant
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum GeneratorConfig {
     /// Generate shapes
     Shapes { n_of_shapes: usize, sample: u8 },

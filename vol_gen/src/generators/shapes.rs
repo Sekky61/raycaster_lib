@@ -48,6 +48,10 @@ impl SampleGenerator for ShapesGenerator {
         }
         0 // todo background
     }
+
+    fn construct(config: &Config) -> Self {
+        ShapesGenerator::from_config(config)
+    }
 }
 
 // # of enum ShapeType variants

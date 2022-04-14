@@ -20,6 +20,10 @@ mod orders;
 
 use crate::{args::get_command, generators::generate_vol};
 
+// todo check what if folder does not exist?
+
+// For convenience:
+// cargo run --release --bin vol_gen -- --dims=256,256,256 --generator solid --sample 112 --output-file volumes/solid_256_linear.vol
 pub fn main() {
     // Get commands
     let cmd = get_command();

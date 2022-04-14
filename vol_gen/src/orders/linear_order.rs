@@ -1,11 +1,21 @@
 use nalgebra::{vector, Vector3};
 
+use crate::config::Config;
+
+use super::OrderGenerator;
+
 #[derive(Debug)]
 pub struct LinearCoordIterator {
     pub dims: Vector3<u32>,
     pub state: Vector3<u32>,
     done: bool,
     started: bool,
+}
+
+impl OrderGenerator for LinearCoordIterator {
+    fn construct(config: &Config) -> Self {
+        LinearCoordIterator::from_dims(config.dims)
+    }
 }
 
 impl LinearCoordIterator {

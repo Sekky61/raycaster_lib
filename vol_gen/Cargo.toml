@@ -9,3 +9,4 @@ fastrand = "1.7.0"
 clap = "3.1.6"
 byteorder = "1.4.3"
 raycaster_lib = { path = "../raycaster_lib" }
+rayon = "1.5.2"

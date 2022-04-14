@@ -43,4 +43,8 @@ impl SampleGenerator for SolidGenerator {
             self.sample
         }
     }
+
+    fn construct(config: &Config) -> Self {
+        SolidGenerator::from_config(config)
+    }
 }

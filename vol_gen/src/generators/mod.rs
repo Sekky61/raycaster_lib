@@ -2,18 +2,17 @@
 //!
 //! Types implmenting `SampleGenerator` can be used to generate volumes
 
-use std::{error::Error, io::Write};
+use std::{error::Error, io::Write, marker::PhantomData};
 
 use nalgebra::Vector3;
 
 use crate::{
     config::{Config, GeneratorConfig},
     file::open_create_file,
+    generators::{shapes::ShapesGenerator, solid::SolidGenerator},
     header::generate_header,
-    orders::{LinearCoordIterator, SampleOrder, ZCoordIterator},
+    orders::{LinearCoordIterator, OrderGenerator, SampleOrder, ZCoordIterator},
 };
-
-use self::{shapes::ShapesGenerator, solid::SolidGenerator};
 
 mod shapes;
 mod solid;
@@ -37,23 +36,18 @@ pub trait SampleGenerator {
     ///
     /// * `coords` - coordinates of the sample
     fn sample_at(&self, coords: Vector3<u32>) -> u8;
-}
 
-/// Obtain source of data
-pub fn get_sample_generator(config: &Config) -> Box<dyn SampleGenerator> {
-    match config.generator {
-        GeneratorConfig::Shapes { .. } => Box::new(ShapesGenerator::from_config(config)),
-        GeneratorConfig::Noise => todo!(),
-        GeneratorConfig::Solid { .. } => Box::new(SolidGenerator::from_config(config)),
-    }
+    fn construct(config: &Config) -> Self;
 }
 
 /// Generate header and samples into file
 /// Samples are in linear order
-pub fn generate_linear_order(
-    sg: Box<dyn SampleGenerator>,
+pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
     config: &Config,
 ) -> Result<(), Box<dyn Error>> {
+    let sg = SG::construct(config);
+    let ord_iter = OG::construct(config);
+
     // Open file
     let file_name = &config.file_name;
     let mut file = open_create_file(file_name)?;
@@ -65,41 +59,7 @@ pub fn generate_linear_order(
         return Err("Writing header error".into());
     }
 
-    // Write samples in linear order
-    let ord_iter = LinearCoordIterator::from_dims(config.dims);
-
-    for dims in ord_iter {
-        let sample = sg.sample_at(dims);
-        let written = file.write(&[sample])?;
-
-        if written != 1 {
-            return Err("Writing error".into());
-        }
-    }
-
-    Ok(())
-}
-
-/// Generate header and samples into file
-/// Samples are in Z order
-pub fn generate_z_order(
-    sg: Box<dyn SampleGenerator>,
-    config: &Config,
-    block_side: u32,
-) -> Result<(), Box<dyn Error>> {
-    // Open file
-    let file_name = &config.file_name;
-    let mut file = open_create_file(file_name)?;
-
-    // Write header
-    let header = generate_header(config);
-    let h_written = file.write(&header[..]).unwrap();
-    if h_written != header.len() {
-        return Err("Writing header error".into());
-    }
-
-    // Write samples
-    let ord_iter = ZCoordIterator::new(config.dims, block_side);
+    // Write samples in order
 
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
@@ -114,12 +74,24 @@ pub fn generate_z_order(
 }
 
 pub fn generate_vol(config: Config) {
-    let gen = get_sample_generator(&config);
+    let res: Result<(), Box<dyn Error>> = match (config.generator, config.save_buffer_order) {
+        (GeneratorConfig::Shapes { .. }, SampleOrder::Linear) => {
+            generate_order::<ShapesGenerator, LinearCoordIterator>(&config)
+        }
+        (GeneratorConfig::Shapes { .. }, SampleOrder::Z(_)) => {
+            generate_order::<ShapesGenerator, ZCoordIterator>(&config)
+        }
+        (GeneratorConfig::Solid { .. }, SampleOrder::Linear) => {
+            generate_order::<SolidGenerator, LinearCoordIterator>(&config)
+        }
+        (GeneratorConfig::Solid { .. }, SampleOrder::Z(_)) => {
+            generate_order::<SolidGenerator, ZCoordIterator>(&config)
+        }
+        (GeneratorConfig::Noise, SampleOrder::Linear) => todo!(),
+        (GeneratorConfig::Noise, SampleOrder::Z(_)) => todo!(),
+    };
 
-    match config.save_buffer_order {
-        SampleOrder::Linear => generate_linear_order(gen, &config).unwrap(),
-        SampleOrder::Z(side) => generate_z_order(gen, &config, side as u32).unwrap(),
-    }
+    res.unwrap();
 
     println!("Generating finished, result in {:#?}", config.file_name);
 }

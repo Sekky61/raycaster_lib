@@ -1,6 +1,8 @@
 use nalgebra::{vector, Vector3};
 
-use super::LinearCoordIterator;
+use crate::config::Config;
+
+use super::{LinearCoordIterator, OrderGenerator, SampleOrder};
 
 // Rounds up
 // Tested in raycaster_lib
@@ -20,6 +22,18 @@ pub struct ZCoordIterator {
     block: LinearCoordIterator,
     inner: LinearCoordIterator,
     block_side: u32,
+}
+
+impl OrderGenerator for ZCoordIterator {
+    fn construct(config: &Config) -> Self {
+        let block_side = match config.save_buffer_order {
+            SampleOrder::Linear => {
+                panic!("Constructing ZCoordIterator while setting SampleOrder to linear")
+            }
+            SampleOrder::Z(e) => e as u32,
+        };
+        ZCoordIterator::new(config.dims, block_side)
+    }
 }
 
 impl ZCoordIterator {
