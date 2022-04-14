@@ -5,6 +5,7 @@
 use std::{error::Error, io::Write, marker::PhantomData};
 
 use nalgebra::Vector3;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     config::{Config, GeneratorConfig},
@@ -28,7 +29,7 @@ pub trait Generator {
 pub trait ChunkGenerator {}
 
 /// Generates one sample at a time, at any location
-pub trait SampleGenerator {
+pub trait SampleGenerator: Sync {
     /// Generate sample
     /// Returns sample value
     ///
@@ -59,7 +60,7 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
         return Err("Writing header error".into());
     }
 
-    // Write samples in order
+    // Sample in parallel and collect results
 
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
@@ -73,19 +74,70 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
     Ok(())
 }
 
+/// Generate header and samples into file
+/// Samples are in linear order
+pub fn generate_order_parallel<SG: SampleGenerator, OG: OrderGenerator>(
+    config: &Config,
+) -> Result<(), Box<dyn Error>> {
+    let sample_gen = SG::construct(config);
+    let mut ord_iter = OG::construct(config);
+
+    // Open file
+    let file_name = &config.file_name;
+    let mut file = open_create_file(file_name)?;
+
+    // Write header
+    let header = generate_header(config);
+    let h_written = file.write(&header[..]).unwrap();
+    if h_written != header.len() {
+        return Err("Writing header error".into());
+    }
+
+    loop {
+        // Get batch of coordinates
+        let mut batch = vec![];
+
+        for _ in 0..32768 {
+            if let Some(pos) = ord_iter.next() {
+                batch.push(pos);
+            } else {
+                break;
+            }
+        }
+        if batch.is_empty() {
+            break;
+        }
+
+        // Sample in parallel and collect results
+
+        let output_samples: Vec<u8> = batch
+            .par_iter()
+            .map(|&pos| sample_gen.sample_at(pos))
+            .collect();
+
+        let written = file.write(&output_samples)?;
+
+        if written != output_samples.len() {
+            return Err("Writing error".into());
+        }
+    }
+
+    Ok(())
+}
+
 pub fn generate_vol(config: Config) {
     let res: Result<(), Box<dyn Error>> = match (config.generator, config.save_buffer_order) {
         (GeneratorConfig::Shapes { .. }, SampleOrder::Linear) => {
-            generate_order::<ShapesGenerator, LinearCoordIterator>(&config)
+            generate_order_parallel::<ShapesGenerator, LinearCoordIterator>(&config)
         }
         (GeneratorConfig::Shapes { .. }, SampleOrder::Z(_)) => {
-            generate_order::<ShapesGenerator, ZCoordIterator>(&config)
+            generate_order_parallel::<ShapesGenerator, ZCoordIterator>(&config)
         }
         (GeneratorConfig::Solid { .. }, SampleOrder::Linear) => {
-            generate_order::<SolidGenerator, LinearCoordIterator>(&config)
+            generate_order_parallel::<SolidGenerator, LinearCoordIterator>(&config)
         }
         (GeneratorConfig::Solid { .. }, SampleOrder::Z(_)) => {
-            generate_order::<SolidGenerator, ZCoordIterator>(&config)
+            generate_order_parallel::<SolidGenerator, ZCoordIterator>(&config)
         }
         (GeneratorConfig::Noise, SampleOrder::Linear) => todo!(),
         (GeneratorConfig::Noise, SampleOrder::Z(_)) => todo!(),
