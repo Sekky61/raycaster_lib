@@ -9,6 +9,7 @@ pub mod parse;
 pub mod transfer_functions;
 
 /// Example of a usecase - single-threaded renderer
+/// todo move to examples
 pub fn render_frame(resolution: Vector2<u16>) -> Vec<u8> {
     use crate::{
         premade::{

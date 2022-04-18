@@ -60,8 +60,7 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
         return Err("Writing header error".into());
     }
 
-    // Sample in parallel and collect results
-
+    // Sample and write to file
     for dims in ord_iter {
         let sample = sg.sample_at(dims);
         let written = file.write(&[sample])?;
@@ -79,7 +78,7 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
 pub fn generate_order_parallel<SG: SampleGenerator, OG: OrderGenerator>(
     config: &Config,
 ) -> Result<(), Box<dyn Error>> {
-    let sample_gen = SG::construct(config);
+    let sample_generator = SG::construct(config);
     let mut ord_iter = OG::construct(config);
 
     // Open file
@@ -112,11 +111,11 @@ pub fn generate_order_parallel<SG: SampleGenerator, OG: OrderGenerator>(
 
         let output_samples: Vec<u8> = batch
             .par_iter()
-            .map(|&pos| sample_gen.sample_at(pos))
+            .map(|&pos| sample_generator.sample_at(pos))
             .collect();
 
+        // Write into file
         let written = file.write(&output_samples)?;
-
         if written != output_samples.len() {
             return Err("Writing error".into());
         }

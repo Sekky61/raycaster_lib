@@ -77,8 +77,11 @@ impl RendererFront {
     ///
     /// Equivalent to:
     /// ```
+    /// # use raycaster_lib::render::RendererFront;
+    /// # use raycaster_lib::render::RendererMessage;
+    /// # let front = RendererFront::new();
     /// let sender = front.get_sender();
-    /// sender.send(msg);
+    /// sender.send(RendererMessage::StartRendering);
     /// ```
     pub fn send_message(&self, msg: RendererMessage) {
         self.communication_in.0.send(msg).unwrap()
@@ -97,7 +100,9 @@ impl RendererFront {
     /// Blocking call
     ///
     /// Equivalent to:
-    /// ```
+    /// ```no_run
+    /// # use raycaster_lib::render::RendererFront;
+    /// # let front = RendererFront::new();
     /// let rec = front.get_receiver();
     /// rec.recv().unwrap(); // returns unit type
     /// ```

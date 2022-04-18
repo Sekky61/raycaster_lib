@@ -1,3 +1,6 @@
+//! Module with helper functions
+//! Saves repetition in unit tests
+
 use nalgebra::{point, vector, Vector3};
 
 use crate::{
@@ -56,7 +59,9 @@ where
     BuildVolume::build(meta).unwrap()
 }
 
-pub fn skull_volume<V>() -> V
+/// Parses and returns volume from file `volumes/Skull.vol` (relative to workspaces)
+/// Optional parameter `block_side` allows creation of block volumes
+pub fn skull_volume<V>(block_side: Option<usize>) -> V
 where
     V: Volume + BuildVolume<u8>,
 {
@@ -64,6 +69,10 @@ where
     path.push("../volumes/Skull.vol");
     println!("{:?}", path);
     let ds = DataSource::from_file(path).unwrap();
-    let meta = skull_parser(ds).expect("skull error");
+    let mut meta = skull_parser(ds).expect("skull error");
+    match block_side {
+        Some(side) => meta.block_side = Some(side),
+        None => (),
+    }
     BuildVolume::build(meta).unwrap()
 }

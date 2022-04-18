@@ -65,8 +65,8 @@ mod test {
     #[test]
     #[ignore]
     fn linear_block_matches_skull() {
-        let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let linear: LinearVolume = skull_volume(None);
+        let block: BlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();
@@ -86,8 +86,8 @@ mod test {
 
     #[test]
     fn sample_at_subsamples_match() {
-        let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let linear: LinearVolume = skull_volume(None);
+        let block: BlockVolume = skull_volume(Some(5));
 
         let sampling_coord = point![0.0, 25.0, 114.0];
         let sampling_spots = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -104,9 +104,11 @@ mod test {
 
     #[test]
     #[ignore]
+    /// Test ignored as it a longer test
+    /// Ignored tests can be run using `cargo test -- --ignored`
     fn linear_block_sample_at_matches() {
-        let linear: LinearVolume = skull_volume();
-        let block: BlockVolume = skull_volume();
+        let linear: LinearVolume = skull_volume(None);
+        let block: BlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();

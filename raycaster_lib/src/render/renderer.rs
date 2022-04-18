@@ -31,8 +31,12 @@ where
         self.render_options.resolution = res;
     }
 
+    pub fn render(&mut self, camera: &PerspectiveCamera, buffer: &mut [u8]) {
+        self.render_to_buffer(camera, buffer, true)
+    }
+
     // buffer y=0 is up
-    pub fn render_to_buffer(
+    pub(crate) fn render_to_buffer(
         &mut self,
         camera: &PerspectiveCamera,
         buffer: &mut [u8],

@@ -75,6 +75,9 @@ impl PerspectiveCamera {
     /// # Example
     ///
     /// ```
+    /// use raycaster_lib::PerspectiveCamera;
+    /// use nalgebra::{vector, point};
+    ///
     /// let position = point![0.0,0.0,0.0];
     /// let direction = vector![1.0,0.0,0.0];
     /// let mut camera = PerspectiveCamera::new(position, direction);
