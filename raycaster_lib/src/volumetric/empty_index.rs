@@ -125,13 +125,10 @@ mod test {
     const NONEMPTY: bool = false;
 
     use super::*;
-    use crate::{test_helpers::*, volumetric::linear_volume::LinearVolume};
+    use crate::{color::RGBA, test_helpers::*, volumetric::linear_volume::LinearVolume};
     use nalgebra::vector;
 
-    use crate::volumetric::{
-        vol_builder::{BuildVolume, DataSource},
-        RGBA,
-    };
+    use crate::volumetric::vol_builder::{BuildVolume, DataSource};
 
     fn dark_tf(_sample: f32) -> RGBA {
         crate::color::zero()

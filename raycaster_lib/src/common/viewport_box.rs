@@ -3,22 +3,26 @@ use std::{
     ops::Range,
 };
 
-use nalgebra::{vector, Vector2};
+use nalgebra::{point, vector, Vector2};
 
-// A 2D range, rectangle described by two points
-// Expected values in range <0;1>
+/// A 2D range; rectangle described by two points.
+/// Though not enforced, expected values are in range <0;1>.
+/// This is in alignment with main usecase - calculations in viewport.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct ViewportBox {
+    /// Lowest point of rectangle
     pub lower: Vector2<f32>,
+    /// Highest point of rectangle
     pub upper: Vector2<f32>,
 }
 
 impl ViewportBox {
+    /// Construct `ViewportBox` from its parts.
     pub fn from_points(lower: Vector2<f32>, upper: Vector2<f32>) -> Self {
         Self { lower, upper }
     }
 
-    // Maximum viewport, flipped
+    /// Returns empty box.
     pub fn new() -> Self {
         Self {
             lower: vector![f32::INFINITY, f32::INFINITY],
@@ -26,22 +30,28 @@ impl ViewportBox {
         }
     }
 
-    // todo params as vector
+    /// Expand range to include point \[x,y\].
     pub fn add_point(&mut self, x: f32, y: f32) {
+        // Todo possibly use vectors
         self.upper.x = f32::clamp(f32::max(self.upper.x, x), 0.0, 1.0);
         self.upper.y = f32::clamp(f32::max(self.upper.y, y), 0.0, 1.0);
         self.lower.x = f32::clamp(f32::min(self.lower.x, x), 0.0, 1.0);
         self.lower.y = f32::clamp(f32::min(self.lower.y, y), 0.0, 1.0);
     }
 
+    /// Returns size of rectangle
     pub fn size(&self) -> Vector2<f32> {
         self.upper - self.lower
     }
 
+    /// Convert `ViewportBox`, which is in normalized coordinates into
+    /// pixel ranges.
+    ///
+    /// Parameter `resolution` is resolution of rectangle \[0,0\],\[1,1\], in other words
+    /// the resolution of camera.
     pub fn get_pixel_range(&self, resolution: Vector2<u16>) -> PixelBox {
-        // Approach: floor values down to nearest pixel
-        // Two adjacent boxes can share one line of pixels
-        // TODO might be good to ceil values
+        // Floor values down to nearest pixel
+        // todo might save time to pass resolution as f32
 
         let res_f = resolution.map(|v| v as f32);
 
@@ -52,8 +62,9 @@ impl ViewportBox {
         PixelBox::new(low_pixel.x..high_pixel.x, low_pixel.y..high_pixel.y)
     }
 
-    // True if rectangles share any area (in other words, if bounds cross)
-    // Touching boundboxes do not cross
+    /// Checks if rectangles share any area (in other words, if bounds cross).
+    /// Touching boundboxes do not cross.
+    /// To get actual intersection area, see [ViewportBox::intersection].
     pub fn crosses(&self, other: &ViewportBox) -> bool {
         let outside = self.upper.x <= other.lower.x
             || self.lower.x >= other.upper.x
@@ -62,7 +73,8 @@ impl ViewportBox {
         !outside
     }
 
-    // Touching boundboxes do not intersect
+    /// Returns result of intersection between two rectangles.
+    /// Touching boundboxes do not intersect.
     pub fn intersection(&self, other: &ViewportBox) -> Option<ViewportBox> {
         let result = self.intersection_unchecked(other);
         if result.lower.x >= result.upper.x || result.lower.y >= result.upper.y {
@@ -72,9 +84,9 @@ impl ViewportBox {
         }
     }
 
-    // Returns intersection of two 2D boxes
-    // If the boxes do not intersect, data is faulty
-    // If you are not sure if boxes intersect, use intersection TODO link
+    /// Returns intersection of two 2D boxes
+    /// If the boxes do not intersect, data is faulty.
+    /// If you are not sure if boxes intersect, use safe variant [ViewportBox::intersection].
     pub fn intersection_unchecked(&self, other: &ViewportBox) -> ViewportBox {
         let lower = vector![
             f32::max(self.lower.x, other.lower.x),
@@ -89,33 +101,42 @@ impl ViewportBox {
     }
 }
 
-// Implemented with open ended ranges
-// if x = 0..10, the width is 10, tenth pixel is index [9]
+/// 2D range of pixels.
+/// Usually product of calling [ViewportBox::get_pixel_range].
+///
+/// Example: if `x = 0..10`, the width is `10`, tenth pixel is index `[9]`.
 #[derive(Clone, Debug)]
 pub struct PixelBox {
+    /// Pixel range on the `x` axis
     pub x: Range<u16>,
+    /// Pixel range on the `y` axis
     pub y: Range<u16>,
 }
 
+// Implemented with open ended ranges
 impl PixelBox {
+    /// Construct new `PixelBox` from two ranges.
     pub fn new(x: Range<u16>, y: Range<u16>) -> Self {
         Self { x, y }
     }
 
+    /// Returns width of the range
     pub fn width(&self) -> u16 {
         self.x.end - self.x.start
     }
 
+    /// Returns height of the range
     pub fn height(&self) -> u16 {
         self.y.end - self.y.start
     }
 
+    /// Returns number of pixels in range.
     pub fn items(&self) -> u32 {
         // Can be at most 32bit
         (self.width() as u32) * (self.height() as u32)
     }
 
-    // True if rectangles share any area (in other words, if bounds cross)
+    /// Checks if rectangles share any area (in other words, if bounds cross)
     pub fn crosses(&self, other: &PixelBox) -> bool {
         let outside = self.x.end <= other.x.start
             || self.x.start >= other.x.end
@@ -124,7 +145,8 @@ impl PixelBox {
         !outside
     }
 
-    // Touching boundboxes do not intersect
+    /// Returns intersection of two `PixelRange`s, if one exists.
+    /// Touching boundboxes do not intersect.
     pub fn intersection(&self, other: &PixelBox) -> Option<PixelBox> {
         let result = self.intersection_unchecked(other);
         if result.x.start >= result.x.end || result.y.start >= result.y.end {
@@ -134,6 +156,7 @@ impl PixelBox {
         }
     }
 
+    /// Unsafe variant of [PixelBox::intersection].
     pub fn intersection_unchecked(&self, other: &PixelBox) -> PixelBox {
         let lower_x = max(self.x.start, other.x.start);
         let lower_y = max(self.y.start, other.y.start);
@@ -147,8 +170,10 @@ impl PixelBox {
         }
     }
 
-    // Returns linear offset
-    // Trusts input
+    /// Returns 'linear' offset of smaller `PixelBox` inside a bigger one.
+    /// Inputs are not checked.
+    /// Usually called with bigger box being screen and therefore getting
+    /// offset of pixelbox in framebuffer.
     pub fn offset_in_unchecked(&self, smaller: &PixelBox) -> u32 {
         //  _______
         // |   __  |

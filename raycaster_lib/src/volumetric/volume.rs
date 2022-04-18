@@ -45,7 +45,7 @@ pub trait Volume: Send {
         let direction = ray.direction.component_mul(&scale_inv);
         let direction = direction.normalize();
 
-        let obj_ray = Ray::from_3(origin, direction);
+        let obj_ray = Ray::new(origin, direction);
 
         Some((obj_ray, t1 - t0))
     }

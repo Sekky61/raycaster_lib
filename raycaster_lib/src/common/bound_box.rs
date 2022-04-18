@@ -2,27 +2,37 @@ use nalgebra::{point, Point3, Vector3};
 
 use super::Ray;
 
+/// Bounding box of object in world space.
+/// Defined by two points, `lower` and `upper`.
+/// Volume is defined as the space between these points.
+/// Box is axis-aligned.
+///
+/// `BoundBox` implements [`IntoIterator`].
+/// This way, corner points can be itarated over.
+/// ```ignore
+/// # use crate::common::BoundBox;
+/// # use nalgebra::point;
+/// let bbox = BoundBox::new(point![0.0, 0.0, 0.0], point![1.0, 1.0, 1.0]);
+/// for point in bbox {
+///     println!{"Point: {point:?}"};
+/// }
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct BoundBox {
+    /// Lowest point of volume
     pub lower: Point3<f32>,
+    /// Highest point of volume
     pub upper: Point3<f32>,
 }
 
 impl BoundBox {
+    /// Construct new `BoundBox` from their defining points.
     pub fn new(lower: Point3<f32>, upper: Point3<f32>) -> BoundBox {
         BoundBox { lower, upper }
     }
 
-    /// Zero sized boundbox
-    ///
-    /// For testing purposes, where bound box is irrelevant
-    pub fn empty() -> BoundBox {
-        BoundBox {
-            lower: point![0.0, 0.0, 0.0],
-            upper: point![0.0, 0.0, 0.0],
-        }
-    }
-
+    /// Alternative construction method.
+    /// Uses `position` as `lower` point and calculates `upper` as `position + dimensions`.
     pub fn from_position_dims(position: Point3<f32>, dimensions: Vector3<f32>) -> BoundBox {
         BoundBox {
             lower: position,
@@ -30,14 +40,21 @@ impl BoundBox {
         }
     }
 
-    pub fn position(&self) -> Point3<f32> {
-        self.lower
+    /// Zero sized boundbox.
+    /// Used for testing purposes, where `BoundBox` is irrelevant.
+    pub fn empty() -> BoundBox {
+        BoundBox {
+            lower: point![0.0, 0.0, 0.0],
+            upper: point![0.0, 0.0, 0.0],
+        }
     }
 
+    /// Returns size of the volume in units
     pub fn dims(&self) -> Vector3<f32> {
         self.upper - self.lower
     }
 
+    /// Tests if `pos` is inside bounding box.
     pub fn is_in(&self, pos: &Point3<f32>) -> bool {
         self.upper.x > pos.x
             && self.upper.y > pos.y
@@ -47,6 +64,15 @@ impl BoundBox {
             && pos.z > self.lower.z
     }
 
+    /// Returns whether intersection between `BoundBox` and `Ray` exists.
+    /// If intersection exists, function also returns the segment of ray.
+    ///
+    /// # Returns
+    ///
+    /// * `None` - if intersection does not exist
+    /// * `Some(t1, t2)` - if objects intersect. `t1` and `t2` are points of intersection on the ray.
+    ///
+    /// To get a point from `t1`, see [`Ray::point_from_t`]
     pub fn intersect(&self, ray: &Ray) -> Option<(f32, f32)> {
         // Source: An Efficient and Robust Ray–Box Intersection Algorithm. Amy Williams et al. 2004.
         // http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.64.7663
@@ -61,12 +87,11 @@ impl BoundBox {
         let tmin = f32::max(f32::max(t_minmax.x.0, t_minmax.y.0), t_minmax.z.0);
         let tmax = f32::min(f32::min(t_minmax.x.1, t_minmax.y.1), t_minmax.z.1);
 
-        // if tmax < 0, ray is intersecting AABB, but the whole AABB is behind us
+        // the whole box is behind us
         if tmax.is_sign_negative() {
             return None;
         }
 
-        // if tmin > tmax, ray doesn't intersect AABB
         if tmin > tmax {
             return None;
         }
@@ -75,9 +100,10 @@ impl BoundBox {
     }
 }
 
+/// Iteration structure, iterates over corners of a `BoundBox`.
 pub struct BoundBoxIterator {
-    pub lower: Point3<f32>,
-    pub upper: Point3<f32>,
+    lower: Point3<f32>,
+    upper: Point3<f32>,
     state: u8,
 }
 
@@ -112,5 +138,34 @@ impl IntoIterator for BoundBox {
             upper: self.upper,
             state: 0,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use nalgebra::point;
+
+    use super::*;
+
+    #[test]
+    fn bbox_iter() {
+        let bbox = BoundBox::new(point![0.0, 0.0, 0.0], point![1.0, 1.0, 1.0]);
+
+        let points: Vec<_> = bbox.into_iter().collect();
+
+        assert_eq!(
+            points,
+            vec![
+                point![0.0, 0.0, 0.0],
+                point![1.0, 0.0, 0.0],
+                point![1.0, 1.0, 0.0],
+                point![0.0, 1.0, 0.0],
+                point![0.0, 0.0, 1.0],
+                point![1.0, 0.0, 1.0],
+                point![1.0, 1.0, 1.0],
+                point![0.0, 1.0, 1.0]
+            ]
+        );
     }
 }

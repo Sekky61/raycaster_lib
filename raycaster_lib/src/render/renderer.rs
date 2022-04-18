@@ -116,7 +116,7 @@ where
         let view_dir_neg = -camera.get_dir();
 
         let begin = obj_ray.origin;
-        let direction = ray.get_direction();
+        let direction = ray.direction;
 
         let step_size = if quality {
             self.render_options.ray_step_quality

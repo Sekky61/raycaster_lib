@@ -1,3 +1,5 @@
+//! Structures and functions used throughout the library
+
 mod bound_box;
 mod ray;
 mod value_range;
@@ -11,7 +13,21 @@ pub use viewport_box::{PixelBox, ViewportBox};
 
 use crate::TF;
 
-// Rounds up
+/// Divides volume into blocks.
+/// Rounds up.
+///
+/// # Params
+/// * `size` - resolution of volume in voxels
+/// * `side` - side of block in voxels
+/// * `overlap` - overlap of blocks (usually 1 voxel)
+///
+/// # Example
+/// ```ignore
+/// # use nalgebra::vector;
+/// # use crate::common::blockify;
+/// let size = vector![19, 20, 21];
+/// assert_eq!(blockify(size, 10, 1), vector![2, 3, 3]);
+/// ```
 pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<usize> {
     let cells = side - overlap; // cells per block
                                 // (size-1) -- number of cells
@@ -21,7 +37,33 @@ pub fn blockify(size: Vector3<usize>, side: usize, overlap: usize) -> Vector3<us
     y / cells
 }
 
-// Assumes range of values <0.0;255.0>
+/// Calculates ranges of samples yielding opaque colors, given `tf`.
+/// Assumes `tf` (transfer function) operates on values `<0.0;255.0>`.
+///
+/// Returns vector of `ValueRange`.
+///
+/// # Example
+/// ```ignore
+/// # use nalgebra::vector;
+/// # use crate::common::ValueRange;
+/// let tf = |x: f32| {
+/// if x > 10.5 && x < 20.5 {
+///     return vector![1.0, 1.0, 1.0, 1.0];
+/// } else if x > 80.1 && x < 85.8 {
+///     return vector![1.0, 1.0, 1.0, 0.1];
+/// } else {
+///     return vector![1.0, 1.0, 1.0, 0.0];
+/// }
+/// };
+///
+/// assert_eq!(
+/// tf_visible_range(tf),
+/// vec![
+///     (11.0..21.0).into(),
+///     (81.0..86.0).into()
+/// ]
+/// );
+/// ```
 pub fn tf_visible_range(tf: TF) -> Vec<ValueRange> {
     let mut ranges = vec![];
     let mut range: Option<ValueRange> = None;
@@ -66,7 +108,25 @@ mod test {
         let ranges = tf_visible_range(tf);
 
         assert_eq!(ranges.len(), 1);
-        assert_eq!(ranges[0], ValueRange::from_range(11.0..21.0));
+        assert_eq!(ranges[0], (11.0..21.0).into());
+    }
+
+    #[test]
+    fn tf_range_split() {
+        let tf = |x: f32| {
+            if x > 10.5 && x < 20.5 {
+                return vector![1.0, 1.0, 1.0, 1.0];
+            } else if x > 80.1 && x < 85.8 {
+                return vector![1.0, 1.0, 1.0, 0.1];
+            } else {
+                return vector![1.0, 1.0, 1.0, 0.0];
+            }
+        };
+
+        assert_eq!(
+            tf_visible_range(tf),
+            vec![(11.0..21.0).into(), (81.0..86.0).into()]
+        );
     }
 
     #[test]

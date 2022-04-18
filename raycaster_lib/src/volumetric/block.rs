@@ -26,7 +26,7 @@ impl Block {
     ) -> Block {
         // todo boundbox and scale has redundant info
         assert_eq!(data.len(), block_side.pow(3));
-        let value_range = ValueRange::from_iter(&data[..]);
+        let value_range = ValueRange::from_samples(&data[..]);
 
         let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
         let lower_vec = point![0.0, 0.0, 0.0] - bound_box.lower; // todo type workaround
@@ -77,7 +77,7 @@ impl Volume for Block {
 
         let t = t1 - t0;
 
-        Some((Ray::from_3(obj_origin, ray.direction), t))
+        Some((Ray::new(obj_origin, ray.direction), t))
     }
 
     fn get_size(&self) -> Vector3<usize> {

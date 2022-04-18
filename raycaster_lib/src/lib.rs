@@ -1,13 +1,14 @@
-//! # Raycaster lib crate
+//! # Raycaster library crate
 //!
-//! Rust library for volumetric raycasting
+//! Rust library for direct volumetric raycasting.
+//!
+//! Source code is part of the generated documentation and is available
+//! upon clicking `source` in upper right corner.
 //!
 //! # Example
 
-// #![feature(generic_const_exprs)]
-
 pub mod color;
-mod common;
+pub mod common;
 mod perspective_camera;
 pub mod premade;
 pub mod render;
@@ -16,7 +17,8 @@ pub mod volumetric;
 
 pub use perspective_camera::PerspectiveCamera;
 
-use volumetric::RGBA;
+use color::RGBA;
+
 pub type TF = fn(f32) -> RGBA; // todo tf module, with trait
 
 pub type ParserFn =

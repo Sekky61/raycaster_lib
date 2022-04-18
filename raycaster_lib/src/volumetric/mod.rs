@@ -1,4 +1,20 @@
-//mod block_gen;
+//! All volume types are declared here.
+//! They are re-exported as the module volumes.
+//!
+//! # What is a volume type?
+//!
+//! Volume type is a representation of volume in our library.
+//! One example may be `LinearVolume` - a volume stored by slices in memory.
+//! Another example is `StreamBlockVolume` - a volume stored by blocks and read from a file.
+//!
+//! # `Volume` trait
+//!
+//! All volume types interface with renderers using `Volume` trait.
+//! This way, rendering can be generic over volume types.
+//!
+//! Another trait used for volumes is `Blocked`.
+//! This trait allows renderer to access volume blocks (where applicable) and is used for parallel rendering.
+
 mod block;
 mod block_volume;
 mod empty_index;
@@ -8,7 +24,8 @@ mod stream_volume;
 mod vol_builder;
 mod volume;
 
-pub use crate::color::RGBA;
+// Exports
+
 pub use empty_index::EmptyIndex;
 pub use vol_builder::DataSource;
 pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
@@ -32,6 +49,7 @@ mod test {
     use nalgebra::{point, vector};
     use volumes::*;
 
+    /// Float comparison for optional values
     fn compare_samples(s1: Option<f32>, s2: Option<f32>) -> bool {
         match (s1, s2) {
             (None, None) => true,
@@ -41,6 +59,7 @@ mod test {
         }
     }
 
+    /// Expected: `Linearvolume` and `Blockvolume` match when sampled everywhere
     #[test]
     fn linear_block_matches() {
         let linear: LinearVolume = white_volume();
@@ -62,6 +81,7 @@ mod test {
         }
     }
 
+    /// Same test as above, with bigger volume
     #[test]
     #[ignore]
     fn linear_block_matches_skull() {
@@ -84,6 +104,7 @@ mod test {
         }
     }
 
+    /// Expected: Samples inside cell match
     #[test]
     fn sample_at_subsamples_match() {
         let linear: LinearVolume = skull_volume(None);

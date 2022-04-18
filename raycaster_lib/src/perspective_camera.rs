@@ -20,9 +20,9 @@ pub struct PerspectiveCamera {
     img_plane_size: Vector2<f32>, // Calculated from fov_y
     /// Direction of ray passing through pixel \[0,0\]
     dir_00: Vector3<f32>, // Vector from camera point to pixel \[0,0\] | upper left corner, in line with buffer convention
-    /// Vector offset between two horizontally neighbouring pixels (such as: [0,0] -> [1,0])
+    /// Vector offset between two horizontally neighbouring pixels (such as: \[0,0\] -> \[1,0\])
     du: Vector3<f32>,
-    /// Vector offset between two vertically neighbouring pixels (such as: [0,0] -> [0,1])
+    /// Vector offset between two vertically neighbouring pixels (such as: \[0,0\] -> \[0,1\])
     dv: Vector3<f32>,
 }
 
@@ -201,7 +201,7 @@ impl PerspectiveCamera {
         // todo component_mul
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
-        Ray::from_3(self.position, dir)
+        Ray::new(self.position, dir)
     }
 
     /// Project bounding box of a volume to viewport

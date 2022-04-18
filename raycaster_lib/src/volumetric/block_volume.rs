@@ -286,20 +286,6 @@ mod test {
         (block_index, block_offset)
     }
 
-    // #[test]
-    // #[ignore]
-    // fn construction() {
-    //     // Assumes BLOCK_SIDE == 3
-    //     let mut data = [0.0; 3 * 3 * 3];
-    //     data[2] = 1.9;
-    //     data[9] = 1.8;
-    //     data[20] = 0.0;
-    //     let bbox = BoundBox::new(point![0.0, 0.0, 0.0], point![1.0, 1.0, 1.0]);
-    //     let block = Block::from_data(data, bbox);
-
-    //     assert_eq!(block.value_range.limits(), (0.0, 1.9));
-    // }
-
     #[test]
     fn build_empty() {
         let tf = |v: f32| vector![1.0, 1.0, 1.0, v];

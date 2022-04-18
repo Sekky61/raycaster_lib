@@ -35,7 +35,7 @@ impl StreamBlock {
     ) -> Self {
         let elements = block_side.pow(3);
         let slice = std::slice::from_raw_parts(data, elements);
-        let value_range = ValueRange::from_iter(slice);
+        let value_range = ValueRange::from_samples(slice);
 
         let scale_inv = vector![1.0, 1.0, 1.0].component_div(&scale);
         let lower_vec = point![0.0, 0.0, 0.0] - bound_box.lower; // todo type workaround
@@ -96,7 +96,7 @@ impl Volume for StreamBlock {
 
         let t = t1 - t0;
 
-        Some((Ray::from_3(obj_origin, ray.direction), t))
+        Some((Ray::new(obj_origin, ray.direction), t))
     }
 
     fn get_size(&self) -> Vector3<usize> {
