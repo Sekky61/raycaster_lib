@@ -3,10 +3,12 @@
 ## Obsah
 1. [Základní informace](#základní-informace)
 2. [Překlad a spouštění](#překlad-a-spouštění)
+3. [Dokumentace](#dokumentace)
 
 # Základní informace
 
 Autor: Michal Majer
+
 Datum: 19.4.2022
 
 # Překlad a spouštění
@@ -79,3 +81,11 @@ Příklady spuštění `vol_gen`:
 ```
 cargo run --release --bin vol_gen -- --dims=100,100,100 --generator solid --sample 42 --output-file volumes/100_solid.vol
 ```
+
+# Dokumentace
+
+Pro vygenerování dokumentace použijte příkaz
+```
+cargo doc --no-deps
+```
+Argumentem `--open` se dokumentace automaticky otevře v prohlížeči, argument `--document-private-items` vygeneruje dokumentaci i neveřejných částí kódu.
