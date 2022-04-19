@@ -230,7 +230,7 @@ impl PerspectiveCamera {
             }
         }
 
-        viewbox
+        viewbox // todo join with pixel mapping
     }
 
     /// Get the distance from camera origin to the middle of a bound box

@@ -17,6 +17,9 @@ use super::{
     messages::{SubRenderResult, ToWorkerMsg},
 };
 
+// light direction (normalized)
+const LIGHT_DIR: Vector3<f32> = vector![-0.74278, -0.55708, -0.37139];
+
 enum Run {
     Stop,
     Continue,
@@ -189,7 +192,6 @@ where
         let obj_ray = block.transform_ray(ray);
 
         let view_dir_neg = -camera.get_dir();
-        let light_dir = vector![-1.0, -1.0, -1.0].normalize(); // light direction
 
         let (obj_ray, t) = match obj_ray {
             Some(r) => r,
@@ -239,9 +241,9 @@ where
 
             if grad_magnitude > GRAD_MAG_THRESH {
                 let grad_norm = grad / grad_magnitude;
-                let diffuse = f32::max(grad_norm.dot(&-light_dir), 0.00); // ambient light 0.09
+                let diffuse = f32::max(grad_norm.dot(&-LIGHT_DIR), 0.00); // ambient light 0.09
 
-                let reflect = light_dir - 2.0 * (grad_norm.dot(&light_dir)) * grad_norm;
+                let reflect = LIGHT_DIR - 2.0 * (grad_norm.dot(&LIGHT_DIR)) * grad_norm;
                 let r_dot_view = reflect.dot(&view_dir_neg);
                 let light_intensity = 200.0;
                 let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
