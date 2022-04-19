@@ -1,9 +1,4 @@
-use std::{
-    collections::VecDeque,
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::VecDeque, path::Path, sync::Arc, time::Instant};
 
 use parking_lot::RwLock;
 
@@ -64,6 +59,25 @@ pub enum RenderQualitySettings {
     FastOnMovement,
 }
 
+impl RenderQualitySettings {
+    pub fn from_gui_int(value: i32) -> RenderQualitySettings {
+        match value {
+            0 => RenderQualitySettings::AlwaysFast,
+            1 => RenderQualitySettings::FastOnMovement,
+            2 => RenderQualitySettings::AlwaysQuality,
+            _ => panic!("Invalid quality settings from GUI"),
+        }
+    }
+
+    pub fn to_gui_int(&self) -> i32 {
+        match self {
+            RenderQualitySettings::AlwaysFast => 0,
+            RenderQualitySettings::FastOnMovement => 1,
+            RenderQualitySettings::AlwaysQuality => 2,
+        }
+    }
+}
+
 /// State of rendering
 ///
 /// Applies changes to camera, spawns and controls rendering
@@ -89,6 +103,8 @@ impl RenderState {
             .early_ray_termination(defaults::ERT)
             .empty_space_skipping(defaults::EI)
             .resolution(defaults::RENDER_RESOLUTION)
+            .ray_step_fast(defaults::RAY_STEP_FAST)
+            .ray_step_quality(defaults::RAY_STEP_QUALITY)
             .build_unchecked();
 
         Self {
@@ -187,7 +203,7 @@ impl RenderState {
             (true, true) => {
                 println!("StreamBlockVolume");
                 let renderer = volume_setup_paralel::<StreamBlockVolume>(
-                    &path,
+                    path,
                     parser,
                     self.render_options,
                     self.current_tf,
@@ -197,7 +213,7 @@ impl RenderState {
             (false, true) => {
                 println!("BlockVolume");
                 let renderer = volume_setup_paralel::<BlockVolume>(
-                    &path,
+                    path,
                     parser,
                     self.render_options,
                     self.current_tf,
@@ -207,7 +223,7 @@ impl RenderState {
             (true, false) => {
                 println!("StreamLinearVolume");
                 let renderer = volume_setup_linear::<StreamLinearVolume>(
-                    &path,
+                    path,
                     parser,
                     self.render_options,
                     self.current_tf,
@@ -217,7 +233,7 @@ impl RenderState {
             (false, false) => {
                 println!("LinearVolume");
                 let renderer = volume_setup_linear::<LinearVolume>(
-                    &path,
+                    path,
                     parser,
                     self.render_options,
                     self.current_tf,

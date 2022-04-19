@@ -157,6 +157,13 @@ impl StateRef {
             state.set_ei(checked);
         });
 
+        // New quality settings
+        let state_clone = self.clone();
+        app.on_render_quality_changed(move || {
+            let mut state = state_clone.borrow_mut();
+            state.handle_quality_changed();
+        });
+
         // New TF selected callback
         let state_clone = self.clone();
         app.on_tf_selected(move |tf_name| {

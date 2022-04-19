@@ -48,6 +48,9 @@ App := Window {
 
     callback tf_selected <=> tf_box.selected;
 
+    property<int> render_quality_mode: 1;
+    callback render_quality_changed();
+
     HorizontalLayout {
         padding-left: 15px;
         spacing: 20px;
@@ -132,6 +135,42 @@ App := Window {
                             value: 0;
                         }
                     }  
+                    VerticalLayout { 
+                        padding-top: 20px;
+                        spacing: 5px;
+                        fast_button := Button {
+                            text: "Fast render only";
+                            clicked => { 
+                                root.render_quality_mode = 0;
+                                root.render_quality_changed();
+                                border-color = #10ee00;
+                                fastmove_button.border-color = #000;
+                                quality_button.border-color = #000;
+                            }
+                        }
+                        fastmove_button := Button {
+                            text: "Fast render on movement";
+                            border-color: #10ee00;
+                            clicked => { 
+                                root.render_quality_mode = 1; 
+                                root.render_quality_changed();
+                                border-color = #10ee00;
+                                fast_button.border-color = #000;
+                                quality_button.border-color = #000;
+                            }
+                        }
+                        quality_button := Button {
+                            text: "Quality render only";
+                            clicked => { 
+                                root.render_quality_mode = 2; 
+                                root.render_quality_changed();
+                                border-color = #10ee00;
+                                fast-button.border-color = #000;
+                                fastmove_button.border-color = #000;
+                            }
+                        }
+                    }
+                    
                 }
             }
             Tab {

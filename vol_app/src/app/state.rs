@@ -11,7 +11,9 @@ use slint::{
 
 use super::{
     common::{CameraMovement, PrewrittenParser, PrewrittenTF},
-    defaults, RenderState, StateRef,
+    defaults,
+    render_state::RenderQualitySettings,
+    RenderState, StateRef,
 };
 
 use crate::App;
@@ -238,6 +240,13 @@ impl State {
             .start_renderer(&self.current_vol_path, self.current_parser);
     }
 
+    /// New quality setting picked by user
+    pub fn handle_quality_changed(&mut self) {
+        let app = self.app.unwrap();
+        let q_int = app.get_render_quality_mode();
+        self.rendering.render_quality_preference = RenderQualitySettings::from_gui_int(q_int);
+    }
+
     pub fn get_renderer_receiver(&self) -> Receiver<()> {
         self.rendering.renderer_front.get_receiver()
     }
@@ -278,10 +287,13 @@ impl State {
         let mt = self.rendering.multi_thread;
         let ert = self.rendering.render_options.early_ray_termination;
         let ei = self.rendering.render_options.empty_space_skipping;
+        let render_quality = self.rendering.render_quality_preference.to_gui_int();
 
         app.set_mt_checked(mt);
         app.set_ert_checked(ert);
         app.set_ei_checked(ei);
+
+        app.set_render_quality_mode(render_quality);
     }
 
     /// Shutdown renderer
