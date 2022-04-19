@@ -5,9 +5,9 @@ const DEFAULT_RAY_STEP_FAST: f32 = 0.5;
 const DEFAULT_EARLY_RAY_TERMINATION: bool = true;
 const DEFAULT_EMPTY_SPACE_SKIPPING: bool = true;
 
-/// Renderer settings
+/// Renderer settings.
 ///
-/// Controls the resolution and optimisations renderer uses
+/// Controls the resolution and optimisations renderer uses.
 #[derive(Clone, Copy)]
 pub struct RenderOptions {
     /// Resolution of rendered image
@@ -23,7 +23,7 @@ pub struct RenderOptions {
 }
 
 impl RenderOptions {
-    /// Constructor
+    /// Constructs new render options.
     pub fn new(
         resolution: Vector2<u16>,
         early_ray_termination: bool,
@@ -40,13 +40,17 @@ impl RenderOptions {
         }
     }
 
-    /// Use Builder pattern to construct `RenderOptions`
+    /// Use Builder pattern to construct `RenderOptions`.
+    /// This method exists for discoverability of [`RenderOptionsBuilder`].
     pub fn builder() -> RenderOptionsBuilder {
         RenderOptionsBuilder::default()
     }
 }
 
-/// Builder for `RenderOptions`
+/// Builder for `RenderOptions`.
+///
+/// By default optimisations are turned on and ray_step is also set.
+/// Without resolution, `RenderOptions` cannot be built.
 #[derive(Default, Clone, Copy)]
 pub struct RenderOptionsBuilder {
     /// Resolution of rendered image
@@ -77,13 +81,13 @@ impl RenderOptionsBuilder {
         self
     }
 
-    /// Set ERT optimisation on or off
+    /// Set ERT optimisation on or off.
     pub fn early_ray_termination(&mut self, on: bool) -> &mut Self {
         self.early_ray_termination = Some(on);
         self
     }
 
-    /// Set empty space skipping optimisation on or off
+    /// Set empty space skipping optimisation on or off.
     pub fn empty_space_skipping(&mut self, on: bool) -> &mut Self {
         self.empty_space_skipping = Some(on);
         self
@@ -101,9 +105,9 @@ impl RenderOptionsBuilder {
         self
     }
 
-    /// Build the options
+    /// Build the options.
     ///
-    /// Fails only if resolution is not specified
+    /// Fails only if resolution is not specified.
     pub fn build(&self) -> Option<RenderOptions> {
         let resolution = match self.resolution {
             Some(r) => r,
@@ -128,10 +132,10 @@ impl RenderOptionsBuilder {
         ))
     }
 
-    /// Build the options
+    /// Build the options.
     ///
-    /// Crashes if resolution is not specified
-    /// For safe variant, see `build` method
+    /// Crashes if resolution is not specified.
+    /// For safe variant, see `build` method.
     pub fn build_unchecked(&self) -> RenderOptions {
         let resolution = self
             .resolution
