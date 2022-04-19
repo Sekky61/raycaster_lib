@@ -2,7 +2,7 @@ use memmap::Mmap;
 use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::{
-    common::{BoundBox, Ray},
+    common::BoundBox,
     volumetric::{vol_builder::DataSource, EmptyIndex},
     TF,
 };
@@ -10,7 +10,7 @@ use crate::{
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 #[derive(Debug)]
-pub struct StreamVolume {
+pub struct StreamLinearVolume {
     // todo rename to streamlinearvolume
     bound_box: BoundBox, // todo empty index
     size: Vector3<usize>,
@@ -20,7 +20,7 @@ pub struct StreamVolume {
     tf: TF,
 }
 
-impl StreamVolume {
+impl StreamLinearVolume {
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
@@ -42,8 +42,8 @@ impl StreamVolume {
     }
 }
 
-impl BuildVolume<u8> for StreamVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamVolume, &'static str> {
+impl BuildVolume<u8> for StreamLinearVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamLinearVolume, &'static str> {
         println!("Build started");
 
         let data = metadata.data.ok_or("No data")?;
@@ -69,11 +69,11 @@ impl BuildVolume<u8> for StreamVolume {
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         println!(
-            "Constructed StreamVolume ({}x{}x{})",
+            "Constructed StreamLinearVolume ({}x{}x{})",
             size.x, size.y, size.z
         );
 
-        let mut volume = StreamVolume {
+        let mut volume = StreamLinearVolume {
             bound_box,
             size,
             file_map: mmap,
@@ -89,7 +89,7 @@ impl BuildVolume<u8> for StreamVolume {
     }
 }
 
-impl Volume for StreamVolume {
+impl Volume for StreamLinearVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.size
     }
@@ -152,7 +152,7 @@ impl Volume for StreamVolume {
     }
 
     fn get_name(&self) -> &str {
-        "StreamVolume"
+        "StreamLinearVolume"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {

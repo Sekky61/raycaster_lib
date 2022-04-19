@@ -6,7 +6,6 @@ use std::sync::Arc;
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use parking_lot::RwLock;
-use raycaster_lib::volumetric::Blocked;
 pub use raycaster_lib::{
     premade::{
         parse::{from_file, skull_parser},

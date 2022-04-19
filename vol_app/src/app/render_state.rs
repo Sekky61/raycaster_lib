@@ -205,8 +205,8 @@ impl RenderState {
                 self.renderer_front.start_rendering(renderer);
             }
             (true, false) => {
-                println!("StreamVolume");
-                let renderer = volume_setup_linear::<StreamVolume>(
+                println!("StreamLinearVolume");
+                let renderer = volume_setup_linear::<StreamLinearVolume>(
                     &path,
                     parser,
                     self.render_options,

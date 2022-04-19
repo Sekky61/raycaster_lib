@@ -20,7 +20,7 @@ mod block_volume;
 mod empty_index;
 mod linear_volume;
 mod stream_block_volume;
-mod stream_volume;
+mod stream_linear_volume;
 mod vol_builder;
 mod volume;
 
@@ -38,7 +38,7 @@ pub mod volumes {
     pub use block_volume::BlockVolume;
     pub use linear_volume::LinearVolume;
     pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
-    pub use stream_volume::StreamVolume;
+    pub use stream_linear_volume::StreamLinearVolume;
 }
 
 #[cfg(test)]

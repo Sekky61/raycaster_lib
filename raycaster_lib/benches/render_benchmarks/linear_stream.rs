@@ -2,7 +2,7 @@ use crate::common::{
     get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
 };
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamVolume};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamLinearVolume};
 
 pub fn render_streamlinear(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
@@ -11,7 +11,7 @@ pub fn render_streamlinear(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: StreamVolume = get_volume();
+    let volume: StreamLinearVolume = get_volume();
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -33,7 +33,7 @@ pub fn render_streamlinear_ert(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: StreamVolume = get_volume();
+    let volume: StreamLinearVolume = get_volume();
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -55,7 +55,7 @@ pub fn render_streamlinear_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: StreamVolume = get_volume();
+    let volume: StreamLinearVolume = get_volume();
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -77,7 +77,7 @@ pub fn render_streamlinear_ert_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: StreamVolume = get_volume();
+    let volume: StreamLinearVolume = get_volume();
 
     let bench_options = BenchOptions::new(
         render_options,
