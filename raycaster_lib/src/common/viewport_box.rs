@@ -3,7 +3,7 @@ use std::{
     ops::Range,
 };
 
-use nalgebra::{point, vector, Vector2};
+use nalgebra::{vector, Vector2};
 
 /// A 2D range; rectangle described by two points.
 /// Though not enforced, expected values are in range <0;1>.

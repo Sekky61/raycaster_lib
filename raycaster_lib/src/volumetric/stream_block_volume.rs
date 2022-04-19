@@ -361,7 +361,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let (data_owner, data_offset) = match data {
+        let (data_owner, _) = match data {
             DataSource::Mmap(m) => m.into_inner(),
             _ => return Err("Data not memory mapped"),
         };

@@ -1,9 +1,6 @@
 use nalgebra::{point, vector, Point3, Vector3};
 
-use crate::{
-    common::{BoundBox, Ray},
-    TF,
-};
+use crate::{common::BoundBox, TF};
 
 use super::{
     vol_builder::{BuildVolume, VolumeMetadata},

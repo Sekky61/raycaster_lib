@@ -85,15 +85,6 @@ impl ShapeInfo {
         }
     }
 
-    pub fn new_generator(
-        vol_dims: Vector3<u32>,
-        size: Vector3<u32>,
-        size_variance: Vector3<u32>,
-        sample: u8,
-    ) -> ShapeInfoGenerator {
-        ShapeInfoGenerator::new(vol_dims, size, size_variance, sample)
-    }
-
     fn render_at(&self, offset: Vector3<u32>) -> u8 {
         match self.shape_type {
             ShapeType::Cuboid => self.render_cuboid(offset),
@@ -178,11 +169,6 @@ impl ShapeInfoGenerator {
 
         let position_high = position_low + size;
 
-        ShapeInfo {
-            position_low,
-            position_high,
-            shape_type,
-            sample: self.sample, // todo
-        }
+        ShapeInfo::new(position_low, position_high, shape_type, self.sample)
     }
 }

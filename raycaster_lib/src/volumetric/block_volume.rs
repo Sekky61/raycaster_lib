@@ -143,7 +143,7 @@ impl Volume for BlockVolume {
         let x = pos.x as usize;
         let y = pos.y as usize;
         let z = pos.z as usize;
-        let (block_index, block_offset) = self.get_indexes(x, y, z);
+        let (block_index, _) = self.get_indexes(x, y, z);
         self.empty_blocks[block_index]
     }
 }

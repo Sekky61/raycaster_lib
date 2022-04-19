@@ -42,7 +42,6 @@ pub fn main() {
     };
 
     println!("Generating volume...");
-    println!("{:?}", cfg);
 
     // Generate to file
     generate_vol(cfg);

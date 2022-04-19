@@ -1,7 +1,7 @@
 use crate::common::{BoundBox, Ray};
 
 use crate::TF;
-use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3};
 
 /// Interface for blocked volume types
 ///

@@ -2,7 +2,7 @@
 //!
 //! Types implmenting `SampleGenerator` can be used to generate volumes
 
-use std::{error::Error, io::Write, marker::PhantomData};
+use std::{error::Error, io::Write};
 
 use nalgebra::Vector3;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -42,40 +42,8 @@ pub trait SampleGenerator: Sync {
 }
 
 /// Generate header and samples into file
-/// Samples are in linear order
+/// Samples are in order dictated by generic parameter `OG`.
 pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
-    config: &Config,
-) -> Result<(), Box<dyn Error>> {
-    let sg = SG::construct(config);
-    let ord_iter = OG::construct(config);
-
-    // Open file
-    let file_name = &config.file_name;
-    let mut file = open_create_file(file_name)?;
-
-    // Write header
-    let header = generate_header(config);
-    let h_written = file.write(&header[..]).unwrap();
-    if h_written != header.len() {
-        return Err("Writing header error".into());
-    }
-
-    // Sample and write to file
-    for dims in ord_iter {
-        let sample = sg.sample_at(dims);
-        let written = file.write(&[sample])?;
-
-        if written != 1 {
-            return Err("Writing error".into());
-        }
-    }
-
-    Ok(())
-}
-
-/// Generate header and samples into file
-/// Samples are in linear order
-pub fn generate_order_parallel<SG: SampleGenerator, OG: OrderGenerator>(
     config: &Config,
 ) -> Result<(), Box<dyn Error>> {
     let sample_generator = SG::construct(config);
@@ -127,16 +95,16 @@ pub fn generate_order_parallel<SG: SampleGenerator, OG: OrderGenerator>(
 pub fn generate_vol(config: Config) {
     let res: Result<(), Box<dyn Error>> = match (config.generator, config.save_buffer_order) {
         (GeneratorConfig::Shapes { .. }, SampleOrder::Linear) => {
-            generate_order_parallel::<ShapesGenerator, LinearCoordIterator>(&config)
+            generate_order::<ShapesGenerator, LinearCoordIterator>(&config)
         }
         (GeneratorConfig::Shapes { .. }, SampleOrder::Z(_)) => {
-            generate_order_parallel::<ShapesGenerator, ZCoordIterator>(&config)
+            generate_order::<ShapesGenerator, ZCoordIterator>(&config)
         }
         (GeneratorConfig::Solid { .. }, SampleOrder::Linear) => {
-            generate_order_parallel::<SolidGenerator, LinearCoordIterator>(&config)
+            generate_order::<SolidGenerator, LinearCoordIterator>(&config)
         }
         (GeneratorConfig::Solid { .. }, SampleOrder::Z(_)) => {
-            generate_order_parallel::<SolidGenerator, ZCoordIterator>(&config)
+            generate_order::<SolidGenerator, ZCoordIterator>(&config)
         }
         (GeneratorConfig::Noise, SampleOrder::Linear) => todo!(),
         (GeneratorConfig::Noise, SampleOrder::Z(_)) => todo!(),

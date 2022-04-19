@@ -2,7 +2,7 @@ use nalgebra::{point, vector, Point3, Vector3};
 
 use crate::{common::blockify, TF};
 
-use super::{block::Block, Volume};
+use super::Volume;
 
 // generic argument S is side of block in voxels, not cells
 #[derive(Debug)]
