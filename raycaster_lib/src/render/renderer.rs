@@ -4,7 +4,7 @@ use crate::{common::Ray, volumetric::Volume, PerspectiveCamera};
 
 use super::RenderOptions;
 
-// light direction (normalized)
+/// light direction (normalized)
 const LIGHT_DIR: Vector3<f32> = vector![-0.74278, -0.55708, -0.37139];
 
 /// Single threaded, synchronous renderer.
@@ -213,7 +213,7 @@ mod test {
     use nalgebra::Vector3;
 
     #[test]
-    fn phong() {
+    fn understanding_phong() {
         // view    light
         //    \ | /
         //     \|/

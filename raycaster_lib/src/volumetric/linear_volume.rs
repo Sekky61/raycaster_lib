@@ -36,12 +36,16 @@ impl LinearVolume {
     }
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {
-        [
-            self.data[base],
-            self.data[base + 1],
-            self.data[base + self.size.z],
-            self.data[base + self.size.z + 1],
-        ]
+        if base + self.size.z + 1 >= self.data.len() {
+            [0.0, 0.0, 0.0, 0.0]
+        } else {
+            [
+                self.data[base],
+                self.data[base + 1],
+                self.data[base + self.size.z],
+                self.data[base + self.size.z + 1],
+            ]
+        }
     }
 }
 
@@ -145,8 +149,8 @@ impl BuildVolume<u8> for LinearVolume {
         // println!("Build data range: {data_range_min} to {data_range_max}");
 
         let size = metadata.size.ok_or("No size")?;
-        let mut scale = metadata.scale.unwrap_or_else(|| vector![1.0, 1.0, 1.0]);
-        scale.iter_mut().for_each(|v| *v -= 0.01);
+        let scale = metadata.scale.unwrap_or_else(|| vector![1.0, 1.0, 1.0]);
+
         let tf = metadata.tf.ok_or("No transfer function")?;
 
         let vol_dims = size.map(|v| (v - 1) as f32).component_mul(&scale);

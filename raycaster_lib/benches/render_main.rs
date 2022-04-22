@@ -52,12 +52,19 @@ criterion_group! {
     targets = render_linear_ei
 }
 
-criterion_main!(
-    sequential_linear,
-    sequential_streamlinear,
-    sequential_block,
-    sequential_streamblock,
-    parallel
-);
+criterion_group! {
+    name = fast_bench;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets = render_linear_ert_ei, render_parallel_mem
+}
+
+// criterion_main!(
+//     sequential_linear,
+//     sequential_streamlinear,
+//     sequential_block,
+//     sequential_streamblock,
+//     parallel
+// );
 //criterion_main!(parallel);
 //criterion_main!(sequential_ei);
+criterion_main!(fast_bench);

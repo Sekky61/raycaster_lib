@@ -49,12 +49,16 @@ impl Block {
     }
 
     pub fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
-        [
-            self.data[start_index],
-            self.data[start_index + 1],
-            self.data[start_index + self.block_side],
-            self.data[start_index + self.block_side + 1],
-        ]
+        if start_index + self.block_side + 1 >= self.data.len() {
+            [0.0, 0.0, 0.0, 0.0]
+        } else {
+            [
+                self.data[start_index],
+                self.data[start_index + 1],
+                self.data[start_index + self.block_side],
+                self.data[start_index + self.block_side + 1],
+            ]
+        }
     }
 
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {

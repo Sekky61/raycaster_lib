@@ -118,7 +118,6 @@ fn skull_inner(s: &[u8]) -> IResult<&[u8], ExtractedMetaSkull> {
     let (s, (size, _, scale)) = skull_header(s)?;
 
     let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
-    //let scale = vector![scale.0 * 0.999, scale.1 * 0.999, scale.2 * 0.999];
     let scale = vector![scale.0, scale.1, scale.2];
 
     // 4B * 7 = 28B
@@ -192,7 +191,6 @@ fn generator_inner(s: &[u8]) -> IResult<&[u8], ExtractedMetaGen> {
     let (s, (size, scale)) = gen_header(s)?;
 
     let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
-    //let scale = vector![scale.0 * 0.99, scale.1 * 0.99, scale.2 * 0.99];
     let scale = vector![scale.0, scale.1, scale.2];
 
     let offset = 26; // 12 + 12 + 2 = 26, data starts at this index

@@ -33,12 +33,16 @@ impl StreamLinearVolume {
 
     fn get_block_data_half(&self, base: usize) -> [f32; 4] {
         let buf: &[u8] = self.file_map.as_ref();
-        [
-            buf[base] as f32,
-            buf[base + 1] as f32,
-            buf[base + self.size.y] as f32,
-            buf[base + self.size.y + 1] as f32,
-        ]
+        if base + self.size.z + 1 >= buf.len() {
+            [0.0, 0.0, 0.0, 0.0]
+        } else {
+            [
+                buf[base] as f32,
+                buf[base + 1] as f32,
+                buf[base + self.size.z] as f32,
+                buf[base + self.size.z + 1] as f32,
+            ]
+        }
     }
 }
 
@@ -59,8 +63,6 @@ impl BuildVolume<u8> for StreamLinearVolume {
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No tf")?;
-
-        let scale = vector![scale.x * 0.99, scale.y * 0.99, scale.z * 0.99]; // todo workaround
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()

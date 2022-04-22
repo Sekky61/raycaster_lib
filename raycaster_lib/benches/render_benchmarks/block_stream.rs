@@ -1,5 +1,6 @@
 use crate::common::{
     get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
+    SKULL_BLOCK_PATH,
 };
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamBlockVolume};
@@ -11,7 +12,7 @@ pub fn render_streamblock(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: StreamBlockVolume = get_volume();
+    let volume: StreamBlockVolume = get_volume(SKULL_BLOCK_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -33,7 +34,7 @@ pub fn render_streamblock_ert(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: StreamBlockVolume = get_volume();
+    let volume: StreamBlockVolume = get_volume(SKULL_BLOCK_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -55,7 +56,7 @@ pub fn render_streamblock_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: StreamBlockVolume = get_volume();
+    let volume: StreamBlockVolume = get_volume(SKULL_BLOCK_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -77,7 +78,7 @@ pub fn render_streamblock_ert_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: StreamBlockVolume = get_volume();
+    let volume: StreamBlockVolume = get_volume(SKULL_BLOCK_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,

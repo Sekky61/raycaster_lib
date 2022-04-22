@@ -1,7 +1,7 @@
 // Wrong behavior
 #![allow(dead_code)]
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
@@ -25,6 +25,9 @@ pub const POSITION: Point3<f32> = point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, Q
 pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
+
+pub const SKULL_PATH: &str = "../volumes/Skull.vol";
+pub const SKULL_BLOCK_PATH: &str = "../volumes/Skull_block.vol";
 
 const BLOCK_SIDE: usize = 32;
 
@@ -55,9 +58,14 @@ pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 1] = [(
     vector![-1.0, -1.0, -1.0],
 )];
 
-pub fn get_volume<V>() -> V
+/// Load and construct volume.
+///
+/// # Params
+/// * `path` - Path to volume file. Relative to `Cargo.toml` of the library.
+pub fn get_volume<V, P>(path: P) -> V
 where
     V: Volume + BuildVolume<u8>,
+    P: AsRef<Path>,
 {
     let parser_add_block_side = move |src: DataSource<u8>| {
         let mut res = skull_parser(src);
@@ -71,9 +79,9 @@ where
         }
         res
     };
-    let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")); // should be library root (!not workspace dir!)
-    path.push("../volumes/Skull.vol");
-    from_file(path, parser_add_block_side, skull_tf).unwrap()
+    let mut full_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")); // should be library root (!not workspace dir!)
+    full_path.push(path);
+    from_file(full_path, parser_add_block_side, skull_tf).unwrap()
 }
 
 pub enum Algorithm {
@@ -143,11 +151,11 @@ where
             match algorithm {
                 Algorithm::Parallel => {
                     if memory == Memory::Stream {
-                        let volume: StreamBlockVolume = get_volume();
+                        let volume: StreamBlockVolume = get_volume(SKULL_PATH);
                         let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
                         front.start_rendering(par_ren);
                     } else {
-                        let volume: BlockVolume = get_volume();
+                        let volume: BlockVolume = get_volume(SKULL_PATH);
                         let par_ren = ParalelRenderer::new(volume, shared_camera, render_options);
                         front.start_rendering(par_ren);
                     };

@@ -1,5 +1,5 @@
 use crate::common::{
-    get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
+    get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION, SKULL_PATH,
 };
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::LinearVolume};
@@ -11,7 +11,7 @@ pub fn render_linear(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: LinearVolume = get_volume();
+    let volume: LinearVolume = get_volume(SKULL_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -33,7 +33,7 @@ pub fn render_linear_ert(c: &mut Criterion) {
         .empty_space_skipping(false)
         .build_unchecked();
 
-    let volume: LinearVolume = get_volume();
+    let volume: LinearVolume = get_volume(SKULL_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -55,7 +55,7 @@ pub fn render_linear_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: LinearVolume = get_volume();
+    let volume: LinearVolume = get_volume(SKULL_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -77,7 +77,7 @@ pub fn render_linear_ert_ei(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: LinearVolume = get_volume();
+    let volume: LinearVolume = get_volume(SKULL_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,

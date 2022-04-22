@@ -96,7 +96,7 @@ impl BoundBox {
             return None;
         }
 
-        Some((tmin, tmax))
+        Some((tmin + 0.0001, tmax - 0.0001))
     }
 }
 

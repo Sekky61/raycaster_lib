@@ -60,6 +60,12 @@ Překlad probíhá přes nástroj `cargo` (případně `rustc`).
 Příkaz `cargo build --release` přeloží všechny součásti projektu s optimalizacemi (žádoucí).
 Překlad je inkrementální a překládají se i závislosti.
 
+Profil s maximální optimalizací (a pomalým překladem): `release-full`.
+Překlad a spouštění s tímto profilem:
+```
+cargo build --profile release-full
+```
+
 ## Spouštění
 
 Projekt se skládá ze dvou aplikací, `vol_app` a `vol_gen`.
@@ -67,6 +73,10 @@ Projekt se skládá ze dvou aplikací, `vol_app` a `vol_gen`.
 Kompilace a spuštění demo aplikace
 ```
 cargo run --release --bin vol_app
+```
+nebo (vyšší optimalizace)
+```
+cargo run --profile release-full --bin vol_app
 ```
 Přeložená aplikace se nachází v `target/release/vol_app`.
 

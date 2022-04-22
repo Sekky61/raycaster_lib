@@ -1,5 +1,6 @@
 use crate::common::{
     get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
+    SKULL_BLOCK_PATH, SKULL_PATH,
 };
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::*};
@@ -11,7 +12,7 @@ pub fn render_parallel_mem(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: BlockVolume = get_volume();
+    let volume: BlockVolume = get_volume(SKULL_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,
@@ -33,7 +34,7 @@ pub fn render_parallel_stream(c: &mut Criterion) {
         .empty_space_skipping(true)
         .build_unchecked();
 
-    let volume: StreamBlockVolume = get_volume();
+    let volume: StreamBlockVolume = get_volume(SKULL_BLOCK_PATH);
 
     let bench_options = BenchOptions::new(
         render_options,

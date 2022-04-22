@@ -223,7 +223,7 @@ fn get_bound_box(
     ];
 
     let block_dims = vector![block_side - 1, block_side - 1, block_side - 1].cast::<f32>();
-    let block_dims = block_dims.component_mul(&vol_scale) - vector![0.01, 0.01, 0.01]; // todo workaround
+    let block_dims = block_dims.component_mul(&vol_scale); // - vector![0.01, 0.01, 0.01]; // todo workaround
 
     let block_pos = vol_position + block_lower.component_mul(&vol_scale);
 
