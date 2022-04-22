@@ -1,4 +1,4 @@
-use nalgebra::{point, vector, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3, Vector4};
 
 use crate::{common::BoundBox, TF};
 
@@ -35,15 +35,15 @@ impl LinearVolume {
         val.copied()
     }
 
-    fn get_block_data_half(&self, base: usize) -> [f32; 4] {
+    fn get_block_data_half(&self, base: usize) -> Vector4<f32> {
         if base + self.size.z + 1 >= self.data.len() {
-            [0.0, 0.0, 0.0, 0.0]
+            vector![0.0, 0.0, 0.0, 0.0]
         } else {
-            [
+            vector![
                 self.data[base],
                 self.data[base + 1],
                 self.data[base + self.size.z],
-                self.data[base + self.size.z + 1],
+                self.data[base + self.size.z + 1]
             ]
         }
     }
@@ -51,53 +51,40 @@ impl LinearVolume {
 
 impl Volume for LinearVolume {
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
-        // todo taky zkusit rozseknout
-        let x_low = pos.x as usize;
-        let y_low = pos.y as usize;
-        let z_low = pos.z as usize;
-
-        // if let Some(ref ei) = self.empty_index {
-        //     let x = ei.sample_int(point![x_low, y_low, z_low]);
-        //     match x {
-        //         super::BlockType::Empty => return 0.0,
-        //         super::BlockType::NonEmpty => (),
-        //     }
-        // }
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
 
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let base = self.get_3d_index(x_low, y_low, z_low);
+        let block_offset = self.get_3d_index(x, y, z);
 
-        let first_index = base;
-        let second_index = base + self.size.z * self.size.y;
-
-        let first_data = self.get_block_data_half(first_index);
-
-        let [c000, c001, c010, c011] = first_data;
-
-        let inv_z_t = 1.0 - z_t;
-        let inv_y_t = 1.0 - y_t;
+        let first_index = block_offset;
+        let second_index = first_index + self.size.z * self.size.y;
 
         // first plane
-
-        let c00 = c000 * inv_z_t + c001 * z_t; // z low
-        let c01 = c010 * inv_z_t + c011 * z_t; // z high
-        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+        // c000, c001, c010, c011
+        let mut x_low_vec = self.get_block_data_half(first_index);
 
         // second plane
+        // c100, c101, c110, c111
+        let mut x_hi_vec = self.get_block_data_half(second_index);
 
-        let second_data = self.get_block_data_half(second_index);
+        x_low_vec *= 1.0 - x_t;
+        x_hi_vec *= x_t;
 
-        //let second_data = self.get_block_data_half(second_index);
-        let [c100, c101, c110, c111] = second_data;
+        //x plane
+        x_low_vec += x_hi_vec;
+        let inv_y_t = 1.0 - y_t;
+        x_low_vec.component_mul_assign(&vector![inv_y_t, inv_y_t, y_t, y_t]);
 
-        let c10 = c100 * inv_z_t + c101 * z_t; // z low
-        let c11 = c110 * inv_z_t + c111 * z_t; // z high
-        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+        // y line
+        let c0: f32 = x_low_vec.x + x_low_vec.z;
+        let c1: f32 = x_low_vec.y + x_low_vec.w;
 
-        c0 * (1.0 - x_t) + c1 * x_t
+        c0 * (1.0 - z_t) + c1 * z_t
     }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {

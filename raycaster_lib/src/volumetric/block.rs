@@ -1,4 +1,4 @@
-use nalgebra::{point, vector, Matrix4, Point3, Vector3};
+use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
 
 use crate::{
     common::{BoundBox, Ray, ValueRange},
@@ -48,15 +48,15 @@ impl Block {
         block
     }
 
-    pub fn get_block_data_half(&self, start_index: usize) -> [f32; 4] {
+    pub fn get_block_data_half(&self, start_index: usize) -> Vector4<f32> {
         if start_index + self.block_side + 1 >= self.data.len() {
-            [0.0, 0.0, 0.0, 0.0]
+            vector![0.0, 0.0, 0.0, 0.0]
         } else {
-            [
+            vector![
                 self.data[start_index],
                 self.data[start_index + 1],
                 self.data[start_index + self.block_side],
-                self.data[start_index + self.block_side + 1],
+                self.data[start_index + self.block_side + 1]
             ]
         }
     }
@@ -97,8 +97,6 @@ impl Volume for Block {
     }
 
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
-        //let data = self.get_block_data(pos);
-
         let x = pos.x as usize;
         let y = pos.y as usize;
         let z = pos.z as usize;
@@ -112,28 +110,27 @@ impl Volume for Block {
         let first_index = block_offset;
         let second_index = block_offset + self.block_side * self.block_side;
 
-        let first_data = self.get_block_data_half(first_index);
-        let [c000, c001, c010, c011] = first_data;
-
-        let inv_z_t = 1.0 - z_t;
-        let inv_y_t = 1.0 - y_t;
-
         // first plane
-
-        let c00 = c000 * inv_z_t + c001 * z_t; // z low
-        let c01 = c010 * inv_z_t + c011 * z_t; // z high
-        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+        // c000, c001, c010, c011
+        let mut x_low_vec = self.get_block_data_half(first_index);
 
         // second plane
+        // c100, c101, c110, c111
+        let mut x_hi_vec = self.get_block_data_half(second_index);
 
-        let second_data = self.get_block_data_half(second_index);
-        let [c100, c101, c110, c111] = second_data;
+        x_low_vec *= 1.0 - x_t;
+        x_hi_vec *= x_t;
 
-        let c10 = c100 * inv_z_t + c101 * z_t; // z low
-        let c11 = c110 * inv_z_t + c111 * z_t; // z high
-        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+        //x plane
+        x_low_vec += x_hi_vec;
+        let inv_y_t = 1.0 - y_t;
+        x_low_vec.component_mul_assign(&vector![inv_y_t, inv_y_t, y_t, y_t]);
 
-        c0 * (1.0 - x_t) + c1 * x_t
+        // y line
+        let c0: f32 = x_low_vec.x + x_low_vec.z;
+        let c1: f32 = x_low_vec.y + x_low_vec.w;
+
+        c0 * (1.0 - z_t) + c1 * z_t
     }
 
     fn get_bound_box(&self) -> BoundBox {

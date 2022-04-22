@@ -58,13 +58,14 @@ criterion_group! {
     targets = render_linear_ert_ei, render_parallel_mem
 }
 
-// criterion_main!(
-//     sequential_linear,
-//     sequential_streamlinear,
-//     sequential_block,
-//     sequential_streamblock,
-//     parallel
-// );
+criterion_main!(
+    sequential_linear,
+    sequential_streamlinear,
+    sequential_block,
+    sequential_streamblock,
+    parallel
+);
+
 //criterion_main!(parallel);
 //criterion_main!(sequential_ei);
-criterion_main!(fast_bench);
+//criterion_main!(fast_bench);

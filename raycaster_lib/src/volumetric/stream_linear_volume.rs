@@ -1,5 +1,5 @@
 use memmap::Mmap;
-use nalgebra::{point, vector, Point3, Vector3};
+use nalgebra::{point, vector, Point3, Vector3, Vector4};
 
 use crate::{
     common::BoundBox,
@@ -31,16 +31,16 @@ impl StreamLinearVolume {
         buf.get(index).map(|v| *v as f32)
     }
 
-    fn get_block_data_half(&self, base: usize) -> [f32; 4] {
+    fn get_block_data_half(&self, base: usize) -> Vector4<f32> {
         let buf: &[u8] = self.file_map.as_ref();
         if base + self.size.z + 1 >= buf.len() {
-            [0.0, 0.0, 0.0, 0.0]
+            vector![0.0, 0.0, 0.0, 0.0]
         } else {
-            [
+            vector![
                 buf[base] as f32,
                 buf[base + 1] as f32,
                 buf[base + self.size.z] as f32,
-                buf[base + self.size.z + 1] as f32,
+                buf[base + self.size.z + 1] as f32
             ]
         }
     }
@@ -96,41 +96,41 @@ impl Volume for StreamLinearVolume {
         self.size
     }
 
-    fn sample_at(&self, pos: nalgebra::Point3<f32>) -> f32 {
-        // todo taky zkusit rozseknout
-        let x_low = pos.x as usize;
-        let y_low = pos.y as usize;
-        let z_low = pos.z as usize;
+    fn sample_at(&self, pos: Point3<f32>) -> f32 {
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
 
         let x_t = pos.x.fract();
         let y_t = pos.y.fract();
         let z_t = pos.z.fract();
 
-        let base = self.get_3d_index(x_low, y_low, z_low) + self.map_offset;
+        let block_offset = self.get_3d_index(x, y, z);
 
-        let first_index = base;
-        let second_index = base + self.size.z * self.size.y;
+        let first_index = block_offset;
+        let second_index = first_index + self.size.z * self.size.y;
 
         // first plane
-        let first_data = self.get_block_data_half(first_index);
-        let [c000, c001, c010, c011] = first_data;
-
-        let inv_z_t = 1.0 - z_t;
-        let inv_y_t = 1.0 - y_t;
-
-        let c00 = c000 * inv_z_t + c001 * z_t; // z low
-        let c01 = c010 * inv_z_t + c011 * z_t; // z high
-        let c0 = c00 * inv_y_t + c01 * y_t; // point on yz plane
+        // c000, c001, c010, c011
+        let mut x_low_vec = self.get_block_data_half(first_index);
 
         // second plane
-        let second_data = self.get_block_data_half(second_index);
-        let [c100, c101, c110, c111] = second_data;
+        // c100, c101, c110, c111
+        let mut x_hi_vec = self.get_block_data_half(second_index);
 
-        let c10 = c100 * inv_z_t + c101 * z_t; // z low
-        let c11 = c110 * inv_z_t + c111 * z_t; // z high
-        let c1 = c10 * inv_y_t + c11 * y_t; // point on yz plane
+        x_low_vec *= 1.0 - x_t;
+        x_hi_vec *= x_t;
 
-        c0 * (1.0 - x_t) + c1 * x_t
+        //x plane
+        x_low_vec += x_hi_vec;
+        let inv_y_t = 1.0 - y_t;
+        x_low_vec.component_mul_assign(&vector![inv_y_t, inv_y_t, y_t, y_t]);
+
+        // y line
+        let c0: f32 = x_low_vec.x + x_low_vec.z;
+        let c1: f32 = x_low_vec.y + x_low_vec.w;
+
+        c0 * (1.0 - z_t) + c1 * z_t
     }
 
     fn get_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
