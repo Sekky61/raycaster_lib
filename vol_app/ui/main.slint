@@ -9,15 +9,15 @@ export struct MousePos := {
 App := Window {
     preferred-width: 1200px;
     preferred-height: 800px;
-    title: "Volume app";
+    title: "Volume demo app";
 
     property<int> frame_time;
 
     property<[StandardListViewItem]> parsers_name_list : [{text: "Vol parser"}, {text: "Skull parser"}];
     property<int> parser_picked_index;
 
-    property<[string]> tf_list : ["Green", "Gray", "White"];
-    property<string> tf_current_value: "Green";
+    property<[string]> tf_list : ["Skull", "Gray", "White"];
+    property<string> tf_current_value: "Skull";
 
     property<image> render_target;
     callback new_rendered_frame();

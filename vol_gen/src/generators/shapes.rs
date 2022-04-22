@@ -6,6 +6,8 @@ use crate::config::{Config, GeneratorConfig};
 
 use super::SampleGenerator;
 
+const OBJECT_SIZE: Vector3<u32> = vector![100, 100, 100];
+
 /// Generate volume with a number of randomly placed shapes
 pub struct ShapesGenerator {
     shapes: Vec<ShapeInfo>,
@@ -24,9 +26,11 @@ impl ShapesGenerator {
             _ => panic!("Bad generator args"),
         };
 
+        let seed = config.seed;
+
         // Generate n shapes
         let random_shape_gen =
-            ShapeInfoGenerator::new(dims, vector![50, 50, 50], vector![10, 10, 10], sample);
+            ShapeInfoGenerator::new(dims, OBJECT_SIZE, vector![10, 10, 10], sample, 10, seed);
         let shapes = random_shape_gen.get_shapes(n_of_shapes);
         ShapesGenerator { shapes }
     }
@@ -55,10 +59,11 @@ impl SampleGenerator for ShapesGenerator {
 }
 
 // # of enum ShapeType variants
-const N_OF_SHAPE_KINDS: u8 = 1;
+const N_OF_SHAPE_KINDS: u8 = 2;
 
 pub enum ShapeType {
     Cuboid,
+    Sphere,
 }
 
 /// One shape in volume
@@ -88,11 +93,30 @@ impl ShapeInfo {
     fn render_at(&self, offset: Vector3<u32>) -> u8 {
         match self.shape_type {
             ShapeType::Cuboid => self.render_cuboid(offset),
+            ShapeType::Sphere => self.render_sphere(offset),
         }
     }
 
     fn render_cuboid(&self, _offset: Vector3<u32>) -> u8 {
         self.sample
+    }
+
+    fn render_sphere(&self, offset: Vector3<u32>) -> u8 {
+        let offset_f = offset.cast::<f32>();
+        let pos_low_f = self.position_low.cast::<f32>();
+        let pos_hi_f = self.position_high.cast::<f32>();
+
+        let center = (pos_low_f + pos_hi_f) / 2.0 - pos_low_f;
+
+        let r = (pos_hi_f.x - pos_low_f.x) / 2.0;
+        let length = offset_f - center;
+
+        //println!("Render sphere r {r} mag {} ", length.magnitude());
+        if length.magnitude() <= r {
+            self.sample
+        } else {
+            0
+        }
     }
 }
 
@@ -104,6 +128,7 @@ pub struct ShapeInfoGenerator {
     size: Vector3<u32>,
     size_variance: Vector3<u32>,
     sample: u8,
+    sample_variance: u8,
 }
 
 impl ShapeInfoGenerator {
@@ -113,14 +138,21 @@ impl ShapeInfoGenerator {
         size: Vector3<u32>,
         size_variance: Vector3<u32>,
         sample: u8,
+        sample_variance: u8,
+        seed: Option<u64>,
     ) -> Self {
         let rng = fastrand::Rng::new();
+        if let Some(seed) = seed {
+            rng.seed(seed);
+        }
+
         Self {
             rng,
             vol_dims,
             size,
             size_variance,
             sample,
+            sample_variance,
         }
     }
 
@@ -128,6 +160,7 @@ impl ShapeInfoGenerator {
         let ran = self.rng.u8(0..N_OF_SHAPE_KINDS);
         match ran {
             0 => ShapeType::Cuboid,
+            1 => ShapeType::Sphere,
             _ => panic!("Random shape error"),
         }
     }
@@ -169,6 +202,15 @@ impl ShapeInfoGenerator {
 
         let position_high = position_low + size;
 
-        ShapeInfo::new(position_low, position_high, shape_type, self.sample)
+        let sample = self.random_sample();
+
+        ShapeInfo::new(position_low, position_high, shape_type, sample)
+    }
+
+    fn random_sample(&self) -> u8 {
+        // Uses saturating intrinsics, so there is no overflow
+        let low = self.sample.saturating_sub(self.sample_variance);
+        let high = self.sample.saturating_add(self.sample_variance);
+        self.rng.u8(low..=high)
     }
 }

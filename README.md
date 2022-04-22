@@ -86,12 +86,15 @@ cargo run --release --bin vol_gen
 ```
 Přeložená aplikace se nachází v `target/release/vol_gen`.
 `vol_gen` přijímá argumenty přes příkazovou řádku.
+Jejich formát lze zjistit příkazem `cargo run --release --bin vol_gen -- --help`.
 
 Příklady spuštění `vol_gen`:
 ```
 cargo run --release --bin vol_gen -- --dims=100,100,100 --generator solid --sample 42 --output-file volumes/100_solid.vol
 
 cargo run --release --bin vol_gen -- --dims=200,200,200  --generator shapes --n-of-shapes 30 --sample 100 --output-file volumes/shapestest.vol
+
+cargo run --release --bin vol_gen -- --dims=800,800,800  --generator shapes --n-of-shapes 50  --sample 100 --output-file volumes/shapestest_block32.vol --seed 1 --layout z --block-size 32
 ```
 
 # Dokumentace

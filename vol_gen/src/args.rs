@@ -101,6 +101,13 @@ pub fn get_command<'a>() -> Command<'a> {
                 .possible_values(LAYOUT_NAMES),
         )
         .arg(
+            Arg::new("seed")
+                .help("Seed for RNG, leave out for random seed")
+                .long("seed")
+                .value_name("SEED")
+                .validator(is_positive_number),
+        )
+        .arg(
             Arg::new("sample") // maybe join this with layout arg | todo add overlap default 1
                 .help("Values of generated object")
                 .long("sample")

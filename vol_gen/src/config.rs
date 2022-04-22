@@ -38,6 +38,8 @@ pub struct Config {
     pub file_name: OsString,
     /// _unimplemented_ Use sparse files to save space
     pub sparse_file: bool,
+    /// Optional seed for RNG, to replicate results
+    pub seed: Option<u64>,
 }
 
 impl Config {
@@ -76,6 +78,8 @@ impl Config {
                                                                          // Sparse
         let sparse_file = args.is_present("sparse");
 
+        let seed = args.value_of("seed").map(|s| s.parse().unwrap());
+
         Ok(Config {
             dims,
             cell_shape,
@@ -84,6 +88,7 @@ impl Config {
             save_buffer_order,
             file_name,
             sparse_file,
+            seed,
         })
     }
 }

@@ -38,6 +38,7 @@ criterion_group! {
 }
 
 // Parallel
+// todo special volume must be used
 criterion_group! {
     name = parallel;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);

@@ -11,8 +11,7 @@ use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 #[derive(Debug)]
 pub struct StreamLinearVolume {
-    // todo rename to streamlinearvolume
-    bound_box: BoundBox, // todo empty index
+    bound_box: BoundBox,
     size: Vector3<usize>,
     empty_index: EmptyIndex<4>,
     file_map: Mmap,
@@ -32,7 +31,7 @@ impl StreamLinearVolume {
     }
 
     fn get_block_data_half(&self, base: usize) -> Vector4<f32> {
-        let buf: &[u8] = self.file_map.as_ref();
+        let buf: &[u8] = &self.file_map.as_ref()[self.map_offset..];
         if base + self.size.z + 1 >= buf.len() {
             vector![0.0, 0.0, 0.0, 0.0]
         } else {
@@ -63,6 +62,7 @@ impl BuildVolume<u8> for StreamLinearVolume {
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No tf")?;
+        let data_offset = metadata.data_offset.ok_or("No data offset")?;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
@@ -71,15 +71,15 @@ impl BuildVolume<u8> for StreamLinearVolume {
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         println!(
-            "Constructed StreamLinearVolume ({}x{}x{})",
-            size.x, size.y, size.z
+            "Constructed StreamLinearVolume ({}x{}x{}) offset {}",
+            size.x, size.y, size.z, data_offset
         );
 
         let mut volume = StreamLinearVolume {
             bound_box,
             size,
             file_map: mmap,
-            map_offset,
+            map_offset: data_offset,
             tf,
             empty_index: EmptyIndex::dummy(),
         };
