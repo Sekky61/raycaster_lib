@@ -26,7 +26,7 @@ impl ShapesGenerator {
 
         // Generate n shapes
         let random_shape_gen =
-            ShapeInfoGenerator::new(dims, vector![7, 7, 7], vector![0, 0, 0], sample);
+            ShapeInfoGenerator::new(dims, vector![50, 50, 50], vector![10, 10, 10], sample);
         let shapes = random_shape_gen.get_shapes(n_of_shapes);
         ShapesGenerator { shapes }
     }
@@ -43,7 +43,7 @@ impl SampleGenerator for ShapesGenerator {
                 && coords.z <= shape.position_high.z
             {
                 let offset = coords - shape.position_low;
-                shape.render_at(offset);
+                return shape.render_at(offset);
             }
         }
         0 // todo background
@@ -152,9 +152,9 @@ impl ShapeInfoGenerator {
         let size_min = self.size - self.size_variance;
         let size_max = self.size + self.size_variance;
 
-        let size_range_x = size_min.x..size_max.x;
-        let size_range_y = size_min.y..size_max.y;
-        let size_range_z = size_min.z..size_max.z;
+        let size_range_x = size_min.x..=size_max.x;
+        let size_range_y = size_min.y..=size_max.y;
+        let size_range_z = size_min.z..=size_max.z;
 
         let size_ranges = vector![size_range_x, size_range_y, size_range_z];
         let size = self.random_vector(size_ranges);
