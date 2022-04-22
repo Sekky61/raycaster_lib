@@ -6,9 +6,8 @@ use super::BoundBox;
 /// Main usecase is getting intersections with volumes ([`BoundBox::intersect`]),
 /// then iterating over the intersected line segment in steps.
 pub struct Ray {
-    // todo t parameter
     pub origin: Point3<f32>,
-    pub direction: Vector3<f32>, // todo Unit
+    pub direction: Vector3<f32>,
 }
 
 impl Ray {
@@ -58,6 +57,24 @@ mod test {
 
     use super::*;
 
+    fn compare_float_vec(actual: Vector3<f32>, expected: Vector3<f32>, error: f32) {
+        let err = f32::abs(actual.x - expected.x);
+        assert!(err < error);
+        let err = f32::abs(actual.y - expected.y);
+        assert!(err < error);
+        let err = f32::abs(actual.z - expected.z);
+        assert!(err < error);
+    }
+
+    fn compare_float_point(actual: Point3<f32>, expected: Point3<f32>, error: f32) {
+        let err = f32::abs(actual.x - expected.x);
+        assert!(err < error);
+        let err = f32::abs(actual.y - expected.y);
+        assert!(err < error);
+        let err = f32::abs(actual.z - expected.z);
+        assert!(err < error);
+    }
+
     #[test]
     fn to_object_space() {
         let ray = Ray {
@@ -71,10 +88,11 @@ mod test {
 
         let obj_ray = ray.transform_to_volume_space(bbox, scale);
 
-        assert_eq!(obj_ray.origin, point![0.0, 0.0, 0.0]);
-        assert_eq!(
+        compare_float_point(obj_ray.origin, point![0.0, 0.0, 0.0], 0.01);
+        compare_float_vec(
             obj_ray.direction.normalize(),
-            vector![0.5, 1.0, 1.0].normalize()
+            vector![0.5, 1.0, 1.0].normalize(),
+            0.01,
         );
     }
 
@@ -91,10 +109,11 @@ mod test {
 
         let obj_ray = ray.transform_to_volume_space(bbox, scale);
 
-        assert_eq!(obj_ray.origin, point![0.0, 0.25, 0.25]);
-        assert_eq!(
+        compare_float_point(obj_ray.origin, point![0.0, 0.25, 0.25], 0.01);
+        compare_float_vec(
             obj_ray.direction.normalize(),
-            vector![1.0, -0.25, -0.25].normalize()
+            vector![1.0, -0.25, -0.25].normalize(),
+            0.01,
         );
     }
 }

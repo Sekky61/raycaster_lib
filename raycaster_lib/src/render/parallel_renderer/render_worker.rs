@@ -30,8 +30,6 @@ pub struct RenderWorker<'a, BV>
 where
     BV: Volume + Blocked,
 {
-    // todo generic blocktype
-    // todo render options?
     renderer_id: usize,
     camera: Arc<RwLock<PerspectiveCamera>>,
     render_quality: bool,
@@ -148,7 +146,6 @@ where
         for y in y_range {
             let y_norm = y as f32 * step_f.y;
             for x in x_range.clone() {
-                // todo clone here -- maybe use own impl
                 let pixel_coord = (x as f32 * step_f.x, y_norm);
                 let ray = camera.get_ray(pixel_coord);
 
@@ -163,15 +160,6 @@ where
 
                 // TODO multiply color with opacity ??
                 // TODO results seem ok
-
-                // if x == x_range.start
-                //     || x == x_range.end - 1
-                //     || y == y_range.start
-                //     || y == y_range.end - 1
-                // {
-                //     color_buf[ptr] = vector![255.0, 255.0, 255.0];
-                //     opacities[ptr] = 1.0;
-                // }
 
                 color_buf[ptr] += color;
 

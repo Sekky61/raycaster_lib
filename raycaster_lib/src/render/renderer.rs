@@ -1,6 +1,6 @@
 use nalgebra::{vector, Vector3, Vector4};
 
-use crate::{common::Ray, volumetric::Volume, PerspectiveCamera};
+use crate::{color::RGBA, common::Ray, volumetric::Volume, PerspectiveCamera};
 
 use super::RenderOptions;
 
@@ -113,7 +113,7 @@ where
     }
 
     /// Accumulate color along one ray.
-    fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera, quality: bool) -> Vector4<f32> {
+    fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera, quality: bool) -> RGBA {
         // Get intersection with volume
         let (obj_ray, t) = match self.volume.transform_ray(ray) {
             Some(e) => e,

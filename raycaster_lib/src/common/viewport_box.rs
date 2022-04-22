@@ -32,7 +32,6 @@ impl ViewportBox {
 
     /// Expand range to include point \[x,y\].
     pub fn add_point(&mut self, x: f32, y: f32) {
-        // Todo possibly use vectors
         self.upper.x = f32::clamp(f32::max(self.upper.x, x), 0.0, 1.0);
         self.upper.y = f32::clamp(f32::max(self.upper.y, y), 0.0, 1.0);
         self.lower.x = f32::clamp(f32::min(self.lower.x, x), 0.0, 1.0);
@@ -53,7 +52,7 @@ impl ViewportBox {
         // Floor values down to nearest pixel
         // todo might save time to pass resolution as f32
 
-        let res_f = resolution.map(|v| v as f32);
+        let res_f = resolution.cast::<f32>();
 
         // Converting to integer rounds down
         let low_pixel = (self.lower.component_mul(&res_f)).map(|v| v as u16);

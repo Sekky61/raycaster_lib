@@ -24,7 +24,8 @@ pub const RESOLUTION: Vector2<u16> = vector![WIDTH, HEIGHT];
 pub const POSITION: Point3<f32> = point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE];
 pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
-type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
+/// Position and direction of camera.
+type CamPos = (Point3<f32>, Vector3<f32>);
 
 pub mod volume_files {
 
@@ -52,7 +53,7 @@ const BLOCK_SIDE: usize = 32;
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
-pub const DEFAULT_CAMERA_POSITIONS_MULTIPLE: [(Point3<f32>, Vector3<f32>); 14] = [ // todo average 14 samples together
+pub const DEFAULT_CAMERA_POSITIONS_MULTIPLE: [(Point3<f32>, Vector3<f32>); 14] = [
     // View volume from each quadrant
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
     (point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0, 1.0]),

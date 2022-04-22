@@ -64,7 +64,6 @@ impl ValueRange {
     /// Check if two `ValueRange`s have common items.
     /// Touching intervals intersect.
     pub fn intersects(&self, other: &ValueRange) -> bool {
-        // todo test
         (other.low <= self.high && other.low >= self.low)
             || (other.high >= self.low && other.high <= self.high)
             || (self.high >= other.low && self.high <= other.high)
@@ -132,6 +131,31 @@ mod test {
         assert!(range.contains(2.0));
         assert_eq!(range.low, 2.0);
         assert_eq!(range.high, 2.0);
+    }
+
+    #[test]
+    fn ranges_intersect() {
+        let empty = ValueRange::empty();
+        let r_low = ValueRange::from_samples(&[1u8, 6]);
+        let r_mid = ValueRange::from_samples(&[3u8, 8]);
+        let r_hi = ValueRange::from_samples(&[10u8, 30]);
+        let inner = ValueRange::from_samples(&[10u8, 15]);
+        let single = ValueRange::from_samples(&[6u8]);
+
+        assert!(!empty.intersects(&r_low));
+        assert!(!empty.intersects(&r_mid));
+        assert!(!empty.intersects(&r_hi));
+        assert!(!empty.intersects(&inner));
+        assert!(!empty.intersects(&single));
+
+        assert!(r_low.intersects(&r_mid));
+        assert!(!r_low.intersects(&r_hi));
+        assert!(!r_mid.intersects(&r_hi));
+
+        assert!(r_low.intersects(&single));
+        assert!(r_mid.intersects(&single));
+
+        assert!(r_hi.intersects(&inner));
     }
 
     #[test]

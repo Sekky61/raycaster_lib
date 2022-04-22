@@ -101,7 +101,8 @@ impl PerspectiveCamera {
     ///
     /// * `vertical_fov_deg` - vertical FoV in degrees
     pub fn change_fov(&mut self, vertical_fov_deg: f32) {
-        self.fov_y = vertical_fov_deg; // todo check if >180deg
+        assert!(vertical_fov_deg > 0.0 && vertical_fov_deg < 180.0);
+        self.fov_y = vertical_fov_deg;
         self.recalc_plane_size();
         self.recalc_dudv();
     }
@@ -198,7 +199,6 @@ impl PerspectiveCamera {
     ///
     /// * pixel_coord - Coordinates in the range of `<0;1>x<0;1>`, point \[0,0\] being upper left corner
     pub fn get_ray(&self, pixel_coord: (f32, f32)) -> Ray {
-        // todo component_mul
         let dir = self.dir_00 + self.du * pixel_coord.0 + self.dv * pixel_coord.1;
         let dir = dir.normalize();
         Ray::new(self.position, dir)
@@ -235,8 +235,8 @@ impl PerspectiveCamera {
 
     /// Get the distance from camera origin to the middle of a bound box
     pub fn box_distance(&self, bound_box: &BoundBox) -> f32 {
-        // TODO is lower corner enough for relative distances? Assuming blocks have the same size
-        let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower); // todo move to box_center function
+        // Assuming blocks have the same size, lower corners can also be relatively compared
+        let center = bound_box.lower + 0.5 * (bound_box.upper - bound_box.lower);
         (center - self.position).magnitude()
     }
 

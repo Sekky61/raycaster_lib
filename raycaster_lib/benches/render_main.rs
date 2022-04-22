@@ -69,14 +69,14 @@ criterion_group! {
 // Testing mains
 
 //criterion_main!(parallel);
-//criterion_main!(sequential_ei);
+criterion_main!(sequential_ei);
 
 // Find best parallel worker params
 
 //criterion_main!(parallel_params);
 
 // BP main
-
+/*
 criterion_main!(
     // Ram vs Stream
     sequential_linear_skull,
@@ -86,4 +86,6 @@ criterion_main!(
     sequential_block_skull,
     // Bigger than RAM
     huge_volume // todo 2K performance
+                // todo compare camera angles
 );
+*/
