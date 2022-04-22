@@ -26,8 +26,26 @@ pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 type CamPos = (Point3<f32>, Vector3<f32>); // todo add to benchoptions
 
-pub const SKULL_PATH: &str = "../volumes/Skull.vol";
-pub const SKULL_BLOCK_PATH: &str = "../volumes/Skull_block.vol";
+pub mod volume_files {
+
+    pub const SKULL_ID: usize = 0;
+    pub const SKULL_PATH: &str = "../volumes/Skull.vol";
+
+    pub const SKULL_BLOCK_ID: usize = 1;
+    pub const SKULL_BLOCK_PATH: &str = "../volumes/Skull_block.vol";
+
+    pub const VOL_4K_ID: usize = 2;
+
+    pub fn get_path(vol_id: usize) -> &'static str {
+        match vol_id {
+            SKULL_ID => SKULL_PATH,
+            SKULL_BLOCK_ID => SKULL_BLOCK_PATH,
+            _ => panic!("Unknown volume ID ({vol_id})"),
+        }
+    }
+}
+
+use volume_files::*;
 
 const BLOCK_SIDE: usize = 32;
 

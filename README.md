@@ -104,3 +104,10 @@ Pro vygenerování dokumentace použijte příkaz
 cargo doc --no-deps
 ```
 Argumentem `--open` se dokumentace automaticky otevře v prohlížeči, argument `--document-private-items` vygeneruje dokumentaci i neveřejných částí kódu.
+
+# Testovací data
+
+| Test | Soubor | Rozlišení | Popis | 
+| ----------- | ---------- | ---------- | ---------- |
+| 1 | `volumes/test_solid.vol` | 1024 | |
+| 2 | Text |

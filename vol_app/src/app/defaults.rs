@@ -1,4 +1,6 @@
-//! Default values
+//! # Default values
+//!
+//! Used as initial values.
 
 use super::{
     common::{PrewrittenParser, PrewrittenTF},
@@ -19,7 +21,11 @@ pub const VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
 pub const MULTI_THREAD: bool = false;
 pub const ERT: bool = true;
 pub const EI: bool = true;
-pub const BLOCK_SIDE: usize = 32;
+
+/// Block side used when constructing blocks in memory.
+/// Does not affect volumes saved in files by blocks.
+pub const BLOCK_SIDE: usize = 128;
+
 pub const STREAM: bool = true;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
