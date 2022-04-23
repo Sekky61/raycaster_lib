@@ -180,7 +180,7 @@ where
                             ParalelRenderer::new(volume, shared_camera, self.render_options);
                         front.start_rendering(par_ren);
                     } else {
-                        let volume: BlockVolume = self.get_volume(&self.vol_path);
+                        let volume: FloatBlockVolume = self.get_volume(&self.vol_path);
                         let par_ren =
                             ParalelRenderer::new(volume, shared_camera, self.render_options);
                         front.start_rendering(par_ren);
@@ -250,7 +250,7 @@ where
                                 ParalelRenderer::new(volume, cam.clone(), self.render_options);
                             front.start_rendering(par_ren);
                         } else {
-                            let volume: BlockVolume = self.get_volume(&self.vol_path);
+                            let volume: FloatBlockVolume = self.get_volume(&self.vol_path);
                             let par_ren =
                                 ParalelRenderer::new(volume, cam.clone(), self.render_options);
                             front.start_rendering(par_ren);

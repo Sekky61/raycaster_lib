@@ -256,8 +256,8 @@ impl RenderState {
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::RamFloat, true) => {
-                println!("{} Ram Float", <BlockVolume as Volume>::get_name());
-                let renderer = volume_setup_paralel::<BlockVolume>(
+                println!("{} Ram Float", <FloatBlockVolume as Volume>::get_name());
+                let renderer = volume_setup_paralel::<FloatBlockVolume>(
                     path,
                     parser,
                     self.render_options,
@@ -267,7 +267,7 @@ impl RenderState {
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::RamFloat, false) => {
-                println!("{}", <FloatVolume as Volume>::get_name());
+                println!("{} Ram Float", <FloatVolume as Volume>::get_name());
                 let renderer = volume_setup_linear::<FloatVolume>(
                     path,
                     parser,

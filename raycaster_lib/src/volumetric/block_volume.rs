@@ -6,24 +6,24 @@ use crate::{
 };
 
 use super::{
-    block::Block,
+    block::FloatBlock,
     vol_builder::{BuildVolume, VolumeMetadata},
     volume::Blocked,
     Volume,
 };
 
 // Default overlap == 1
-pub struct BlockVolume {
+pub struct FloatBlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     pub empty_blocks: Vec<bool>, // todo use empty index, but first remove generics from emptyindex
     block_size: Vector3<usize>,  // Number of blocks in structure (.data)
-    pub data: Vec<Block>,
+    pub data: Vec<FloatBlock>,
     tf: TF,
 }
 
-impl BlockVolume {
+impl FloatBlockVolume {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = self.block_side - 1; // implicit block overlap of 1
@@ -46,7 +46,7 @@ impl BlockVolume {
         }
     }
 
-    pub fn build_empty(blocks: &[Block], tf: TF) -> Vec<bool> {
+    pub fn build_empty(blocks: &[FloatBlock], tf: TF) -> Vec<bool> {
         let mut v = Vec::with_capacity(blocks.len());
         let vis_ranges = tf_visible_range(tf);
 
@@ -58,8 +58,8 @@ impl BlockVolume {
     }
 }
 
-impl Blocked for BlockVolume {
-    type BlockType = Block;
+impl Blocked for FloatBlockVolume {
+    type BlockType = FloatBlock;
 
     fn get_blocks(&self) -> &[Self::BlockType] {
         &self.data
@@ -70,7 +70,7 @@ impl Blocked for BlockVolume {
     }
 }
 
-impl Volume for BlockVolume {
+impl Volume for FloatBlockVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }
@@ -131,11 +131,11 @@ impl Volume for BlockVolume {
 
     fn set_tf(&mut self, tf: TF) {
         self.tf = tf;
-        self.empty_blocks = BlockVolume::build_empty(&self.data, self.tf);
+        self.empty_blocks = FloatBlockVolume::build_empty(&self.data, self.tf);
     }
 
     fn get_name() -> &'static str {
-        "BlockVolume"
+        "FloatBlockVolume"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {
@@ -147,8 +147,8 @@ impl Volume for BlockVolume {
     }
 }
 
-impl BuildVolume<u8> for BlockVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
+impl BuildVolume<u8> for FloatBlockVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<FloatBlockVolume, &'static str> {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
@@ -176,13 +176,13 @@ impl BuildVolume<u8> for BlockVolume {
                     let block_data = get_block_data(slice, size, block_start, block_side);
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
                     let block =
-                        Block::from_data(block_data, block_bound_box, scale, block_side, tf);
+                        FloatBlock::from_data(block_data, block_bound_box, scale, block_side, tf);
                     blocks.push(block);
                 }
             }
         }
 
-        let empty_blocks = BlockVolume::build_empty(&blocks, tf);
+        let empty_blocks = FloatBlockVolume::build_empty(&blocks, tf);
 
         println!(
             "Built {} blocks of dims {} blocks ({},{},{}) -> ({},{},{})",
@@ -196,7 +196,7 @@ impl BuildVolume<u8> for BlockVolume {
             block_size.z,
         );
 
-        Ok(BlockVolume {
+        Ok(FloatBlockVolume {
             bound_box,
             data_size: size,
             block_size,
@@ -287,12 +287,15 @@ mod test {
     #[test]
     fn build_empty() {
         let tf = |v: f32| vector![1.0, 1.0, 1.0, v];
-        let block1 = Block::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
-        let block2 = Block::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
-        let block3 = Block::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let block1 =
+            FloatBlock::from_data(vec![0.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let block2 =
+            FloatBlock::from_data(vec![1.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
+        let block3 =
+            FloatBlock::from_data(vec![2.0], BoundBox::empty(), vector![1.0, 1.0, 1.0], 1, tf);
         let blocks = &[block1, block2, block3];
 
-        let empty = BlockVolume::build_empty(blocks, tf);
+        let empty = FloatBlockVolume::build_empty(blocks, tf);
 
         assert_eq!(empty.len(), 3);
         assert!(empty[0]);

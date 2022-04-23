@@ -19,7 +19,7 @@ pub fn render_parallel_mem<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Parallel,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(BLOCK_SIDE),
     );
@@ -67,7 +67,7 @@ pub fn block_side_test(c: &mut Criterion) {
         Algorithm::Parallel,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(BLOCK_SIDE),
     );

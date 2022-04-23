@@ -34,8 +34,8 @@ pub use volume::{Blocked, Volume};
 pub mod volumes {
     use super::*;
 
-    pub use block::Block;
-    pub use block_volume::BlockVolume;
+    pub use block::FloatBlock;
+    pub use block_volume::FloatBlockVolume;
     pub use linear_volume::FloatVolume;
     pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
     pub use stream_linear_volume::LinearVolume;
@@ -63,7 +63,7 @@ mod test {
     #[test]
     fn linear_block_matches() {
         let linear: FloatVolume = white_volume();
-        let block: BlockVolume = white_volume();
+        let block: FloatBlockVolume = white_volume();
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();
@@ -86,7 +86,7 @@ mod test {
     #[ignore]
     fn linear_block_matches_skull() {
         let linear: FloatVolume = skull_volume(None);
-        let block: BlockVolume = skull_volume(Some(5));
+        let block: FloatBlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();
@@ -108,7 +108,7 @@ mod test {
     #[test]
     fn sample_at_subsamples_match() {
         let linear: FloatVolume = skull_volume(None);
-        let block: BlockVolume = skull_volume(Some(5));
+        let block: FloatBlockVolume = skull_volume(Some(5));
 
         let sampling_coord = point![0.0, 25.0, 114.0];
         let sampling_spots = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -129,7 +129,7 @@ mod test {
     /// Ignored tests can be run using `cargo test -- --ignored`
     fn linear_block_sample_at_matches() {
         let linear: FloatVolume = skull_volume(None);
-        let block: BlockVolume = skull_volume(Some(5));
+        let block: FloatBlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();

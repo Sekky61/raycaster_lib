@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::common::volume_files::*;
 use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::volumes::BlockVolume};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::FloatBlockVolume};
 
 pub fn render_block<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
@@ -19,7 +19,7 @@ pub fn render_block<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(16), // fallback
     );
@@ -43,7 +43,7 @@ pub fn render_block_ert<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(16), // fallback
     );
@@ -67,7 +67,7 @@ pub fn render_block_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(16), // fallback
     );
@@ -91,7 +91,7 @@ pub fn render_block_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<BlockVolume>,
+        PhantomData::<FloatBlockVolume>,
         Memory::Ram,
         Some(16), // fallback
     );

@@ -7,7 +7,7 @@ use crate::{
 
 use super::{EmptyIndex, Volume};
 
-pub struct Block {
+pub struct FloatBlock {
     pub block_side: usize,
     pub value_range: ValueRange,
     pub bound_box: BoundBox,
@@ -16,14 +16,14 @@ pub struct Block {
     empty_index: EmptyIndex<4>,
 }
 
-impl Block {
+impl FloatBlock {
     pub fn from_data(
         data: Vec<f32>,
         bound_box: BoundBox,
         scale: Vector3<f32>,
         block_side: usize,
         tf: TF,
-    ) -> Block {
+    ) -> FloatBlock {
         // todo boundbox and scale has redundant info
         assert_eq!(data.len(), block_side.pow(3));
         let value_range = ValueRange::from_samples(&data[..]);
@@ -35,7 +35,7 @@ impl Block {
             .append_translation(&lower_vec)
             .append_nonuniform_scaling(&scale_inv);
 
-        let mut block = Block {
+        let mut block = FloatBlock {
             data,
             bound_box,
             value_range,
@@ -67,7 +67,7 @@ impl Block {
 }
 
 // todo subvolume trait?
-impl Volume for Block {
+impl Volume for FloatBlock {
     // A more optimal specialization
     fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
         // TODO assumes scale == 1
