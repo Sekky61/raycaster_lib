@@ -175,7 +175,7 @@ where
             match self.algorithm {
                 Algorithm::Parallel => {
                     if self.memory == Memory::Stream {
-                        let volume: StreamBlockVolume = self.get_volume(&self.vol_path);
+                        let volume: BlockVolume = self.get_volume(&self.vol_path);
                         let par_ren =
                             ParalelRenderer::new(volume, shared_camera, self.render_options);
                         front.start_rendering(par_ren);
@@ -245,7 +245,7 @@ where
                 match self.algorithm {
                     Algorithm::Parallel => {
                         if self.memory == Memory::Stream {
-                            let volume: StreamBlockVolume = self.get_volume(&self.vol_path);
+                            let volume: BlockVolume = self.get_volume(&self.vol_path);
                             let par_ren =
                                 ParalelRenderer::new(volume, cam.clone(), self.render_options);
                             front.start_rendering(par_ren);

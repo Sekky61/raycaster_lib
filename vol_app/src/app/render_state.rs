@@ -212,8 +212,8 @@ impl RenderState {
         );
         match (mem_type, self.multi_thread) {
             (PickedMemoryType::Stream, true) => {
-                println!("{} Stream", <StreamBlockVolume as Volume>::get_name());
-                let renderer = volume_setup_paralel::<StreamBlockVolume>(
+                println!("{} Stream", <BlockVolume as Volume>::get_name());
+                let renderer = volume_setup_paralel::<BlockVolume>(
                     path,
                     parser,
                     self.render_options,
@@ -234,8 +234,8 @@ impl RenderState {
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::Ram, true) => {
-                println!("{} Ram", <StreamBlockVolume as Volume>::get_name());
-                let renderer = volume_setup_paralel::<StreamBlockVolume>(
+                println!("{} Ram", <BlockVolume as Volume>::get_name());
+                let renderer = volume_setup_paralel::<BlockVolume>(
                     path,
                     parser,
                     self.render_options,
@@ -311,8 +311,8 @@ where
             Ok(ref mut m) => {
                 if m.block_side.is_none() {
                     m.block_side = Some(defaults::BLOCK_SIDE);
-                    m.set_memory_type(memory);
                 }
+                m.set_memory_type(memory);
             }
             Err(_) => (),
         }

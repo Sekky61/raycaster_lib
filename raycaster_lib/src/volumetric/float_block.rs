@@ -147,7 +147,7 @@ impl Volume for FloatBlock {
     }
 
     fn get_name() -> &'static str {
-        "Block"
+        "FloatBlock"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {

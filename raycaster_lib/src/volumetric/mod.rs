@@ -34,7 +34,7 @@ pub use volume::{Blocked, Volume};
 pub mod volumes {
     use super::*;
 
-    pub use block_volume::{StreamBlock, StreamBlockVolume};
+    pub use block_volume::{Block, BlockVolume};
     pub use float_block::FloatBlock;
     pub use float_block_volume::FloatBlockVolume;
     pub use float_volume::FloatVolume;

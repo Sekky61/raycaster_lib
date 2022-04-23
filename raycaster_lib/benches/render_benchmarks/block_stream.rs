@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::common::volume_files::*;
 use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamBlockVolume};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::BlockVolume};
 
 pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
@@ -19,7 +19,7 @@ pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamBlockVolume>,
+        PhantomData::<BlockVolume>,
         Memory::Stream,
         None,
     );
@@ -43,7 +43,7 @@ pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamBlockVolume>,
+        PhantomData::<BlockVolume>,
         Memory::Stream,
         None,
     );
@@ -67,7 +67,7 @@ pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamBlockVolume>,
+        PhantomData::<BlockVolume>,
         Memory::Stream,
         None,
     );
@@ -91,7 +91,7 @@ pub fn render_streamblock_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamBlockVolume>,
+        PhantomData::<BlockVolume>,
         Memory::Stream,
         None,
     );

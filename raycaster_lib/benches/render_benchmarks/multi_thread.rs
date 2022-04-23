@@ -43,7 +43,7 @@ pub fn render_parallel_stream<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Parallel,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamBlockVolume>,
+        PhantomData::<BlockVolume>,
         Memory::Stream,
         Some(BLOCK_SIDE),
     );

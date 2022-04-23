@@ -95,6 +95,10 @@ impl TypedMmap {
         TypedMmap { mmap, offset: 0 }
     }
 
+    pub fn as_ptr<T>(&self) -> *const T {
+        self.mmap.as_ptr() as *const T
+    }
+
     pub fn into_inner(self) -> (Mmap, usize) {
         (self.mmap, self.offset)
     }
@@ -148,6 +152,13 @@ impl<T: Clone> DataSource<T> {
                 DataSource::Vec(new)
             }
             DataSource::Mmap(m) => DataSource::Mmap(m),
+        }
+    }
+
+    pub fn as_ptr(&self) -> *const T {
+        match self {
+            DataSource::Vec(v) => v.as_ptr(),
+            DataSource::Mmap(m) => m.as_ptr(),
         }
     }
 

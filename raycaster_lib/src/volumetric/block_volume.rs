@@ -3,7 +3,7 @@ use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
 
 use crate::{
     common::{blockify, tf_visible_range, BoundBox, Ray, ValueRange},
-    volumetric::DataSource,
+    volumetric::{DataSource, MemoryType},
     TF,
 };
 
@@ -13,7 +13,7 @@ use super::{
     EmptyIndex, Volume,
 };
 
-pub struct StreamBlock {
+pub struct Block {
     pub block_side: usize, // todo empty index
     pub value_range: ValueRange,
     pub bound_box: BoundBox,
@@ -22,7 +22,7 @@ pub struct StreamBlock {
     empty_index: EmptyIndex<4>,
 }
 
-impl StreamBlock {
+impl Block {
     /// # Safety
     ///
     /// data has to be pointer into the beginning of memory mapped file
@@ -80,10 +80,10 @@ impl StreamBlock {
     }
 }
 
-// Safety: pointer points to memory mapped file, which lives as long as StreamBlockVolume lives
-unsafe impl Send for StreamBlock {}
+// Safety: pointer points to memory mapped file, which lives as long as BlockVolume lives
+unsafe impl Send for Block {}
 
-impl Volume for StreamBlock {
+impl Volume for Block {
     // A more optimal specialization
     fn transform_ray(&self, ray: &Ray) -> Option<(Ray, f32)> {
         let (t0, t1) = match self.bound_box.intersect(ray) {
@@ -166,7 +166,7 @@ impl Volume for StreamBlock {
     }
 
     fn get_name() -> &'static str {
-        "StreamBlock"
+        "Block"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {
@@ -175,21 +175,20 @@ impl Volume for StreamBlock {
 }
 
 // Default overlap == 1
-pub struct StreamBlockVolume {
+pub struct BlockVolume {
     block_side: usize,
     bound_box: BoundBox,
     data_size: Vector3<usize>,
     pub empty_blocks: Vec<bool>,
-    empty_index: EmptyIndex<4>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
-    _data_owner: Mmap,
-    pub data: Vec<StreamBlock>,
+    _data_owner: DataSource<u8>,
+    pub data: Vec<Block>,
     tf: TF,
 }
 
-unsafe impl Sync for StreamBlockVolume {}
+unsafe impl Sync for BlockVolume {}
 
-impl StreamBlockVolume {
+impl BlockVolume {
     // returns (block index, block offset)
     fn get_indexes(&self, x: usize, y: usize, z: usize) -> (usize, usize) {
         let jump_per_block = self.block_side - 1; // implicit block overlap of 1
@@ -219,7 +218,7 @@ impl StreamBlockVolume {
     }
 
     /// True == block is empty
-    pub fn build_empty(blocks: &[StreamBlock], tf: TF) -> Vec<bool> {
+    pub fn build_empty(blocks: &[Block], tf: TF) -> Vec<bool> {
         let mut v = Vec::with_capacity(blocks.len());
         let vis_ranges = tf_visible_range(tf);
 
@@ -231,8 +230,8 @@ impl StreamBlockVolume {
     }
 }
 
-impl Blocked for StreamBlockVolume {
-    type BlockType = StreamBlock;
+impl Blocked for BlockVolume {
+    type BlockType = Block;
 
     fn get_blocks(&self) -> &[Self::BlockType] {
         &self.data
@@ -243,7 +242,7 @@ impl Blocked for StreamBlockVolume {
     }
 }
 
-impl Volume for StreamBlockVolume {
+impl Volume for BlockVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.data_size
     }
@@ -305,26 +304,27 @@ impl Volume for StreamBlockVolume {
 
     fn set_tf(&mut self, tf: TF) {
         self.tf = tf;
-        self.empty_blocks = StreamBlockVolume::build_empty(&self.data, self.tf);
+        self.empty_blocks = BlockVolume::build_empty(&self.data, self.tf);
     }
 
     fn get_name() -> &'static str {
-        "StreamBlockVolume"
+        "BlockVolume"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {
-        self.empty_index.is_empty(pos)
+        false // todo delegate to block
     }
 }
 
-impl BuildVolume<u8> for StreamBlockVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamBlockVolume, &'static str> {
+impl BuildVolume<u8> for BlockVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<BlockVolume, &'static str> {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No transfer function")?;
         let block_side = metadata.block_side.ok_or("No block side")?;
         let data = metadata.data.ok_or("No data")?;
+        let memory_type = metadata.memory_type.unwrap_or(MemoryType::Stream);
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
@@ -337,11 +337,12 @@ impl BuildVolume<u8> for StreamBlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let (data_owner, offset) = match data {
-            DataSource::Mmap(m) => m.into_inner(),
-            _ => return Err("Data not memory mapped"),
+        let data_desired_form = match memory_type {
+            MemoryType::Stream => data,
+            MemoryType::Ram => data.to_vec(),
         };
-        let ptr = unsafe { data_owner.as_ptr().add(offset) };
+
+        let ptr = unsafe { data_desired_form.as_ptr() };
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {
@@ -353,14 +354,14 @@ impl BuildVolume<u8> for StreamBlockVolume {
                     let block_data_offset = get_3d_index(block_size, block_off) * block_side.pow(3);
                     let block_data_ptr = unsafe { ptr.add(block_data_offset) };
                     let block = unsafe {
-                        StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr, tf)
+                        Block::new(block_side, block_bound_box, scale, block_data_ptr, tf)
                     };
                     blocks.push(block);
                 }
             }
         }
 
-        let empty_blocks = StreamBlockVolume::build_empty(&blocks, tf);
+        let empty_blocks = BlockVolume::build_empty(&blocks, tf);
 
         println!(
             "Built {} blocks of dims {} blocks ({},{},{}) blocks ({},{},{}) memory",
@@ -374,19 +375,16 @@ impl BuildVolume<u8> for StreamBlockVolume {
             block_size.z,
         );
 
-        let mut volume = StreamBlockVolume {
+        let volume = BlockVolume {
             bound_box,
             data_size: size,
             block_size,
             data: blocks,
-            _data_owner: data_owner,
+            _data_owner: data_desired_form,
             tf,
             block_side,
             empty_blocks,
-            empty_index: EmptyIndex::dummy(),
         };
-
-        //volume.empty_index = EmptyIndex::from_volume(&volume);
         Ok(volume)
     }
 }
