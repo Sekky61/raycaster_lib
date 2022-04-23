@@ -15,12 +15,12 @@
 //! Another trait used for volumes is `Blocked`.
 //! This trait allows renderer to access volume blocks (where applicable) and is used for parallel rendering.
 
+mod block_volume;
 mod empty_index;
 mod float_block;
 mod float_block_volume;
 mod float_volume;
-mod stream_block_volume;
-mod stream_linear_volume;
+mod linear_volume;
 mod vol_builder;
 mod volume;
 
@@ -34,11 +34,11 @@ pub use volume::{Blocked, Volume};
 pub mod volumes {
     use super::*;
 
+    pub use block_volume::{StreamBlock, StreamBlockVolume};
     pub use float_block::FloatBlock;
     pub use float_block_volume::FloatBlockVolume;
     pub use float_volume::FloatVolume;
-    pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
-    pub use stream_linear_volume::LinearVolume;
+    pub use linear_volume::LinearVolume;
 }
 
 #[cfg(test)]
