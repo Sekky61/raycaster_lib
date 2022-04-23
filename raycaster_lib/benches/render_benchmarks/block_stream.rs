@@ -5,7 +5,7 @@ use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, R
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::BlockVolume};
 
-pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_streamed<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -29,7 +29,7 @@ pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_streamed_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -53,7 +53,7 @@ pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_streamed_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -77,7 +77,7 @@ pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_streamed_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)

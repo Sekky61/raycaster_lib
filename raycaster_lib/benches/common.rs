@@ -40,7 +40,17 @@ pub mod volume_files {
     pub const SKULL_BLOCK_ID: usize = 1;
     pub const SKULL_BLOCK_PATH: &str = "../volumes/Skull_block.vol";
 
-    pub const VOL_4K_ID: usize = 2;
+    pub const SMALL_SHAPES_LIN_ID: usize = 2;
+    pub const SMALL_SHAPES_LIN_PATH: &str = "../volumes/800shapes_lin.vol";
+
+    pub const SMALL_SHAPES_BLOCK_ID: usize = 3;
+    pub const SMALL_SHAPES_BLOCK_PATH: &str = "../volumes/800shapes_block16.vol";
+
+    pub const MAIN_BLOCK_ID: usize = 4;
+    pub const MAIN_BLOCK_PATH: &str = "../volumes/2kshapes_block16.vol";
+
+    pub const HUGE_ID: usize = 5;
+    pub const HUGE_PATH: &str = "../volumes/4kshapes_block16.vol";
 
     pub fn get_path(vol_id: usize) -> &'static str {
         match vol_id {

@@ -13,23 +13,46 @@ const SAMPLE_SIZE: usize = 10;
 
 // Linear Volume
 criterion_group! {
-    name = sequential_linear_skull;
+    name = sequential_linear_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_linear_float<{SKULL_ID}>, render_linear_float_ert<{SKULL_ID}>, render_linear_float_ei<{SKULL_ID}>, render_linear_float_ert_ei<{SKULL_ID}>
+    targets =
+        render_linear_float<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ert_ei<{SMALL_SHAPES_LIN_ID}>
+}
+
+// Linear Volume
+criterion_group! {
+    name = sequential_linear_small_float;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets =
+        render_linear_float<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_linear_float_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
 // Linear Volume Streamed
 criterion_group! {
     name = sequential_streamlinear_skull;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_streamlinear<{SKULL_ID}>, render_streamlinear_ert<{SKULL_ID}>, render_streamlinear_ei<{SKULL_ID}>, render_streamlinear_ert_ei<{SKULL_ID}>
+    targets =
+        render_streamlinear<{SMALL_SHAPES_LIN_ID}>,
+        render_streamlinear_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_streamlinear_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_streamlinear_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
 // Block Volume
 criterion_group! {
     name = sequential_block_skull;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_block<{SKULL_ID}>, render_block_ert<{SKULL_ID}>, render_block_ei<{SKULL_ID}>, render_block_ert_ei<{SKULL_ID}>
+    targets =
+        render_block<{SMALL_SHAPES_LIN_ID}>,
+        render_block_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_block_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_block_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
 // Block Volume Streamed
@@ -37,7 +60,11 @@ criterion_group! {
 criterion_group! {
     name = sequential_streamblock_skull;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_streamblock<{SKULL_ID}>, render_streamblock_ert<{SKULL_ID}>, render_streamblock_ei<{SKULL_ID}>, render_streamblock_ert_ei<{SKULL_ID}>
+    targets =
+        render_streamed<{SMALL_SHAPES_LIN_ID}>,
+        render_streamed_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_streamed_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_streamed_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
 // Parallel
@@ -45,13 +72,16 @@ criterion_group! {
 criterion_group! {
     name = parallel;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_parallel_mem<{SKULL_ID}>, render_parallel_stream<{SKULL_ID}>
+    targets =
+        render_parallel_mem<{MAIN_BLOCK_ID}>,
+        render_parallel_stream<{MAIN_BLOCK_ID}>
 }
 
 criterion_group! {
     name = huge_volume;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_parallel_stream<{VOL_4K_ID}>
+    targets =
+        render_parallel_stream<{HUGE_ID}>
 }
 
 // Testing
@@ -59,13 +89,13 @@ criterion_group! {
 criterion_group! {
     name = sequential_ei;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_linear_float_ei<{SKULL_ID}>
+    targets = render_linear_float_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
 criterion_group! {
     name = parallel_params;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_parallel_mem<{SKULL_ID}>
+    targets = render_parallel_mem<{SMALL_SHAPES_LIN_ID}>
 }
 
 criterion_group! {
