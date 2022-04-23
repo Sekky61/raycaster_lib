@@ -200,6 +200,11 @@ where
 
         let tf = self.volume.get_tf();
 
+        // Source:
+        // https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-39-volume-rendering-techniques
+        // Equation 3
+        let opacity_correction = step_size;
+
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
             if self.render_options.early_ray_termination && *opacity > 0.99 {
@@ -242,9 +247,11 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            accum += (1.0 - *opacity) * color_b.w * sample_rgb;
+            let opacity_corrected = color_b.w * opacity_correction;
 
-            *opacity += (1.0 - *opacity) * color_b.w;
+            accum += (1.0 - *opacity) * opacity_corrected * sample_rgb;
+
+            *opacity += (1.0 - *opacity) * opacity_corrected;
         }
 
         accum

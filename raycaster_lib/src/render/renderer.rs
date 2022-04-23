@@ -113,6 +113,7 @@ where
     }
 
     /// Accumulate color along one ray.
+    /// Opacity is corrected for sample step
     fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera, quality: bool) -> RGBA {
         // Get intersection with volume
         let (obj_ray, t) = match self.volume.transform_ray(ray) {
@@ -139,6 +140,11 @@ where
         let mut pos = begin;
 
         let tf = self.volume.get_tf();
+
+        // Source:
+        // https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-39-volume-rendering-techniques
+        // Equation 3
+        let opacity_correction = step_size;
 
         // Maximum number of step is known from intersection
         let max_n_of_steps = (t / step_size) as usize; // todo inverted into options
@@ -192,9 +198,11 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
+            let opacity_corrected = color_b.w * opacity_correction;
+
             // Accumulate color
-            rgb += (1.0 - opacity) * color_b.w * sample_rgb;
-            opacity += (1.0 - opacity) * color_b.w;
+            rgb += (1.0 - opacity) * opacity_corrected * sample_rgb;
+            opacity += (1.0 - opacity) * opacity_corrected;
 
             // ERT
             // relying on branch predictor to "eliminate" branch
