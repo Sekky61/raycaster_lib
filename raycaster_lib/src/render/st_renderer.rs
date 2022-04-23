@@ -31,7 +31,7 @@ where
     }
 
     fn start(self) -> JoinHandle<()> {
-        println!("Starting renderer | {}", self.volume.get_name());
+        println!("Starting renderer | {}", <V as Volume>::get_name());
         self.start_rendering()
     }
 

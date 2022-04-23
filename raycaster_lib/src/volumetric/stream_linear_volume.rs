@@ -153,7 +153,7 @@ impl Volume for StreamLinearVolume {
         vector![1.0, 1.0, 1.0]
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "StreamLinearVolume"
     }
 

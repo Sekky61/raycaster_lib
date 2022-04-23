@@ -105,7 +105,11 @@ cargo doc --no-deps
 ```
 Argumentem `--open` se dokumentace automaticky otevře v prohlížeči, argument `--document-private-items` vygeneruje dokumentaci i neveřejných částí kódu.
 
-# Testovací data
+# Testovani
+
+Testovaci framework Criterion vyzaduje program `perf`.
+
+## Data
 
 | Test | Soubor | Rozlišení | Popis | 
 | ----------- | ---------- | ---------- | ---------- |

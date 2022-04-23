@@ -132,7 +132,7 @@ pub trait Volume: Send {
     }
 
     /// Returns the name of the volume
-    fn get_name(&self) -> &str;
+    fn get_name() -> &'static str;
 }
 
 // pub struct VolumeHit {

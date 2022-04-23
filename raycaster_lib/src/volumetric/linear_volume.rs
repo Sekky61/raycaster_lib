@@ -111,7 +111,7 @@ impl Volume for LinearVolume {
         self.tf = tf;
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "LinearVolume"
     }
 

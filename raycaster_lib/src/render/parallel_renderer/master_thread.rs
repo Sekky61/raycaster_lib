@@ -15,11 +15,12 @@ use super::{
     workers::{CompWorker, RenderWorker},
 };
 
-const RENDERER_COUNT: u8 = 5; // todo dynamic
+// Determined by experiments for 6c12t CPU
+const RENDERER_COUNT: u8 = 9; // todo dynamic
 const COMPOSITER_COUNT: u8 = 1;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
 
-const TILE_SIDE: u16 = 32;
+const TILE_SIDE: u16 = 10;
 
 pub struct ParalelRenderer<BV>
 where
@@ -45,7 +46,7 @@ where
     }
 
     fn start(self) -> JoinHandle<()> {
-        println!("Starting renderer | {}", self.volume.get_name());
+        println!("Starting renderer | {}", <BV as Volume>::get_name());
         self.start_rendering()
     }
 

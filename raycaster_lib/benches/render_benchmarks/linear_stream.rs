@@ -1,7 +1,7 @@
+use std::marker::PhantomData;
+
 use crate::common::volume_files::*;
-use crate::common::{
-    get_volume, Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION,
-};
+use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamLinearVolume};
 
@@ -14,14 +14,14 @@ pub fn render_streamlinear<const VOL_ID: usize>(c: &mut Criterion) {
 
     let path = get_path(VOL_ID);
 
-    let volume: StreamLinearVolume = get_volume(path);
-
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
-        volume,
-        Memory::Ram,
+        path,
+        PhantomData::<StreamLinearVolume>,
+        Memory::Stream,
+        None,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -38,14 +38,14 @@ pub fn render_streamlinear_ert<const VOL_ID: usize>(c: &mut Criterion) {
 
     let path = get_path(VOL_ID);
 
-    let volume: StreamLinearVolume = get_volume(path);
-
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
-        volume,
-        Memory::Ram,
+        path,
+        PhantomData::<StreamLinearVolume>,
+        Memory::Stream,
+        None,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -62,14 +62,14 @@ pub fn render_streamlinear_ei<const VOL_ID: usize>(c: &mut Criterion) {
 
     let path = get_path(VOL_ID);
 
-    let volume: StreamLinearVolume = get_volume(path);
-
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
-        volume,
-        Memory::Ram,
+        path,
+        PhantomData::<StreamLinearVolume>,
+        Memory::Stream,
+        None,
     );
 
     let benchmark = bench_options.get_benchmark();
@@ -86,14 +86,14 @@ pub fn render_streamlinear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
 
     let path = get_path(VOL_ID);
 
-    let volume: StreamLinearVolume = get_volume(path);
-
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
-        volume,
-        Memory::Ram,
+        path,
+        PhantomData::<StreamLinearVolume>,
+        Memory::Stream,
+        None,
     );
 
     let benchmark = bench_options.get_benchmark();

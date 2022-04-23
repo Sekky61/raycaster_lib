@@ -1,5 +1,5 @@
 use common::volume_files::*;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use render_benchmarks::{block::*, block_stream::*, linear::*, linear_stream::*, multi_thread::*};
 
 mod common;
@@ -66,10 +66,17 @@ criterion_group! {
     targets = render_parallel_mem<{SKULL_ID}>
 }
 
+criterion_group! {
+    name = block_side;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets = block_side_test
+}
+
 // Testing mains
 
 //criterion_main!(parallel);
-criterion_main!(sequential_ei);
+criterion_main!(block_side);
+//criterion_main!(sequential_ei);
 
 // Find best parallel worker params
 

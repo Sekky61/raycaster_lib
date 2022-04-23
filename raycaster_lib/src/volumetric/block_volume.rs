@@ -134,7 +134,7 @@ impl Volume for BlockVolume {
         self.empty_blocks = BlockVolume::build_empty(&self.data, self.tf);
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "BlockVolume"
     }
 

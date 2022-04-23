@@ -146,7 +146,7 @@ impl Volume for Block {
         self.data.get(index).cloned()
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "Block"
     }
 

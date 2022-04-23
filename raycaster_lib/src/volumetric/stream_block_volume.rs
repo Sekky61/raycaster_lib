@@ -165,7 +165,7 @@ impl Volume for StreamBlock {
         Some(sample as f32)
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "StreamBlock"
     }
 
@@ -307,7 +307,7 @@ impl Volume for StreamBlockVolume {
         self.empty_blocks = StreamBlockVolume::build_empty(&self.data, self.tf);
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name() -> &'static str {
         "StreamBlockVolume"
     }
 

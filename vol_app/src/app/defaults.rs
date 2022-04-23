@@ -24,9 +24,9 @@ pub const EI: bool = true;
 
 /// Block side used when constructing blocks in memory.
 /// Does not affect volumes saved in files by blocks.
-pub const BLOCK_SIDE: usize = 128;
+pub const BLOCK_SIDE: usize = 44;
 
-pub const STREAM: bool = true;
+pub const STREAM: bool = false;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
