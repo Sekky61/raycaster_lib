@@ -1,6 +1,6 @@
 use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use raycaster_lib::{
-    render::RenderOptions, test_helpers, volumetric::volumes::LinearVolume, PerspectiveCamera,
+    render::RenderOptions, test_helpers, volumetric::volumes::FloatVolume, PerspectiveCamera,
 };
 
 pub const WIDTH: u16 = 700;
@@ -12,7 +12,7 @@ pub const DIRECTION: Vector3<f32> = vector![-1.0, -1.0, -1.0];
 
 #[test]
 fn single_thread_api() {
-    let volume: LinearVolume = test_helpers::skull_volume(None);
+    let volume: FloatVolume = test_helpers::skull_volume(None);
     let camera = PerspectiveCamera::new(POSITION, DIRECTION);
 
     let render_options = RenderOptions::builder()

@@ -125,7 +125,7 @@ mod test {
     const NONEMPTY: bool = false;
 
     use super::*;
-    use crate::{color::RGBA, test_helpers::*, volumetric::linear_volume::LinearVolume};
+    use crate::{color::RGBA, test_helpers::*, volumetric::linear_volume::FloatVolume};
     use nalgebra::vector;
 
     use crate::volumetric::vol_builder::{BuildVolume, DataSource};
@@ -134,7 +134,7 @@ mod test {
         crate::color::zero()
     }
 
-    fn volume_dims_nonempty(dims: Vector3<usize>, non_empty_indexes: &[usize]) -> LinearVolume {
+    fn volume_dims_nonempty(dims: Vector3<usize>, non_empty_indexes: &[usize]) -> FloatVolume {
         let mut vol = empty_vol_meta(dims);
         if let Some(ref mut data) = vol.data {
             match data {
@@ -158,7 +158,7 @@ mod test {
 
         #[test]
         fn empty() {
-            let volume: LinearVolume = empty_volume(vector![2, 2, 2]);
+            let volume: FloatVolume = empty_volume(vector![2, 2, 2]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(volume.get_size().iter().product::<usize>(), 8);
@@ -169,7 +169,7 @@ mod test {
 
         #[test]
         fn empty_bigger() {
-            let volume: LinearVolume = empty_volume(vector![24, 24, 10]);
+            let volume: FloatVolume = empty_volume(vector![24, 24, 10]);
             let empty_index = EmptyIndex::<3>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 12 * 12 * 5);
@@ -179,7 +179,7 @@ mod test {
 
         #[test]
         fn non_empty() {
-            let volume: LinearVolume = volume_dims_nonempty(vector![2, 2, 2], &[2]);
+            let volume: FloatVolume = volume_dims_nonempty(vector![2, 2, 2], &[2]);
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 1);
@@ -190,7 +190,7 @@ mod test {
         #[test]
         fn empty_side3() {
             // cell size 3 --> 4 voxels
-            let volume: LinearVolume = empty_volume(vector![10, 5, 19]);
+            let volume: FloatVolume = empty_volume(vector![10, 5, 19]);
             let empty_index = EmptyIndex::<4>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 3 * 2 * 6);
@@ -201,7 +201,7 @@ mod test {
         #[test]
         fn empty_side6() {
             // cell size 6 --> 7 voxels
-            let volume: LinearVolume = empty_volume(vector![23, 15, 8]);
+            let volume: FloatVolume = empty_volume(vector![23, 15, 8]);
             let empty_index = EmptyIndex::<7>::from_volume(&volume);
 
             assert_eq!(empty_index.blocks.len(), 4 * 3 * 2);
@@ -224,7 +224,7 @@ mod test {
                 panic!("test error - no data from empty_vol");
             }
 
-            let volume: LinearVolume = BuildVolume::build(meta).unwrap();
+            let volume: FloatVolume = BuildVolume::build(meta).unwrap();
 
             let empty_index = EmptyIndex::<2>::from_volume(&volume);
 

@@ -2,6 +2,6 @@
 
 pub mod block;
 pub mod block_stream;
-pub mod linear;
+pub mod float_linear;
 pub mod linear_stream;
 pub mod multi_thread;

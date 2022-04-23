@@ -232,7 +232,7 @@ impl RenderState {
             }
             (false, false) => {
                 println!("LinearVolume");
-                let renderer = volume_setup_linear::<LinearVolume>(
+                let renderer = volume_setup_linear::<FloatVolume>(
                     path,
                     parser,
                     self.render_options,

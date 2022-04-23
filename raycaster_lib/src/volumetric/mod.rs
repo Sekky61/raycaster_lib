@@ -36,7 +36,7 @@ pub mod volumes {
 
     pub use block::Block;
     pub use block_volume::BlockVolume;
-    pub use linear_volume::LinearVolume;
+    pub use linear_volume::FloatVolume;
     pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
     pub use stream_linear_volume::StreamLinearVolume;
 }
@@ -62,7 +62,7 @@ mod test {
     /// Expected: `Linearvolume` and `Blockvolume` match when sampled everywhere
     #[test]
     fn linear_block_matches() {
-        let linear: LinearVolume = white_volume();
+        let linear: FloatVolume = white_volume();
         let block: BlockVolume = white_volume();
 
         let vol_size_l = linear.get_size();
@@ -85,7 +85,7 @@ mod test {
     #[test]
     #[ignore]
     fn linear_block_matches_skull() {
-        let linear: LinearVolume = skull_volume(None);
+        let linear: FloatVolume = skull_volume(None);
         let block: BlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
@@ -107,7 +107,7 @@ mod test {
     /// Expected: Samples inside cell match
     #[test]
     fn sample_at_subsamples_match() {
-        let linear: LinearVolume = skull_volume(None);
+        let linear: FloatVolume = skull_volume(None);
         let block: BlockVolume = skull_volume(Some(5));
 
         let sampling_coord = point![0.0, 25.0, 114.0];
@@ -128,7 +128,7 @@ mod test {
     /// Test ignored as it a longer test
     /// Ignored tests can be run using `cargo test -- --ignored`
     fn linear_block_sample_at_matches() {
-        let linear: LinearVolume = skull_volume(None);
+        let linear: FloatVolume = skull_volume(None);
         let block: BlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();

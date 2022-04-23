@@ -7,7 +7,9 @@ use super::{
     EmptyIndex, Volume,
 };
 
-pub struct LinearVolume {
+/// Samples are stored in slices, but the slices are converted to floats in preprocessing stage.
+/// Viable for small volumes, as it needs to be stored in RAM, preprocessed and takes 4x the memory (4B float vs 1B int sample).
+pub struct FloatVolume {
     bound_box: BoundBox, // lower and upper point in world coordinates; lower == position; upper - lower = size
     size: Vector3<usize>,
     data: Vec<f32>,
@@ -15,7 +17,7 @@ pub struct LinearVolume {
     empty_index: EmptyIndex<4>,
 }
 
-impl std::fmt::Debug for LinearVolume {
+impl std::fmt::Debug for FloatVolume {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Volume")
             .field("box", &self.bound_box)
@@ -25,7 +27,7 @@ impl std::fmt::Debug for LinearVolume {
     }
 }
 
-impl LinearVolume {
+impl FloatVolume {
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
@@ -49,7 +51,7 @@ impl LinearVolume {
     }
 }
 
-impl Volume for LinearVolume {
+impl Volume for FloatVolume {
     fn sample_at(&self, pos: Point3<f32>) -> f32 {
         let x = pos.x as usize;
         let y = pos.y as usize;
@@ -120,8 +122,8 @@ impl Volume for LinearVolume {
     }
 }
 
-impl BuildVolume<u8> for LinearVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<LinearVolume, &'static str> {
+impl BuildVolume<u8> for FloatVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<FloatVolume, &'static str> {
         println!("Build started");
 
         let data = metadata.data.ok_or("No volumetric data passed")?;
@@ -148,7 +150,7 @@ impl BuildVolume<u8> for LinearVolume {
 
         println!("New linear volume, size {size:?} scale {scale:?} bound_box {bound_box:?}");
 
-        let mut volume = LinearVolume {
+        let mut volume = FloatVolume {
             bound_box,
             size,
             data,
@@ -241,7 +243,7 @@ mod test {
 
     #[test]
     fn intersect_works() {
-        let vol: LinearVolume = white_volume();
+        let vol: FloatVolume = white_volume();
         let bbox = vol.get_bound_box();
         let ray = Ray {
             origin: point![-1.0, -1.0, 0.0],
@@ -254,7 +256,7 @@ mod test {
 
     #[test]
     fn intersect_works2() {
-        let vol: LinearVolume = white_volume();
+        let vol: FloatVolume = white_volume();
         let ray = Ray {
             origin: point![-0.4, 0.73, 0.0],
             direction: vector![1.0, 0.0, 1.0],
@@ -267,7 +269,7 @@ mod test {
 
     #[test]
     fn not_intersecting() {
-        let vol: LinearVolume = white_volume();
+        let vol: FloatVolume = white_volume();
         let ray = Ray {
             origin: point![200.0, 200.0, 200.0],
             direction: vector![1.0, 0.0, 0.0],

@@ -1,6 +1,8 @@
 use common::volume_files::*;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use render_benchmarks::{block::*, block_stream::*, linear::*, linear_stream::*, multi_thread::*};
+use render_benchmarks::{
+    block::*, block_stream::*, float_linear::*, linear_stream::*, multi_thread::*,
+};
 
 mod common;
 mod render_benchmarks;
@@ -13,7 +15,7 @@ const SAMPLE_SIZE: usize = 10;
 criterion_group! {
     name = sequential_linear_skull;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_linear<{SKULL_ID}>, render_linear_ert<{SKULL_ID}>, render_linear_ei<{SKULL_ID}>, render_linear_ert_ei<{SKULL_ID}>
+    targets = render_linear_float<{SKULL_ID}>, render_linear_float_ert<{SKULL_ID}>, render_linear_float_ei<{SKULL_ID}>, render_linear_float_ert_ei<{SKULL_ID}>
 }
 
 // Linear Volume Streamed
@@ -57,7 +59,7 @@ criterion_group! {
 criterion_group! {
     name = sequential_ei;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_linear_ei<{SKULL_ID}>
+    targets = render_linear_float_ei<{SKULL_ID}>
 }
 
 criterion_group! {

@@ -3,9 +3,9 @@ use std::marker::PhantomData;
 use crate::common::volume_files::*;
 use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::volumes::LinearVolume};
+use raycaster_lib::{render::RenderOptions, volumetric::volumes::FloatVolume};
 
-pub fn render_linear<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_linear_float<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -19,7 +19,7 @@ pub fn render_linear<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<LinearVolume>,
+        PhantomData::<FloatVolume>,
         Memory::Stream,
         None,
     );
@@ -29,7 +29,7 @@ pub fn render_linear<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_linear_ert<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_linear_float_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -43,7 +43,7 @@ pub fn render_linear_ert<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<LinearVolume>,
+        PhantomData::<FloatVolume>,
         Memory::Stream,
         None,
     );
@@ -53,7 +53,7 @@ pub fn render_linear_ert<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_linear_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_linear_float_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -67,7 +67,7 @@ pub fn render_linear_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<LinearVolume>,
+        PhantomData::<FloatVolume>,
         Memory::Stream,
         None,
     );
@@ -77,7 +77,7 @@ pub fn render_linear_ei<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_linear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_linear_float_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -91,7 +91,7 @@ pub fn render_linear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<LinearVolume>,
+        PhantomData::<FloatVolume>,
         Memory::Stream,
         None,
     );
