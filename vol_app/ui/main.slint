@@ -13,8 +13,13 @@ App := Window {
 
     property<int> frame_time;
 
+    property<string> path_text: "Nonebar";
+
     property<[StandardListViewItem]> parsers_name_list : [{text: "Vol parser"}, {text: "Skull parser"}];
     property<int> parser_picked_index;
+
+    property<[StandardListViewItem]> memory_list : [{text: "Memory mapped file"}, {text: "Samples in RAM"}, {text: "Samples in RAM converted to float"}];
+    property<int> memory_picked_index;
 
     property<[string]> tf_list : ["Skull", "Gray", "White", "Shapes"];
     property<string> tf_current_value: "Skull";
@@ -68,14 +73,39 @@ App := Window {
                     }
 
                     Text { 
-                        text: "Choose a parser";
-                     }
+                        text: root.path_text;
+                    }
+                    
+                    VerticalLayout {
+                        padding-top: 20px;
+                        spacing: 10px;
 
-                    StandardListView {
-                        width: parent.width;
-                        height: 300px;
-                        model <=> root.parsers_name_list;
-                        current-item <=> root.parser_picked_index;
+                        Text {
+                            text: "Choose a parser";
+                        }
+
+                        StandardListView {
+                            width: parent.width;
+                            height: 120px;
+                            model <=> root.parsers_name_list;
+                            current-item <=> root.parser_picked_index;
+                        }
+                    }
+
+                    VerticalLayout {
+                        padding-top: 20px;
+                        spacing: 10px;
+                        
+                        Text { 
+                            text: "Choose a form of samples";
+                        }
+
+                        StandardListView {
+                            width: parent.width;
+                            height: 120px;
+                            model <=> root.memory_list;
+                            current-item <=> root.memory_picked_index;
+                        }
                     }
 
                     VerticalLayout {

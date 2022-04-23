@@ -39,6 +39,13 @@ impl CameraBuffer {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum PickedMemoryType {
+    Stream,
+    Ram,
+    RamFloat,
+}
+
 /// Quality of rendered image
 /// At the moment, the difference is sampling step
 #[derive(Debug, Clone, Copy)]
@@ -90,7 +97,6 @@ pub struct RenderState {
     pub render_time: Instant,
     pub is_rendering: bool,
     pub multi_thread: bool,
-    pub stream_volume: MemoryType,
     pub current_frame_quality: RenderQuality,
 }
 
@@ -114,7 +120,6 @@ impl RenderState {
             render_options,
             render_quality_preference: defaults::RENDER_QUALITY,
             multi_thread: defaults::MULTI_THREAD,
-            stream_volume: defaults::MEMORY_TYPE,
             render_time: Instant::now(),
             current_tf: defaults::TRANSFER_FUNCTION,
             current_frame_quality: RenderQuality::Quality,
@@ -192,55 +197,83 @@ impl RenderState {
     /// # Params
     /// * `path` - path of file to parse
     /// * `parser` - parser to use
-    pub fn start_renderer(&mut self, path: &Path, parser: PrewrittenParser) {
+    pub fn start_renderer(
+        &mut self,
+        path: &Path,
+        parser: PrewrittenParser,
+        mem_type: PickedMemoryType,
+    ) {
+        // todo no params are needed
         print!(
             "GUI: starting renderer: MT {} | ERT {} | EI {} | ",
             self.multi_thread,
             self.render_options.early_ray_termination,
             self.render_options.empty_space_skipping
         );
-        match (self.stream_volume, self.multi_thread) {
-            (MemoryType::Stream, true) => {
-                println!("StreamBlockVolume");
+        match (mem_type, self.multi_thread) {
+            (PickedMemoryType::Stream, true) => {
+                println!("{} Stream", <StreamBlockVolume as Volume>::get_name());
                 let renderer = volume_setup_paralel::<StreamBlockVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
-                    self.stream_volume,
-                ); // todo tf redundant
-                self.renderer_front.start_rendering(renderer);
-            }
-            (MemoryType::Ram, true) => {
-                println!("BlockVolume");
-                let renderer = volume_setup_paralel::<BlockVolume>(
-                    path,
-                    parser,
-                    self.render_options,
-                    self.current_tf,
-                    self.stream_volume,
+                    MemoryType::Stream,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
-            (MemoryType::Stream, false) => {
-                println!("StreamLinearVolume");
+            (PickedMemoryType::Stream, false) => {
+                println!("{} Stream", <LinearVolume as Volume>::get_name());
                 let renderer = volume_setup_linear::<LinearVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
-                    self.stream_volume,
+                    MemoryType::Stream,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
-            (MemoryType::Ram, false) => {
-                println!("LinearVolume");
+            (PickedMemoryType::Ram, true) => {
+                println!("{} Ram", <StreamBlockVolume as Volume>::get_name());
+                let renderer = volume_setup_paralel::<StreamBlockVolume>(
+                    path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                    MemoryType::Ram,
+                );
+                self.renderer_front.start_rendering(renderer);
+            }
+            (PickedMemoryType::Ram, false) => {
+                println!("{} Ram", <LinearVolume as Volume>::get_name());
+                let renderer = volume_setup_linear::<LinearVolume>(
+                    path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                    MemoryType::Ram,
+                );
+                self.renderer_front.start_rendering(renderer);
+            }
+            (PickedMemoryType::RamFloat, true) => {
+                println!("{} Ram Float", <BlockVolume as Volume>::get_name());
+                let renderer = volume_setup_paralel::<BlockVolume>(
+                    path,
+                    parser,
+                    self.render_options,
+                    self.current_tf,
+                    MemoryType::Ram,
+                );
+                self.renderer_front.start_rendering(renderer);
+            }
+            (PickedMemoryType::RamFloat, false) => {
+                println!("{}", <FloatVolume as Volume>::get_name());
                 let renderer = volume_setup_linear::<FloatVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
-                    self.stream_volume,
+                    MemoryType::Ram,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
@@ -248,10 +281,6 @@ impl RenderState {
 
         self.renderer_front
             .send_message(RendererMessage::StartRendering);
-        println!(
-            "Started renderer: {} | {path:#?}",
-            if self.multi_thread { "MT" } else { "ST" }
-        );
     }
 
     /// Put `movement` to buffer
@@ -339,4 +368,13 @@ fn construct_common(
     let camera = Arc::new(RwLock::new(camera));
 
     (camera, parser_fn, tf_fn)
+}
+impl PickedMemoryType {
+    pub fn get_gui_index(&self) -> i32 {
+        match self {
+            PickedMemoryType::Stream => 0,
+            PickedMemoryType::Ram => 1,
+            PickedMemoryType::RamFloat => 2,
+        }
+    }
 }

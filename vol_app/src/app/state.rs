@@ -3,7 +3,7 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 use crossbeam_channel::Receiver;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::Mutex;
-use raycaster_lib::render::RendererMessage;
+use raycaster_lib::{render::RendererMessage, volumetric::MemoryType};
 use slint::{
     re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
     Weak,
@@ -12,7 +12,7 @@ use slint::{
 use super::{
     common::{CameraMovement, PrewrittenParser, PrewrittenTF},
     defaults,
-    render_state::RenderQualitySettings,
+    render_state::{PickedMemoryType, RenderQualitySettings},
     RenderState, StateRef,
 };
 
@@ -31,6 +31,7 @@ pub struct State {
     // Current volume
     current_vol_path: PathBuf,
     current_parser: PrewrittenParser,
+    current_memory_type: PickedMemoryType,
     // Vol picker
     file_picked: Option<PathBuf>,
     parser_picked: Option<PrewrittenParser>, // todo current parser to fix switching TF
@@ -56,6 +57,7 @@ impl State {
             rendering: RenderState::new(),
             current_vol_path: defaults::VOLUME_PATH.into(),
             current_parser: defaults::VOLUME_PARSER,
+            current_memory_type: defaults::MEMORY_TYPE,
         }
     }
 
@@ -186,23 +188,33 @@ impl State {
 
     /// Start renderer with default values
     pub fn initial_render_call(&mut self) {
-        self.rendering
-            .start_renderer(&self.current_vol_path, self.current_parser);
+        self.rendering.start_renderer(
+            &self.current_vol_path,
+            self.current_parser,
+            self.current_memory_type,
+        );
     }
 
     /// Setter
     pub fn set_file_picked(&mut self, file: PathBuf) {
         self.file_picked = Some(file);
+
+        let picked_vol_path = match self.file_picked {
+            Some(ref p) => p.clone().into_os_string().into_string().unwrap(),
+            None => "Nothing picked".into(),
+        };
+        self.app.unwrap().set_path_text(picked_vol_path.into());
     }
 
     /// Start new renderer based on user input
-    pub fn handle_open_vol(&mut self, parser_index: i32) {
+    pub fn handle_open_vol(&mut self, parser_index: i32, memory_index: i32) {
         // Is file and parser picked?
         let path_picked = self.file_picked.is_some();
         let parser_picked = parser_index != -1;
+        let memory_picked = memory_index != -1;
 
         // Is parser selected?
-        if !path_picked || !parser_picked {
+        if !path_picked || !parser_picked || !memory_picked {
             return;
         }
 
@@ -212,6 +224,7 @@ impl State {
             None => return, // todo error
         };
         self.parser_picked = None;
+        self.app.unwrap().set_path_text("Nothing picked".into());
 
         // Display new
         let parser = match parser_index {
@@ -220,25 +233,41 @@ impl State {
             _ => panic!("Unexpected parser"),
         };
 
+        let memory_type = match memory_index {
+            0 => PickedMemoryType::Stream,
+            1 => PickedMemoryType::Ram,
+            2 => PickedMemoryType::RamFloat,
+            _ => panic!("Unexpected memory type picked"),
+        };
+
         self.current_vol_path = path;
         self.current_parser = parser;
+        self.current_memory_type = memory_type;
 
-        self.rendering
-            .start_renderer(&self.current_vol_path, self.current_parser);
+        self.rendering.start_renderer(
+            &self.current_vol_path,
+            self.current_parser,
+            self.current_memory_type,
+        );
     }
 
     /// Restart renderer with new transfer function
     pub fn handle_tf_changed(&mut self, tf_name: &str) {
+        // todo check if works
         let tf = match tf_name {
-            "Green" => PrewrittenTF::Skull,
+            "Skull" => PrewrittenTF::Skull,
             "Gray" => PrewrittenTF::Gray,
             "White" => PrewrittenTF::White,
             "Shapes" => PrewrittenTF::Shapes,
             _ => panic!("Unknown transfer function '{tf_name}'"),
         };
         self.current_tf = tf;
-        self.rendering
-            .start_renderer(&self.current_vol_path, self.current_parser);
+        self.rendering.current_tf = tf;
+        self.rendering.start_renderer(
+            &self.current_vol_path,
+            self.current_parser,
+            self.current_memory_type,
+        );
     }
 
     /// New quality setting picked by user
@@ -289,10 +318,23 @@ impl State {
         let ert = self.rendering.render_options.early_ray_termination;
         let ei = self.rendering.render_options.empty_space_skipping;
         let render_quality = self.rendering.render_quality_preference.to_gui_int();
+        let picked_vol_path = match self.file_picked {
+            Some(ref p) => p.clone().into_os_string().into_string().unwrap(),
+            None => "Nothing picked".into(),
+        };
+
+        let tf = self.rendering.current_tf.get_name();
+        let parser_index = self.current_parser.get_gui_index();
+        let memory_index = self.current_memory_type.get_gui_index();
 
         app.set_mt_checked(mt);
         app.set_ert_checked(ert);
         app.set_ei_checked(ei);
+        app.set_tf_current_value(tf.into());
+
+        app.set_path_text(picked_vol_path.into());
+        app.set_parser_picked_index(parser_index);
+        app.set_memory_picked_index(memory_index);
 
         app.set_render_quality_mode(render_quality);
     }

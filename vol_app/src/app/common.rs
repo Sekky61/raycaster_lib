@@ -39,6 +39,15 @@ impl PrewrittenParser {
             PrewrittenParser::SkullParser => skull_parser,
         }
     }
+
+    /// Get index in GUI
+    pub fn get_gui_index(&self) -> i32 {
+        // todo typedef return type
+        match self {
+            PrewrittenParser::MyVolParser => 0,
+            PrewrittenParser::SkullParser => 1,
+        }
+    }
 }
 
 /// List of transfer functions user can choose
@@ -59,6 +68,17 @@ impl PrewrittenTF {
             PrewrittenTF::Gray => transfer_functions::anything_tf,
             PrewrittenTF::White => transfer_functions::white_tf,
             PrewrittenTF::Shapes => transfer_functions::shapes_tf,
+        }
+    }
+
+    /// Mapping from enum variant to string with name.
+    /// To update GUI while initializing.
+    pub fn get_name(&self) -> &'static str {
+        match self {
+            PrewrittenTF::Skull => "Skull",
+            PrewrittenTF::Gray => "Gray",
+            PrewrittenTF::White => "White",
+            PrewrittenTF::Shapes => "Shapes",
         }
     }
 }

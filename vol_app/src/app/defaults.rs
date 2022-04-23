@@ -4,7 +4,7 @@
 
 use super::{
     common::{PrewrittenParser, PrewrittenTF},
-    render_state::RenderQualitySettings,
+    render_state::{PickedMemoryType, RenderQualitySettings},
 };
 use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use raycaster_lib::volumetric::MemoryType;
@@ -28,7 +28,7 @@ pub const EI: bool = true;
 /// Does not affect volumes saved in files by blocks.
 pub const BLOCK_SIDE: usize = 32;
 
-pub const MEMORY_TYPE: MemoryType = MemoryType::Ram;
+pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Ram;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Shapes;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;

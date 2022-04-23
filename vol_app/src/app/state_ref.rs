@@ -127,7 +127,8 @@ impl StateRef {
 
             let app = state.get_app();
             let parser_gui_index = app.get_parser_picked_index();
-            state.handle_open_vol(parser_gui_index);
+            let memory_gui_index = app.get_memory_picked_index();
+            state.handle_open_vol(parser_gui_index, memory_gui_index);
         });
 
         // MT checkbox changed callback
