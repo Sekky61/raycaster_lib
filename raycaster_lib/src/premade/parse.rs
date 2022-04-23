@@ -20,7 +20,7 @@ pub fn from_file<P, T, M, PF>(path: P, parser: PF, tf: TF) -> Result<T, &'static
 where
     P: AsRef<Path>,
     T: BuildVolume<M> + Volume,
-    PF: Fn(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
+    PF: FnOnce(DataSource<u8>) -> Result<VolumeMetadata<M>, &'static str>,
 {
     let ds: DataSource<u8> = DataSource::from_file(path)?;
     let mut metadata = parser(ds)?;
@@ -36,7 +36,7 @@ pub fn from_data_source<T, M>(
 where
     T: BuildVolume<M> + Volume,
 {
-    let slice = ds.get_slice().ok_or("Cannot get data")?;
+    let slice = ds.get_slice();
     let mut metadata = parser(slice)?;
     metadata.set_tf(tf);
     BuildVolume::<M>::build(metadata)
@@ -48,7 +48,7 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
     // Scope to drop DataSource
     let size = {
         let mut beetle_header = tuple((le_u16, le_u16, le_u16));
-        let slice = data_source.get_slice().ok_or("No data in data_source")?;
+        let slice = data_source.get_slice();
         let parse_res: IResult<_, _> = beetle_header(slice);
 
         let (_rest, size) = match parse_res {
@@ -58,7 +58,8 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
         size
     };
 
-    let new_data_src = data_source.into_transmute();
+    let data_pure_samples = data_source.clone_with_offset(6);
+    let new_data_src = data_pure_samples.into_transmute();
 
     let size = vector![size.0 as usize, size.1 as usize, size.2 as usize];
 
@@ -67,10 +68,10 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
         size: Some(size),
         scale: None,
         data: Some(new_data_src),
-        data_offset: Some(6),
         data_shape: Some(StorageShape::Linear),
         tf: Some(beetle_tf),
         block_side: None,
+        memory_type: None,
     };
 
     Ok(meta)
@@ -83,7 +84,7 @@ pub struct ExtractedMetaSkull {
 }
 
 pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
-    let slice = data_source.get_slice().ok_or("No data in data_source")?;
+    let slice = data_source.get_slice();
 
     let parse_res = skull_inner(slice);
 
@@ -96,15 +97,17 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
         Err(_) => return Err("Parse error"),
     };
 
+    let cut_data = data_source.clone_with_offset(offset);
+
     Ok(VolumeMetadata {
         position: None,
         size: Some(size),
         scale: Some(scale),
-        data_offset: Some(offset),
-        data: Some(data_source),
+        data: Some(cut_data),
         data_shape: Some(StorageShape::Linear),
         tf: Some(skull_tf),
         block_side: None,
+        memory_type: None,
     })
 }
 
@@ -140,7 +143,7 @@ pub struct ExtractedMetaGen {
 }
 
 pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
-    let slice = data_source.get_slice().ok_or("No data in data_source")?;
+    let slice = data_source.get_slice();
 
     let parse_res = generator_inner(slice);
 
@@ -167,6 +170,8 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         _ => return Err("Unknown data shape"),
     };
 
+    let cut_data = data_source.clone_with_offset(offset);
+
     // todo doesnt hold for z shape (padidng to blocks)
     //assert_eq!(slice.len() - offset, size.x * size.y * size.z);
 
@@ -174,11 +179,11 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         position: None,
         size: Some(size),
         scale: Some(scale),
-        data_offset: Some(offset),
-        data: Some(data_source),
+        data: Some(cut_data),
         data_shape: Some(data_shape),
         tf: Some(skull_tf),
         block_side,
+        memory_type: None,
     })
 }
 

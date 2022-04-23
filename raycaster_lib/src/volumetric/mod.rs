@@ -28,7 +28,7 @@ mod volume;
 
 pub use empty_index::EmptyIndex;
 pub use vol_builder::DataSource;
-pub use vol_builder::{BuildVolume, StorageShape, VolumeMetadata};
+pub use vol_builder::{BuildVolume, MemoryType, StorageShape, VolumeMetadata}; // todo move
 pub use volume::{Blocked, Volume};
 
 pub mod volumes {
@@ -38,7 +38,7 @@ pub mod volumes {
     pub use block_volume::BlockVolume;
     pub use linear_volume::FloatVolume;
     pub use stream_block_volume::{StreamBlock, StreamBlockVolume};
-    pub use stream_linear_volume::StreamLinearVolume;
+    pub use stream_linear_volume::LinearVolume;
 }
 
 #[cfg(test)]

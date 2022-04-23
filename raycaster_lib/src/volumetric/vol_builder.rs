@@ -14,6 +14,12 @@ where
     fn build(metadata: VolumeMetadata<T>) -> Result<Self, &'static str>;
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum MemoryType {
+    Stream,
+    Ram,
+}
+
 pub enum StorageShape {
     Linear,
     Z(u8),
@@ -27,7 +33,7 @@ pub struct VolumeMetadata<T> {
     pub scale: Option<Vector3<f32>>, // Shape of cells
     // Data
     pub data: Option<DataSource<T>>,
-    pub data_offset: Option<usize>,
+    pub memory_type: Option<MemoryType>,
     pub data_shape: Option<StorageShape>,
     pub tf: Option<TF>,            // Transfer function
     pub block_side: Option<usize>, // todo u16
@@ -62,11 +68,6 @@ impl<T> VolumeMetadata<T> {
         self
     }
 
-    pub fn set_data_offset(&mut self, data_offset: usize) -> &mut Self {
-        self.data_offset = Some(data_offset);
-        self
-    }
-
     pub fn set_tf(&mut self, tf: TF) -> &mut Self {
         self.tf = Some(tf);
         self
@@ -76,8 +77,14 @@ impl<T> VolumeMetadata<T> {
         self.block_side = Some(block_side);
         self
     }
+
+    pub fn set_memory_type(&mut self, memory_type: MemoryType) -> &mut Self {
+        self.memory_type = Some(memory_type);
+        self
+    }
 }
 
+#[derive(Debug)]
 pub struct TypedMmap {
     mmap: Mmap,
     offset: usize,
@@ -94,6 +101,10 @@ impl TypedMmap {
 
     pub fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
+    }
+
+    pub fn get_raw(&self) -> &[u8] {
+        &self.mmap[self.offset..]
     }
 
     pub fn get_all<T>(&self) -> &[T] {
@@ -120,17 +131,13 @@ impl TypedMmap {
     }
 }
 
+#[derive(Debug)]
 pub enum DataSource<T> {
     Vec(Vec<T>),
     Mmap(TypedMmap),
-    None,
 }
 
-impl<T> DataSource<T> {
-    pub fn new() -> DataSource<T> {
-        DataSource::None
-    }
-
+impl<T: Clone> DataSource<T> {
     pub fn into<U>(self) -> DataSource<U>
     where
         T: Into<U> + Copy,
@@ -141,7 +148,22 @@ impl<T> DataSource<T> {
                 DataSource::Vec(new)
             }
             DataSource::Mmap(m) => DataSource::Mmap(m),
-            DataSource::None => DataSource::None,
+        }
+    }
+
+    /// Adds offset
+    /// Offset in elements, not bytes
+    pub fn clone_with_offset(self, offset: usize) -> Self {
+        match self {
+            DataSource::Vec(v) => {
+                let slice = &v.as_slice()[offset..];
+                let new_vec = slice.to_owned();
+                DataSource::Vec(new_vec)
+            }
+            DataSource::Mmap(mut m) => {
+                m.offset += offset;
+                DataSource::Mmap(m)
+            }
         }
     }
 
@@ -159,30 +181,32 @@ impl<T> DataSource<T> {
                 DataSource::Vec(new)
             }
             DataSource::Mmap(m) => DataSource::Mmap(m),
-            DataSource::None => DataSource::None,
         }
     }
 
-    pub fn get_slice_transmute<U>(&self) -> Option<&[U]> {
+    pub fn get_slice_transmute<U>(&self) -> &[U] {
         let slice = match self {
-            DataSource::Vec(v) => Some(v.as_slice()),
-            DataSource::Mmap(m) => Some(m.get_all()),
-            DataSource::None => None,
-        }?;
+            DataSource::Vec(v) => v.as_slice(),
+            DataSource::Mmap(m) => m.get_all(),
+        };
 
         let ptr = slice.as_ptr();
         let len = slice.len();
         let growth = size_of::<T>() / size_of::<U>();
         let new_length = len * growth;
-        Some(unsafe { std::slice::from_raw_parts(ptr as *mut U, new_length) })
+
+        unsafe { std::slice::from_raw_parts(ptr as *mut U, new_length) }
     }
 
-    pub fn get_slice(&self) -> Option<&[T]> {
+    pub fn get_slice(&self) -> &[T] {
         match self {
-            DataSource::Vec(v) => Some(v.as_slice()),
-            DataSource::Mmap(m) => Some(m.get_all()),
-            DataSource::None => None,
+            DataSource::Vec(v) => v.as_slice(),
+            DataSource::Mmap(m) => m.get_all(),
         }
+    }
+
+    pub fn get(&self, index: usize) -> Option<T> {
+        self.get_slice().get(index).cloned()
     }
 
     pub fn from_mmap(mmap: Mmap) -> DataSource<T> {
@@ -192,6 +216,18 @@ impl<T> DataSource<T> {
 
     pub fn from_vec(vec: Vec<T>) -> DataSource<T> {
         DataSource::Vec(vec)
+    }
+
+    /// Copy mmapped file to ram
+    pub fn to_vec(self) -> Self {
+        match self {
+            DataSource::Vec(_) => self,
+            DataSource::Mmap(m) => {
+                let src = m.get_all();
+                let vec = src.to_owned();
+                DataSource::Vec(vec)
+            }
+        }
     }
 
     pub fn from_file<P>(path: P) -> Result<DataSource<T>, &'static str>
@@ -219,11 +255,5 @@ impl<T> DataSource<T> {
 
         let data_source = DataSource::from_mmap(mmap);
         Ok(data_source)
-    }
-}
-
-impl<T> Default for DataSource<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }

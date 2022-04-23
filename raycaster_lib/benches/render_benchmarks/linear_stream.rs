@@ -3,7 +3,8 @@ use std::marker::PhantomData;
 use crate::common::volume_files::*;
 use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
 use criterion::Criterion;
-use raycaster_lib::{render::RenderOptions, volumetric::volumes::StreamLinearVolume};
+use raycaster_lib::render::RenderOptions;
+use raycaster_lib::volumetric::volumes::LinearVolume;
 
 pub fn render_streamlinear<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
@@ -19,7 +20,7 @@ pub fn render_streamlinear<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamLinearVolume>,
+        PhantomData::<LinearVolume>,
         Memory::Stream,
         None,
     );
@@ -43,7 +44,7 @@ pub fn render_streamlinear_ert<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamLinearVolume>,
+        PhantomData::<LinearVolume>,
         Memory::Stream,
         None,
     );
@@ -67,7 +68,7 @@ pub fn render_streamlinear_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamLinearVolume>,
+        PhantomData::<LinearVolume>,
         Memory::Stream,
         None,
     );
@@ -91,7 +92,7 @@ pub fn render_streamlinear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         Algorithm::Linear,
         &DEFAULT_CAMERA_POSITIONS,
         path,
-        PhantomData::<StreamLinearVolume>,
+        PhantomData::<LinearVolume>,
         Memory::Stream,
         None,
     );

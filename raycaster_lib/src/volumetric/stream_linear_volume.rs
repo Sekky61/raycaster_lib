@@ -1,37 +1,38 @@
-use memmap::Mmap;
 use nalgebra::{point, vector, Point3, Vector3, Vector4};
 
 use crate::{
     common::BoundBox,
-    volumetric::{vol_builder::DataSource, EmptyIndex},
+    volumetric::{
+        vol_builder::{DataSource, MemoryType},
+        EmptyIndex,
+    },
     TF,
 };
 
 use super::{vol_builder::VolumeMetadata, BuildVolume, Volume};
 
 #[derive(Debug)]
-pub struct StreamLinearVolume {
+pub struct LinearVolume {
     bound_box: BoundBox,
     size: Vector3<usize>,
     empty_index: EmptyIndex<4>,
-    file_map: Mmap,
-    map_offset: usize,
+    data: DataSource<u8>,
     tf: TF,
 }
 
-impl StreamLinearVolume {
+impl LinearVolume {
     fn get_3d_index(&self, x: usize, y: usize, z: usize) -> usize {
         z + y * self.size.z + x * self.size.y * self.size.z
     }
 
     fn get_3d_data(&self, x: usize, y: usize, z: usize) -> Option<f32> {
-        let index = self.map_offset + self.get_3d_index(x, y, z);
-        let buf: &[u8] = self.file_map.as_ref();
-        buf.get(index).map(|v| *v as f32)
+        let index = self.get_3d_index(x, y, z);
+        let val = self.data.get(index);
+        val.map(|v| v as f32)
     }
 
     fn get_block_data_half(&self, base: usize) -> Vector4<f32> {
-        let buf: &[u8] = &self.file_map.as_ref()[self.map_offset..];
+        let buf = self.data.get_slice();
         if base + self.size.z + 1 >= buf.len() {
             vector![0.0, 0.0, 0.0, 0.0]
         } else {
@@ -45,24 +46,27 @@ impl StreamLinearVolume {
     }
 }
 
-impl BuildVolume<u8> for StreamLinearVolume {
-    fn build(metadata: VolumeMetadata<u8>) -> Result<StreamLinearVolume, &'static str> {
+impl BuildVolume<u8> for LinearVolume {
+    fn build(metadata: VolumeMetadata<u8>) -> Result<LinearVolume, &'static str> {
         println!("Build started");
 
         let data = metadata.data.ok_or("No data")?;
+        let memory_type = metadata.memory_type.unwrap_or(MemoryType::Ram);
 
-        let (mmap, map_offset) = if let DataSource::Mmap(tm) = data {
-            // todo or use typedmap?
-            tm.into_inner()
-        } else {
-            return Err("No file mapped");
+        match data {
+            DataSource::Mmap(_) => (),
+            _ => panic!("Not file mapped"),
+        }
+
+        let data = match memory_type {
+            MemoryType::Stream => data,
+            MemoryType::Ram => data.to_vec(),
         };
 
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No tf")?;
-        let data_offset = metadata.data_offset.ok_or("No data offset")?;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>()
@@ -71,16 +75,15 @@ impl BuildVolume<u8> for StreamLinearVolume {
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         println!(
-            "Constructed StreamLinearVolume ({}x{}x{}) offset {}",
-            size.x, size.y, size.z, data_offset
+            "Constructed LinearVolume ({}x{}x{}) memory {:?}",
+            size.x, size.y, size.z, memory_type
         );
 
-        let mut volume = StreamLinearVolume {
+        let mut volume = LinearVolume {
             bound_box,
             size,
-            file_map: mmap,
-            map_offset: data_offset,
             tf,
+            data,
             empty_index: EmptyIndex::dummy(),
         };
 
@@ -91,7 +94,7 @@ impl BuildVolume<u8> for StreamLinearVolume {
     }
 }
 
-impl Volume for StreamLinearVolume {
+impl Volume for LinearVolume {
     fn get_size(&self) -> Vector3<usize> {
         self.size
     }
@@ -154,7 +157,7 @@ impl Volume for StreamLinearVolume {
     }
 
     fn get_name() -> &'static str {
-        "StreamLinearVolume"
+        "LinearVolume"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {

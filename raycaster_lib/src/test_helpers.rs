@@ -19,12 +19,12 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
     VolumeMetadata {
         size: Some(vector![2, 2, 2]),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
-        data_offset: Some(0),
         position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
         block_side: Some(16),
+        memory_type: None,
     }
 }
 
@@ -34,12 +34,12 @@ pub fn empty_vol_meta(size: Vector3<usize>) -> VolumeMetadata<u8> {
     VolumeMetadata {
         size: Some(size),
         scale: Some(vector![100.0, 100.0, 100.0]), // shape of voxels
-        data_offset: Some(0),
         position: Some(point![0.0, 0.0, 0.0]),
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
         block_side: Some(16),
+        memory_type: None,
     }
 }
 

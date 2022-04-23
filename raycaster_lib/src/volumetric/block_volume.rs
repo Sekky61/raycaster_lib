@@ -153,7 +153,6 @@ impl BuildVolume<u8> for BlockVolume {
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
-        let offset = metadata.data_offset.unwrap_or(0);
         let tf = metadata.tf.ok_or("No transfer function")?;
         let block_side = metadata.block_side.ok_or("No block side")?;
 
@@ -168,7 +167,7 @@ impl BuildVolume<u8> for BlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let slice = &data.get_slice().ok_or("No data in datasource")?[offset..];
+        let slice = data.get_slice();
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {

@@ -322,10 +322,9 @@ impl BuildVolume<u8> for StreamBlockVolume {
         let position = metadata.position.unwrap_or_else(|| point![0.0, 0.0, 0.0]);
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
-        let data = metadata.data.ok_or("No data")?;
-        let data_offset = metadata.data_offset.unwrap_or(0);
         let tf = metadata.tf.ok_or("No transfer function")?;
         let block_side = metadata.block_side.ok_or("No block side")?;
+        let data = metadata.data.ok_or("No data")?;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
@@ -338,11 +337,11 @@ impl BuildVolume<u8> for StreamBlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let (data_owner, _) = match data {
+        let (data_owner, offset) = match data {
             DataSource::Mmap(m) => m.into_inner(),
             _ => return Err("Data not memory mapped"),
         };
-        let ptr = unsafe { data_owner.as_ptr().add(data_offset) };
+        let ptr = unsafe { data_owner.as_ptr().add(offset) };
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {
@@ -364,7 +363,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
         let empty_blocks = StreamBlockVolume::build_empty(&blocks, tf);
 
         println!(
-            "Built {} blocks of dims {} blocks ({},{},{}) -> ({},{},{})",
+            "Built {} blocks of dims {} blocks ({},{},{}) blocks ({},{},{}) memory",
             blocks.len(),
             block_side,
             size.x,

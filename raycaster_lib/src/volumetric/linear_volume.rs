@@ -114,7 +114,7 @@ impl Volume for FloatVolume {
     }
 
     fn get_name() -> &'static str {
-        "LinearVolume"
+        "FloatVolume"
     }
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {
@@ -127,10 +127,9 @@ impl BuildVolume<u8> for FloatVolume {
         println!("Build started");
 
         let data = metadata.data.ok_or("No volumetric data passed")?;
-        let slice = data.get_slice().ok_or("No data inside datasource")?;
-        let offset = metadata.data_offset.unwrap_or(0);
+        let slice = data.get_slice();
 
-        let data: Vec<f32> = slice[offset..].iter().map(|&val| val.into()).collect();
+        let data: Vec<f32> = slice.iter().map(|&val| val.into()).collect();
 
         // let data_range_max = data.iter().fold(-10000.0, |cum, &v| f32::max(v, cum));
         // let data_range_min = data.iter().fold(100000.0, |cum, &v| f32::min(v, cum));

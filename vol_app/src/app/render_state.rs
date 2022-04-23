@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 use raycaster_lib::{
     premade::parse::from_file,
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{volumes::*, Blocked, BuildVolume, DataSource, Volume},
+    volumetric::{volumes::*, Blocked, BuildVolume, DataSource, MemoryType, Volume},
     ParserFn, PerspectiveCamera, TF,
 };
 
@@ -90,7 +90,7 @@ pub struct RenderState {
     pub render_time: Instant,
     pub is_rendering: bool,
     pub multi_thread: bool,
-    pub stream_volume: bool,
+    pub stream_volume: MemoryType,
     pub current_frame_quality: RenderQuality,
 }
 
@@ -114,7 +114,7 @@ impl RenderState {
             render_options,
             render_quality_preference: defaults::RENDER_QUALITY,
             multi_thread: defaults::MULTI_THREAD,
-            stream_volume: defaults::STREAM,
+            stream_volume: defaults::MEMORY_TYPE,
             render_time: Instant::now(),
             current_tf: defaults::TRANSFER_FUNCTION,
             current_frame_quality: RenderQuality::Quality,
@@ -200,43 +200,47 @@ impl RenderState {
             self.render_options.empty_space_skipping
         );
         match (self.stream_volume, self.multi_thread) {
-            (true, true) => {
+            (MemoryType::Stream, true) => {
                 println!("StreamBlockVolume");
                 let renderer = volume_setup_paralel::<StreamBlockVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
+                    self.stream_volume,
                 ); // todo tf redundant
                 self.renderer_front.start_rendering(renderer);
             }
-            (false, true) => {
+            (MemoryType::Ram, true) => {
                 println!("BlockVolume");
                 let renderer = volume_setup_paralel::<BlockVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
+                    self.stream_volume,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
-            (true, false) => {
+            (MemoryType::Stream, false) => {
                 println!("StreamLinearVolume");
-                let renderer = volume_setup_linear::<StreamLinearVolume>(
+                let renderer = volume_setup_linear::<LinearVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
+                    self.stream_volume,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
-            (false, false) => {
+            (MemoryType::Ram, false) => {
                 println!("LinearVolume");
                 let renderer = volume_setup_linear::<FloatVolume>(
                     path,
                     parser,
                     self.render_options,
                     self.current_tf,
+                    self.stream_volume,
                 );
                 self.renderer_front.start_rendering(renderer);
             }
@@ -263,6 +267,7 @@ fn volume_setup_paralel<V>(
     parser: PrewrittenParser,
     render_options: RenderOptions,
     tf: PrewrittenTF,
+    memory: MemoryType,
 ) -> ParalelRenderer<V>
 where
     V: Volume + Blocked + BuildVolume<u8> + 'static,
@@ -271,12 +276,13 @@ where
 
     // Example of custom parsing on client side
     // If volume is not blocked, build blocks in memory
-    let parser_add_block_side = move |src: DataSource<u8>| {
+    let parser_add_block_side_volume_type = move |src: DataSource<u8>| {
         let mut res = parser_fn(src);
         match &mut res {
             Ok(ref mut m) => {
                 if m.block_side.is_none() {
                     m.block_side = Some(defaults::BLOCK_SIDE);
+                    m.set_memory_type(memory);
                 }
             }
             Err(_) => (),
@@ -284,7 +290,7 @@ where
         res
     };
 
-    let volume: V = from_file(path, parser_add_block_side, tf_fn).unwrap();
+    let volume: V = from_file(path, parser_add_block_side_volume_type, tf_fn).unwrap();
 
     ParalelRenderer::new(volume, camera, render_options)
 }
@@ -295,13 +301,25 @@ fn volume_setup_linear<V>(
     parser: PrewrittenParser,
     render_options: RenderOptions,
     tf: PrewrittenTF,
+    memory: MemoryType,
 ) -> SerialRenderer<V>
 where
     V: Volume + BuildVolume<u8>,
 {
     let (camera, parser_fn, tf_fn) = construct_common(parser, tf);
 
-    let volume = from_file(path, parser_fn, tf_fn).unwrap();
+    let parser_fn_with_volume_type = move |d| {
+        let mut meta_res = parser_fn(d);
+        match &mut meta_res {
+            Ok(meta) => {
+                meta.set_memory_type(memory);
+            }
+            Err(_) => (),
+        }
+        meta_res
+    };
+
+    let volume = from_file(path, parser_fn_with_volume_type, tf_fn).unwrap();
 
     SerialRenderer::new(volume, camera, render_options)
 }
@@ -314,6 +332,7 @@ fn construct_common(
     let direction = defaults::CAM_DIR;
 
     let parser_fn = parser.get_parser_fn();
+
     let tf_fn = tf.get_tf();
 
     let camera = PerspectiveCamera::new(position, direction);
