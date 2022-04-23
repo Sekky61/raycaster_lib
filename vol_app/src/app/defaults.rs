@@ -24,9 +24,9 @@ pub const EI: bool = true;
 
 /// Block side used when constructing blocks in memory.
 /// Does not affect volumes saved in files by blocks.
-pub const BLOCK_SIDE: usize = 44;
+pub const BLOCK_SIDE: usize = 16;
 
-pub const STREAM: bool = false;
+pub const STREAM: bool = true;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
@@ -36,9 +36,9 @@ pub const RAY_STEP_QUALITY: f32 = 0.2;
 
 // Camera
 // Ugly until https://github.com/rust-lang/rust/issues/57241 lands
-pub const CAM_POS_X: f32 = 1000.0;
-pub const CAM_POS_Y: f32 = 1000.0;
-pub const CAM_POS_Z: f32 = 1000.0;
+pub const CAM_POS_X: f32 = 3000.0;
+pub const CAM_POS_Y: f32 = 3000.0;
+pub const CAM_POS_Z: f32 = 3000.0;
 
 pub const CAM_POS: Point3<f32> = point![CAM_POS_X, CAM_POS_Y, CAM_POS_Z];
 pub const CAM_DIR: Vector3<f32> = vector![0.0 - CAM_POS_X, 0.0 - CAM_POS_Y, 0.0 - CAM_POS_Z];

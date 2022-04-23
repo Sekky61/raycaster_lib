@@ -53,7 +53,7 @@ impl StreamBlock {
             empty_index: EmptyIndex::dummy(),
         };
 
-        block.empty_index = EmptyIndex::<4>::from_volume_without_tf(&block, tf);
+        //block.empty_index = EmptyIndex::<4>::from_volume_without_tf(&block, tf);
         block
     }
 
@@ -218,6 +218,7 @@ impl StreamBlockVolume {
         }
     }
 
+    /// True == block is empty
     pub fn build_empty(blocks: &[StreamBlock], tf: TF) -> Vec<bool> {
         let mut v = Vec::with_capacity(blocks.len());
         let vis_ranges = tf_visible_range(tf);
@@ -322,7 +323,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
-        let offset = metadata.data_offset.unwrap_or(0);
+        let data_offset = metadata.data_offset.unwrap_or(0);
         let tf = metadata.tf.ok_or("No transfer function")?;
         let block_side = metadata.block_side.ok_or("No block side")?;
 
@@ -341,15 +342,16 @@ impl BuildVolume<u8> for StreamBlockVolume {
             DataSource::Mmap(m) => m.into_inner(),
             _ => return Err("Data not memory mapped"),
         };
-        let ptr = unsafe { data_owner.as_ptr().add(offset) }; // todo offset or data_offset?
+        let ptr = unsafe { data_owner.as_ptr().add(data_offset) };
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {
                 for z in 0..block_size.z {
-                    let block_start = step_size * point![x, y, z];
+                    let block_off = point![x, y, z];
+                    let block_start = step_size * block_off;
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
 
-                    let block_data_offset = get_3d_index(block_size, block_start);
+                    let block_data_offset = get_3d_index(block_size, block_off) * block_side.pow(3);
                     let block_data_ptr = unsafe { ptr.add(block_data_offset) };
                     let block = unsafe {
                         StreamBlock::new(block_side, block_bound_box, scale, block_data_ptr, tf)
@@ -385,7 +387,7 @@ impl BuildVolume<u8> for StreamBlockVolume {
             empty_index: EmptyIndex::dummy(),
         };
 
-        volume.empty_index = EmptyIndex::from_volume(&volume);
+        //volume.empty_index = EmptyIndex::from_volume(&volume);
         Ok(volume)
     }
 }

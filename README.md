@@ -94,7 +94,7 @@ cargo run --release --bin vol_gen -- --dims=100,100,100 --generator solid --samp
 
 cargo run --release --bin vol_gen -- --dims=200,200,200  --generator shapes --n-of-shapes 30 --sample 100 --output-file volumes/shapestest.vol
 
-cargo run --release --bin vol_gen -- --dims=800,800,800  --generator shapes --n-of-shapes 50  --sample 100 --output-file volumes/shapestest_block32.vol --seed 1 --layout z --block-size 32
+cargo run --release --bin vol_gen -- --dims=800,800,800  --generator shapes --n-of-shapes 50  --sample 100 --output-file volumes/shapestest_block16.vol --seed 1 --layout z --block-size 16
 ```
 
 # Dokumentace
@@ -111,7 +111,16 @@ Testovaci framework Criterion vyzaduje program `perf`.
 
 ## Data
 
-| Test | Soubor | Rozlišení | Popis | 
+| Test | Soubor | Rozlišení | TF | Popis | 
 | ----------- | ---------- | ---------- | ---------- |
-| 1 | `volumes/test_solid.vol` | 1024 | |
-| 2 | Text |
+| 1 | `volumes/2kshapes_lin.vol` | 2000 |  |  |
+| 2 | `volumes/2kshapes_block16.vol` | 2000 |  |  |
+| 3 | `volumes/4kshapes_block16.vol` | 4000 |  |  |
+
+cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2  --generator shapes --n-of-shapes 80 --sample 100 --output-file volumes/2kshapes_lin.vol
+
+cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 80 --sample 100 --output-file volumes/2kshapes_block16.vol
+
+
+cargo run --release --bin vol_gen -- --dims=96,96,96  --generator solid  --sample 100 --output-file volumes/shapestest_block16.vol --seed 1 --layout z --block-size 16
+

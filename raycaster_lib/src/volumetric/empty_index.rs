@@ -61,7 +61,7 @@ impl<const S: usize> EmptyIndex<S> {
         let block_iter = volume.get_block(side + 1, base); // side in voxels vs side in blocks
 
         // True if empty
-        block_iter.map(tf).all(|f| f.w == 0.0)
+        !block_iter.map(tf).any(|f| f.w != 0.0)
     }
 
     fn index_3d(&self, x: usize, y: usize, z: usize) -> usize {

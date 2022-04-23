@@ -6,7 +6,7 @@ use crate::config::{Config, GeneratorConfig};
 
 use super::SampleGenerator;
 
-const OBJECT_SIZE: Vector3<u32> = vector![100, 100, 100];
+const OBJECT_SIZE: Vector3<u32> = vector![10, 10, 10];
 
 /// Generate volume with a number of randomly placed shapes
 pub struct ShapesGenerator {
@@ -193,9 +193,9 @@ impl ShapeInfoGenerator {
         let size = self.random_vector(size_ranges);
 
         // Spawn shape in positions it fits
-        let pos_range_x = 0..(self.vol_dims.x - size.x);
-        let pos_range_y = 0..(self.vol_dims.y - size.y);
-        let pos_range_z = 0..(self.vol_dims.z - size.z);
+        let pos_range_x = 0..=(self.vol_dims.x - size.x);
+        let pos_range_y = 0..=(self.vol_dims.y - size.y);
+        let pos_range_z = 0..=(self.vol_dims.z - size.z);
 
         let pos_ranges = vector![pos_range_x, pos_range_y, pos_range_z];
         let position_low = self.random_vector(pos_ranges);
