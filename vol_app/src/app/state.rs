@@ -233,6 +233,7 @@ impl State {
             "Green" => PrewrittenTF::Skull,
             "Gray" => PrewrittenTF::Gray,
             "White" => PrewrittenTF::White,
+            "Shapes" => PrewrittenTF::Shapes,
             _ => panic!("Unknown transfer function '{tf_name}'"),
         };
         self.current_tf = tf;

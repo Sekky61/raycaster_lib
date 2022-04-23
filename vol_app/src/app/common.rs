@@ -47,6 +47,7 @@ pub enum PrewrittenTF {
     Skull,
     Gray,
     White,
+    Shapes,
 }
 
 impl PrewrittenTF {
@@ -57,6 +58,7 @@ impl PrewrittenTF {
             PrewrittenTF::Skull => transfer_functions::skull_tf,
             PrewrittenTF::Gray => transfer_functions::anything_tf,
             PrewrittenTF::White => transfer_functions::white_tf,
+            PrewrittenTF::Shapes => transfer_functions::shapes_tf,
         }
     }
 }

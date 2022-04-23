@@ -15,10 +15,10 @@ pub const RENDER_RESOLUTION: Vector2<u16> = vector![RENDER_WIDTH, RENDER_HEIGHT]
 
 // Volume
 // todo may not lead to a file
-pub const VOLUME_PATH: &str = "volumes/Skull.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
-pub const VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
+pub const VOLUME_PATH: &str = "volumes/800shapes_block16.vol"; // "volumes/Skull.vol" "volumes/a.vol" "volumes/solid_blocks_32.vol"
+pub const VOLUME_PARSER: PrewrittenParser = PrewrittenParser::MyVolParser;
 
-pub const MULTI_THREAD: bool = false;
+pub const MULTI_THREAD: bool = true;
 pub const ERT: bool = true;
 pub const EI: bool = true;
 
@@ -27,7 +27,7 @@ pub const EI: bool = true;
 pub const BLOCK_SIDE: usize = 16;
 
 pub const STREAM: bool = true;
-pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
+pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Shapes;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
 

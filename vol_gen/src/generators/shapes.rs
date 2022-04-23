@@ -6,7 +6,7 @@ use crate::config::{Config, GeneratorConfig};
 
 use super::SampleGenerator;
 
-const OBJECT_SIZE: Vector3<u32> = vector![10, 10, 10];
+const OBJECT_SIZE: Vector3<u32> = vector![100, 100, 100];
 
 /// Generate volume with a number of randomly placed shapes
 pub struct ShapesGenerator {
