@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    block::FloatBlock,
+    float_block::FloatBlock,
     vol_builder::{BuildVolume, VolumeMetadata},
     volume::Blocked,
     Volume,

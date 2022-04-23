@@ -125,7 +125,7 @@ mod test {
     const NONEMPTY: bool = false;
 
     use super::*;
-    use crate::{color::RGBA, test_helpers::*, volumetric::linear_volume::FloatVolume};
+    use crate::{color::RGBA, test_helpers::*, volumetric::float_volume::FloatVolume};
     use nalgebra::vector;
 
     use crate::volumetric::vol_builder::{BuildVolume, DataSource};
