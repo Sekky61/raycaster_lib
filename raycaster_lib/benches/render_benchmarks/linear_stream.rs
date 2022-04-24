@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::common::volume_files::*;
-use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
+use crate::common::{Algorithm, BenchOptions, Memory, RESOLUTION};
 use criterion::Criterion;
 use raycaster_lib::render::RenderOptions;
 use raycaster_lib::volumetric::volumes::LinearVolume;
@@ -18,7 +18,7 @@ pub fn render_streamlinear<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
         Memory::Stream,
@@ -42,7 +42,7 @@ pub fn render_streamlinear_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
         Memory::Stream,
@@ -66,7 +66,7 @@ pub fn render_streamlinear_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
         Memory::Stream,
@@ -90,7 +90,7 @@ pub fn render_streamlinear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
         Memory::Stream,

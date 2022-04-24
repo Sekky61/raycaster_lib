@@ -5,7 +5,7 @@ use crate::common::{Algorithm, BenchOptions, Memory, RESOLUTION};
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::BlockVolume};
 
-pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_ramblock<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -20,7 +20,7 @@ pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<BlockVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None, // no effect anyway
     );
 
@@ -29,7 +29,7 @@ pub fn render_streamblock<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_ramblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -44,7 +44,7 @@ pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<BlockVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
@@ -53,7 +53,7 @@ pub fn render_streamblock_ert<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_ramblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -68,7 +68,7 @@ pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<BlockVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
@@ -77,7 +77,7 @@ pub fn render_streamblock_ei<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_streamblock_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_ramblock_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -92,7 +92,7 @@ pub fn render_streamblock_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<BlockVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 

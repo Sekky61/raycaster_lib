@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
 use crate::common::volume_files::*;
-use crate::common::{Algorithm, BenchOptions, Memory, DEFAULT_CAMERA_POSITIONS, RESOLUTION};
+use crate::common::{Algorithm, BenchOptions, Memory, RESOLUTION};
 use criterion::Criterion;
 use raycaster_lib::{render::RenderOptions, volumetric::volumes::FloatBlockVolume};
 
-pub fn render_block<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_block_float<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -17,7 +17,7 @@ pub fn render_block<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<FloatBlockVolume>,
         Memory::Ram,
@@ -29,7 +29,7 @@ pub fn render_block<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_block_ert<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_block_float_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -41,7 +41,7 @@ pub fn render_block_ert<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<FloatBlockVolume>,
         Memory::Ram,
@@ -53,7 +53,7 @@ pub fn render_block_ert<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_block_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_block_float_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(false)
@@ -65,7 +65,7 @@ pub fn render_block_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<FloatBlockVolume>,
         Memory::Ram,
@@ -77,7 +77,7 @@ pub fn render_block_ei<const VOL_ID: usize>(c: &mut Criterion) {
     benchmark(c);
 }
 
-pub fn render_block_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
+pub fn render_block_float_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let render_options = RenderOptions::builder()
         .resolution(RESOLUTION)
         .early_ray_termination(true)
@@ -89,7 +89,7 @@ pub fn render_block_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
     let bench_options = BenchOptions::new(
         render_options,
         Algorithm::Linear,
-        &DEFAULT_CAMERA_POSITIONS,
+        &get_cam_pos(VOL_ID),
         path,
         PhantomData::<FloatBlockVolume>,
         Memory::Ram,

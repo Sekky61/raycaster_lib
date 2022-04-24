@@ -1,7 +1,8 @@
 use common::volume_files::*;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use render_benchmarks::{
-    block::*, block_stream::*, float_linear::*, linear_stream::*, multi_thread::*,
+    block_ram::*, block_stream::*, float_block::*, float_linear::*, linear_ram::*,
+    linear_stream::*, multi_thread::*,
 };
 
 mod common;
@@ -11,9 +12,9 @@ const SAMPLE_SIZE: usize = 10;
 
 // Single thread
 
-// Linear Volume
+// Float Volume and optimizations
 criterion_group! {
-    name = sequential_linear_small;
+    name = sequential_linear_float_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
         render_linear_float<{SMALL_SHAPES_LIN_ID}>,
@@ -22,20 +23,20 @@ criterion_group! {
         render_linear_float_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
-// Linear Volume
+// Linear Volume in RAM and optimizations
 criterion_group! {
-    name = sequential_linear_small_float;
+    name = sequential_linear_ram_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_linear_float<{SMALL_SHAPES_LIN_ID}>,
-        render_linear_float_ert<{SMALL_SHAPES_LIN_ID}>,
-        render_linear_float_ei<{SMALL_SHAPES_LIN_ID}>,
-        render_linear_float_ert_ei<{SMALL_SHAPES_LIN_ID}>
+    render_ramlinear<{SMALL_SHAPES_LIN_ID}>,
+    render_ramlinear_ert<{SMALL_SHAPES_LIN_ID}>,
+    render_ramlinear_ei<{SMALL_SHAPES_LIN_ID}>,
+    render_ramlinear_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
-// Linear Volume Streamed
+// Linear Volume Streamed and optimizations
 criterion_group! {
-    name = sequential_streamlinear_skull;
+    name = sequential_linear_stream_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
         render_streamlinear<{SMALL_SHAPES_LIN_ID}>,
@@ -44,60 +45,69 @@ criterion_group! {
         render_streamlinear_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
-// Block Volume
+// Block Volume Float and optimizations
 criterion_group! {
-    name = sequential_block_skull;
+    name = sequential_block_float_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_block<{SMALL_SHAPES_LIN_ID}>,
-        render_block_ert<{SMALL_SHAPES_LIN_ID}>,
-        render_block_ei<{SMALL_SHAPES_LIN_ID}>,
-        render_block_ert_ei<{SMALL_SHAPES_LIN_ID}>
+        render_block_float<{SMALL_SHAPES_LIN_ID}>,
+        render_block_float_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_block_float_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_block_float_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
-// Block Volume Streamed
-// todo special volume must be used
+// Block Volume stream and optimizations
 criterion_group! {
-    name = sequential_streamblock_skull;
+    name = sequential_block_stream_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_streamed<{SMALL_SHAPES_LIN_ID}>,
-        render_streamed_ert<{SMALL_SHAPES_LIN_ID}>,
-        render_streamed_ei<{SMALL_SHAPES_LIN_ID}>,
-        render_streamed_ert_ei<{SMALL_SHAPES_LIN_ID}>
+        render_streamblock<{SMALL_SHAPES_LIN_ID}>,
+        render_streamblock_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_streamblock_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_streamblock_ert_ei<{SMALL_SHAPES_LIN_ID}>
 }
 
-// Parallel
-// todo special volume must be used
+// Block Volume RAM and optimizations
 criterion_group! {
-    name = parallel;
+    name = sequential_block_ram_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_parallel_mem<{MAIN_BLOCK_ID}>,
+        render_ramblock<{SMALL_SHAPES_LIN_ID}>,
+        render_ramblock_ert<{SMALL_SHAPES_LIN_ID}>,
+        render_ramblock_ei<{SMALL_SHAPES_LIN_ID}>,
+        render_ramblock_ert_ei<{SMALL_SHAPES_LIN_ID}>
+}
+
+// 2K section
+
+// Linear Volume in RAM and optimizations
+criterion_group! {
+    name = sequential_linear_ram_2k;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets =
+    render_ramlinear<{MAIN_BLOCK_ID}>,
+    render_ramlinear_ert_ei<{MAIN_BLOCK_ID}>
+}
+
+// Parallel, 2K volume, full optimisations
+criterion_group! {
+    name = parallel_2k;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets =
+        render_float_parallel<{MAIN_BLOCK_ID}>,
+        render_parallel_ram<{MAIN_BLOCK_ID}>,
         render_parallel_stream<{MAIN_BLOCK_ID}>
 }
 
+// Streamed huge volume, 4K volume
 criterion_group! {
-    name = huge_volume;
+    name = parallel_4k;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
         render_parallel_stream<{HUGE_ID}>
 }
 
-// Testing
-
-criterion_group! {
-    name = sequential_ei;
-    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_linear_float_ei<{SMALL_SHAPES_LIN_ID}>
-}
-
-criterion_group! {
-    name = parallel_params;
-    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
-    targets = render_parallel_mem<{SMALL_SHAPES_LIN_ID}>
-}
-
+// Experiment, finding optimal block size
 criterion_group! {
     name = block_side;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);

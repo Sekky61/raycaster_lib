@@ -38,9 +38,9 @@ pub const RAY_STEP_QUALITY: f32 = 0.2;
 
 // Camera
 // Ugly until https://github.com/rust-lang/rust/issues/57241 lands
-pub const CAM_POS_X: f32 = 300.0;
-pub const CAM_POS_Y: f32 = 300.0;
-pub const CAM_POS_Z: f32 = 300.0;
+pub const CAM_POS_X: f32 = 2600.0;
+pub const CAM_POS_Y: f32 = 2600.0;
+pub const CAM_POS_Z: f32 = 2600.0;
 
 pub const CAM_POS: Point3<f32> = point![CAM_POS_X, CAM_POS_Y, CAM_POS_Z];
 pub const CAM_DIR: Vector3<f32> = vector![0.0 - CAM_POS_X, 0.0 - CAM_POS_Y, 0.0 - CAM_POS_Z];

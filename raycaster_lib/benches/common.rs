@@ -11,6 +11,7 @@ use criterion::BenchmarkId;
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use parking_lot::RwLock;
+use raycaster_lib::volumetric::MemoryType;
 pub use raycaster_lib::{
     premade::{
         parse::{from_file, skull_parser},
@@ -34,41 +35,63 @@ type CamPos = (Point3<f32>, Vector3<f32>);
 
 pub mod volume_files {
 
+    use super::*;
+
     pub const SKULL_ID: usize = 0;
     pub const SKULL_PATH: &str = "../volumes/Skull.vol";
+    pub const SKULL_CAM: [CamPos; 1] = camera_pos_single(300.0);
 
     pub const SKULL_BLOCK_ID: usize = 1;
     pub const SKULL_BLOCK_PATH: &str = "../volumes/Skull_block.vol";
+    pub const SKULL_BLOCK_CAM: [CamPos; 1] = camera_pos_single(300.0);
 
     pub const SMALL_SHAPES_LIN_ID: usize = 2;
     pub const SMALL_SHAPES_LIN_PATH: &str = "../volumes/800shapes_lin.vol";
+    pub const SMALL_SHAPES_LIN_CAM: [CamPos; 1] = camera_pos_single(1100.0);
 
     pub const SMALL_SHAPES_BLOCK_ID: usize = 3;
     pub const SMALL_SHAPES_BLOCK_PATH: &str = "../volumes/800shapes_block16.vol";
+    pub const SMALL_SHAPES_BLOCK_CAM: [CamPos; 1] = camera_pos_single(1100.0);
 
     pub const MAIN_BLOCK_ID: usize = 4;
     pub const MAIN_BLOCK_PATH: &str = "../volumes/2kshapes_block16.vol";
+    pub const MAIN_BLOCK_CAM: [CamPos; 1] = camera_pos_single(2500.0);
 
     pub const HUGE_ID: usize = 5;
     pub const HUGE_PATH: &str = "../volumes/4kshapes_block16.vol";
+    pub const HUGE_CAM: [CamPos; 1] = camera_pos_single(4600.0); // todo
 
     pub fn get_path(vol_id: usize) -> &'static str {
         match vol_id {
             SKULL_ID => SKULL_PATH,
             SKULL_BLOCK_ID => SKULL_BLOCK_PATH,
+            SMALL_SHAPES_LIN_ID => SMALL_SHAPES_LIN_PATH,
+            SMALL_SHAPES_BLOCK_ID => SMALL_SHAPES_BLOCK_PATH,
+            MAIN_BLOCK_ID => MAIN_BLOCK_PATH,
+            HUGE_ID => HUGE_PATH,
+            _ => panic!("Unknown volume ID ({vol_id})"),
+        }
+    }
+
+    pub fn get_cam_pos(vol_id: usize) -> [CamPos; 1] {
+        match vol_id {
+            SKULL_ID => SKULL_CAM,
+            SKULL_BLOCK_ID => SKULL_BLOCK_CAM,
+            SMALL_SHAPES_LIN_ID => SMALL_SHAPES_LIN_CAM,
+            SMALL_SHAPES_BLOCK_ID => SMALL_SHAPES_BLOCK_CAM,
+            MAIN_BLOCK_ID => MAIN_BLOCK_CAM,
+            HUGE_ID => HUGE_CAM,
             _ => panic!("Unknown volume ID ({vol_id})"),
         }
     }
 }
-
-use volume_files::*;
 
 pub const BLOCK_SIDE: usize = 10;
 
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
 #[rustfmt::skip]
-pub const DEFAULT_CAMERA_POSITIONS_MULTIPLE: [(Point3<f32>, Vector3<f32>); 14] = [
+pub const CAMERA_POSITIONS_MULTIPLE: [CamPos; 14] = [
     // View volume from each quadrant
     (point![ QUADRANT_DISTANCE,  QUADRANT_DISTANCE,  QUADRANT_DISTANCE], vector![-1.0, -1.0, -1.0]),
     (point![ QUADRANT_DISTANCE,  QUADRANT_DISTANCE, -QUADRANT_DISTANCE], vector![-1.0, -1.0,  1.0]),
@@ -87,7 +110,36 @@ pub const DEFAULT_CAMERA_POSITIONS_MULTIPLE: [(Point3<f32>, Vector3<f32>); 14] =
     (point![0.0, 0.0, -QUADRANT_DISTANCE], vector![0.0, 0.0, 1.0]),
 ];
 
-pub const DEFAULT_CAMERA_POSITIONS: [(Point3<f32>, Vector3<f32>); 1] = [(
+#[rustfmt::skip]
+const fn camera_pos_all(distance: f32, neg_distance: f32) -> [CamPos; 14] {
+    [
+    // View volume from each quadrant
+    (point![ distance,  distance,  distance], vector![-1.0, -1.0, -1.0]),
+    (point![ distance,  distance, neg_distance], vector![-1.0, -1.0,  1.0]),
+    (point![ distance, neg_distance,  distance], vector![-1.0,  1.0, -1.0]),
+    (point![ distance, neg_distance, neg_distance], vector![-1.0,  1.0,  1.0]),
+    (point![neg_distance,  distance,  distance], vector![ 1.0, -1.0, -1.0]),
+    (point![neg_distance,  distance, neg_distance], vector![ 1.0, -1.0,  1.0]),
+    (point![neg_distance, neg_distance,  distance], vector![ 1.0,  1.0, -1.0]),
+    (point![neg_distance, neg_distance, neg_distance], vector![ 1.0,  1.0,  1.0]),
+    // View volume from each axis
+    (point![distance, 0.0, 0.0], vector![-1.0, 0.0, 0.0]),
+    (point![0.0, distance, 0.0], vector![0.0, -1.0, 0.0]),
+    (point![0.0, 0.0, distance], vector![0.0, 0.0, -1.0]),
+    (point![neg_distance, 0.0, 0.0], vector![1.0, 0.0, 0.0]),
+    (point![0.0, neg_distance, 0.0], vector![0.0, 1.0, 0.0]),
+    (point![0.0, 0.0, neg_distance], vector![0.0, 0.0, 1.0]),
+    ]
+}
+
+const fn camera_pos_single(distance: f32) -> [CamPos; 1] {
+    [(
+        point![distance, distance, distance],
+        vector![-1.0, -1.0, -1.0],
+    )]
+}
+
+pub const CAMERA_POSITION_SINGLE: [CamPos; 1] = [(
     point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE],
     vector![-1.0, -1.0, -1.0],
 )];
@@ -156,7 +208,14 @@ where
                     if m.block_side.is_none() {
                         m.block_side = self.block_side;
                     }
-                    println!("Blockside of {:?}", m.block_side);
+                    match self.memory {
+                        Memory::Stream => m.set_memory_type(MemoryType::Stream),
+                        Memory::Ram => m.set_memory_type(MemoryType::Ram),
+                    };
+                    println!(
+                        "Blockside of {:?}, memory {:?}",
+                        m.block_side, m.memory_type
+                    );
                 }
                 Err(_) => (),
             }
