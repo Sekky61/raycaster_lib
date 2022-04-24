@@ -87,8 +87,8 @@ impl BuildVolume<u8> for LinearVolume {
             empty_index: EmptyIndex::dummy(),
         };
 
-        let empty_index = EmptyIndex::from_volume(&volume);
-        volume.empty_index = empty_index;
+        // let empty_index = EmptyIndex::from_volume(&volume);
+        //volume.empty_index = empty_index;
 
         Ok(volume)
     }
@@ -162,5 +162,9 @@ impl Volume for LinearVolume {
 
     fn is_empty(&self, pos: Point3<f32>) -> bool {
         self.empty_index.is_empty(pos)
+    }
+
+    fn build_empty_index(&mut self) {
+        self.empty_index = EmptyIndex::from_volume(self);
     }
 }

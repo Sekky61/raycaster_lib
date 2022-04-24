@@ -53,11 +53,15 @@ pub mod volume_files {
     pub const SMALL_SHAPES_BLOCK_PATH: &str = "../volumes/800shapes_block16.vol";
     pub const SMALL_SHAPES_BLOCK_CAM: [CamPos; 1] = camera_pos_single(1100.0);
 
-    pub const MAIN_BLOCK_ID: usize = 4;
+    pub const MAIN_LIN_ID: usize = 4;
+    pub const MAIN_LIN_PATH: &str = "../volumes/2kshapes_lin.vol";
+    pub const MAIN_LIN_CAM: [CamPos; 1] = camera_pos_single(2500.0);
+
+    pub const MAIN_BLOCK_ID: usize = 5;
     pub const MAIN_BLOCK_PATH: &str = "../volumes/2kshapes_block16.vol";
     pub const MAIN_BLOCK_CAM: [CamPos; 1] = camera_pos_single(2500.0);
 
-    pub const HUGE_ID: usize = 5;
+    pub const HUGE_ID: usize = 6;
     pub const HUGE_PATH: &str = "../volumes/4kshapes_block16.vol";
     pub const HUGE_CAM: [CamPos; 1] = camera_pos_single(4600.0); // todo
 
@@ -67,6 +71,7 @@ pub mod volume_files {
             SKULL_BLOCK_ID => SKULL_BLOCK_PATH,
             SMALL_SHAPES_LIN_ID => SMALL_SHAPES_LIN_PATH,
             SMALL_SHAPES_BLOCK_ID => SMALL_SHAPES_BLOCK_PATH,
+            MAIN_LIN_ID => MAIN_LIN_PATH,
             MAIN_BLOCK_ID => MAIN_BLOCK_PATH,
             HUGE_ID => HUGE_PATH,
             _ => panic!("Unknown volume ID ({vol_id})"),
@@ -79,6 +84,7 @@ pub mod volume_files {
             SKULL_BLOCK_ID => SKULL_BLOCK_CAM,
             SMALL_SHAPES_LIN_ID => SMALL_SHAPES_LIN_CAM,
             SMALL_SHAPES_BLOCK_ID => SMALL_SHAPES_BLOCK_CAM,
+            MAIN_LIN_ID => MAIN_LIN_CAM,
             MAIN_BLOCK_ID => MAIN_BLOCK_CAM,
             HUGE_ID => HUGE_CAM,
             _ => panic!("Unknown volume ID ({vol_id})"),
@@ -244,19 +250,34 @@ where
             match self.algorithm {
                 Algorithm::Parallel => {
                     if self.memory == Memory::Stream {
-                        let volume: BlockVolume = self.get_volume(&self.vol_path);
+                        let mut volume: BlockVolume = self.get_volume(&self.vol_path);
+
+                        if self.render_options.empty_space_skipping {
+                            volume.build_empty_index();
+                        }
+
                         let par_ren =
                             ParalelRenderer::new(volume, shared_camera, self.render_options);
                         front.start_rendering(par_ren);
                     } else {
-                        let volume: FloatBlockVolume = self.get_volume(&self.vol_path);
+                        let mut volume: FloatBlockVolume = self.get_volume(&self.vol_path);
+
+                        if self.render_options.empty_space_skipping {
+                            volume.build_empty_index();
+                        }
+
                         let par_ren =
                             ParalelRenderer::new(volume, shared_camera, self.render_options);
                         front.start_rendering(par_ren);
                     };
                 }
                 Algorithm::Linear => {
-                    let volume: V = self.get_volume(&self.vol_path);
+                    let mut volume: V = self.get_volume(&self.vol_path);
+
+                    if self.render_options.empty_space_skipping {
+                        volume.build_empty_index();
+                    }
+
                     let serial_r = SerialRenderer::new(volume, shared_camera, self.render_options);
                     front.start_rendering(serial_r);
                 }
@@ -395,6 +416,8 @@ where
         let w = self.render_options.resolution.x;
         let h = self.render_options.resolution.y;
 
-        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim} | {memory}")
+        let path = &self.vol_path;
+
+        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim} | {memory} | {path:?}")
     }
 }

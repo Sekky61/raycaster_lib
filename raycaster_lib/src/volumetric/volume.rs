@@ -133,6 +133,8 @@ pub trait Volume: Send {
 
     /// Returns the name of the volume
     fn get_name() -> &'static str;
+
+    fn build_empty_index(&mut self);
 }
 
 // pub struct VolumeHit {

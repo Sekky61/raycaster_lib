@@ -97,7 +97,11 @@ impl Config {
 #[derive(Debug, Clone, Copy)]
 pub enum GeneratorConfig {
     /// Generate shapes
-    Shapes { n_of_shapes: usize, sample: u8 },
+    Shapes {
+        n_of_shapes: usize,
+        sample: u8,
+        obj_size: u32,
+    },
     /// _unimplemented_ Generate random data
     Noise,
     /// Generate solid volume
@@ -112,15 +116,18 @@ impl GeneratorConfig {
         // sample
         let sample_str = args.value_of("sample");
         let n_of_shapes_str = args.value_of("n-of-shapes");
+        let obj_size_str = args.value_of("object-size");
 
         match s {
             "shapes" => {
                 // Shapes
                 let n_of_shapes = n_of_shapes_str.unwrap().parse().unwrap();
                 let sample = sample_str.unwrap().parse().unwrap();
+                let obj_size = obj_size_str.unwrap().parse().unwrap();
                 GeneratorConfig::Shapes {
                     n_of_shapes,
                     sample,
+                    obj_size,
                 }
             }
             "noise" => {

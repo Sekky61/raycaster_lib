@@ -145,6 +145,9 @@ impl Volume for FloatBlockVolume {
         let (block_index, _) = self.get_indexes(x, y, z);
         self.empty_blocks[block_index]
     }
+
+    fn build_empty_index(&mut self) { //noop
+    }
 }
 
 impl BuildVolume<u8> for FloatBlockVolume {

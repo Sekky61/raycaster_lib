@@ -95,8 +95,8 @@ criterion_group! {
     name = sequential_linear_ram_2k;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-    render_ramlinear<{MAIN_BLOCK_ID}>,
-    render_ramlinear_ert_ei<{MAIN_BLOCK_ID}>
+    render_ramlinear<{MAIN_LIN_ID}>,
+    render_ramlinear_ert_ei<{MAIN_LIN_ID}>
 }
 
 // Parallel, 2K volume, full optimisations
@@ -104,7 +104,6 @@ criterion_group! {
     name = parallel_2k;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_parallel_float<{MAIN_BLOCK_ID}>,
         render_parallel_ram<{MAIN_BLOCK_ID}>,
         render_parallel_stream<{MAIN_BLOCK_ID}>
 }
@@ -147,7 +146,7 @@ criterion_main!(
     sequential_linear_ram_2k,
     parallel_2k,
     // 4K streamed (parallel only)
-    parallel_4k,
+    //parallel_4k,
     // Camera angles
 
     // Determining block side

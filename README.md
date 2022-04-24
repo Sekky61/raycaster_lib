@@ -117,27 +117,33 @@ Testovaci framework Criterion vyzaduje program `perf`.
 | ----------- | ---------- | ---------- | ---------- | ---------- |
 | 1 | `volumes/800shapes_lin.vol` | 800 |  | Porovnani single thread reseni |
 | 2 | `volumes/800shapes_block16.vol` | 800 |  | Porovnani single thread reseni |
-| 3 | `volumes/2kshapes_block16.vol` | 2000 |  | Optimalizovane reseni |
-| 4 | `volumes/4kshapes_block16.vol` | 4000 |  | Optimalizovane reseni, pouze stream ze souboru |
+| 4 | `volumes/2kshapes_lin.vol` | 2000 |  |  |
+| 4 | `volumes/2kshapes_block16.vol` | 2000 |  | Optimalizovane reseni |
+| 5 | `volumes/4kshapes_block16.vol` | 4000 |  | Optimalizovane reseni, pouze stream ze souboru |
 
 ### Generovani dat
 
 Objem #1
 ```
-cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 50 --sample 100 --output-file volumes/800shapes_lin.vol --layout linear
+cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 70 --sample 100 --output-file volumes/800shapes_lin.vol --layout linear --object-size 70
 ```
 
 Objem #2
 ```
-cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 50 --sample 100 --output-file volumes/800shapes_block16.vol --layout z --block-size 16
+cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 70 --sample 100 --output-file volumes/800shapes_block16.vol --layout z --block-size 16 --object-size 70
 ```
 
 Objem #3
 ```
-cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 120 --sample 100 --output-file volumes/2kshapes_block16.vol
+cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout linear  --generator shapes --n-of-shapes 140 --sample 100 --output-file volumes/2kshapes_lin.vol --object-size 140
 ```
 
 Objem #4
+```
+cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 140 --sample 100 --output-file volumes/2kshapes_block16.vol --object-size 140
+```
+
+Objem #5
 ```
 cargo run --release --bin vol_gen -- --dims=4000,4000,4000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 300 --sample 100 --output-file volumes/2kshapes_block16.vol
 ```

@@ -153,4 +153,8 @@ impl Volume for FloatBlock {
     fn is_empty(&self, pos: Point3<f32>) -> bool {
         self.empty_index.is_empty(pos)
     }
+
+    fn build_empty_index(&mut self) {
+        self.empty_index = EmptyIndex::from_volume(self);
+    }
 }

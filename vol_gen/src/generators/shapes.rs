@@ -6,8 +6,6 @@ use crate::config::{Config, GeneratorConfig};
 
 use super::SampleGenerator;
 
-const OBJECT_SIZE: Vector3<u32> = vector![100, 100, 100];
-
 /// Generate volume with a number of randomly placed shapes
 pub struct ShapesGenerator {
     shapes: Vec<ShapeInfo>,
@@ -17,20 +15,23 @@ impl ShapesGenerator {
     /// Constructor
     pub fn from_config(config: &Config) -> ShapesGenerator {
         let dims = config.dims;
-        let (n_of_shapes, sample) = match config.generator {
+        let (n_of_shapes, sample, obj_size) = match config.generator {
             GeneratorConfig::Shapes {
                 n_of_shapes,
                 sample,
-            } => (n_of_shapes, sample),
+                obj_size,
+            } => (n_of_shapes, sample, obj_size),
             //  Should not happen
             _ => panic!("Bad generator args"),
         };
 
         let seed = config.seed;
+        let obj_size = vector![obj_size, obj_size, obj_size];
+        let size_variance = obj_size / 3;
 
         // Generate n shapes
         let random_shape_gen =
-            ShapeInfoGenerator::new(dims, OBJECT_SIZE, vector![10, 10, 10], sample, 10, seed);
+            ShapeInfoGenerator::new(dims, obj_size, size_variance, sample, 10, seed);
         let shapes = random_shape_gen.get_shapes(n_of_shapes);
         ShapesGenerator { shapes }
     }

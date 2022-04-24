@@ -319,7 +319,11 @@ where
         res
     };
 
-    let volume: V = from_file(path, parser_add_block_side_volume_type, tf_fn).unwrap();
+    let mut volume: V = from_file(path, parser_add_block_side_volume_type, tf_fn).unwrap();
+
+    if render_options.empty_space_skipping {
+        volume.build_empty_index();
+    }
 
     ParalelRenderer::new(volume, camera, render_options)
 }
@@ -348,7 +352,11 @@ where
         meta_res
     };
 
-    let volume = from_file(path, parser_fn_with_volume_type, tf_fn).unwrap();
+    let mut volume: V = from_file(path, parser_fn_with_volume_type, tf_fn).unwrap();
+
+    if render_options.empty_space_skipping {
+        volume.build_empty_index();
+    }
 
     SerialRenderer::new(volume, camera, render_options)
 }

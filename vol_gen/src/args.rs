@@ -86,6 +86,7 @@ pub fn get_command<'a>() -> Command<'a> {
                     ("solid", "sample"),       // if solid is set, require option sample
                     ("shapes", "n-of-shapes"), // todo shapes size and variance
                     ("shapes", "sample"),
+                    ("shapes", "object-size"),
                 ])
                 .takes_value(true)
                 .value_name("NAME")
@@ -114,6 +115,14 @@ pub fn get_command<'a>() -> Command<'a> {
                 .value_name("BYTE")
                 .hide(true) // Hide from help
                 .validator(|s| is_positive_number(s).and(can_fit_u8(s))),
+        )
+        .arg(
+            Arg::new("object-size") // maybe join this with layout arg | todo add overlap default 1
+                .help("Size of individual generated objects")
+                .long("object-size")
+                .value_name("SIDE")
+                .hide(true) // Hide from help
+                .validator(is_positive_number),
         )
         .arg(
             Arg::new("block-size") // maybe join this with layout arg | todo add overlap default 1

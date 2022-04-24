@@ -16,8 +16,10 @@ pub fn skull_tf(sample: f32) -> RGBA {
 #[allow(dead_code)]
 pub fn shapes_tf(sample: f32) -> RGBA {
     // relevant data between 90 and 110
-    if sample > 85.0 && sample <= 100.0 {
-        RGBA::new(255.0, 30.0, 60.0, 0.3)
+    if sample > 85.0 && sample <= 95.0 {
+        RGBA::new(255.0, 30.0, 60.0, 0.02)
+    } else if sample > 95.0 && sample <= 100.0 {
+        RGBA::new(10.0, 60.0, 180.0, 0.3)
     } else if sample > 100.0 && sample < 115.0 {
         RGBA::new(90.0, 210.0, 20.0, 0.6)
     } else {
