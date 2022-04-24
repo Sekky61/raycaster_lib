@@ -66,6 +66,8 @@ Překlad a spouštění s tímto profilem:
 cargo build --profile release-full
 ```
 
+Pripadne jeste spoustet s promennou `RUSTFLAGS="-C target-cpu=native"`
+
 ## Spouštění
 
 Projekt se skládá ze dvou aplikací, `vol_app` a `vol_gen`.
@@ -122,12 +124,12 @@ Testovaci framework Criterion vyzaduje program `perf`.
 
 Objem #1
 ```
-cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 40 --sample 100 --output-file volumes/800shapes_lin.vol --layout linear
+cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 50 --sample 100 --output-file volumes/800shapes_lin.vol --layout linear
 ```
 
 Objem #2
 ```
-cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 40 --sample 100 --output-file volumes/800shapes_block16.vol --layout z --block-size 16
+cargo run --release --bin vol_gen -- --dims=800,800,800 --generator shapes --seed 2 --n-of-shapes 50 --sample 100 --output-file volumes/800shapes_block16.vol --layout z --block-size 16
 ```
 
 Objem #3
@@ -137,5 +139,5 @@ cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout z -
 
 Objem #4
 ```
-cargo run --release --bin vol_gen -- --dims=4000,4000,4000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 120 --sample 100 --output-file volumes/2kshapes_block16.vol
+cargo run --release --bin vol_gen -- --dims=4000,4000,4000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 300 --sample 100 --output-file volumes/2kshapes_block16.vol
 ```

@@ -111,7 +111,7 @@ pub const CAMERA_POSITIONS_MULTIPLE: [CamPos; 14] = [
 ];
 
 #[rustfmt::skip]
-const fn camera_pos_all(distance: f32, neg_distance: f32) -> [CamPos; 14] {
+pub const fn camera_pos_all(distance: f32, neg_distance: f32) -> [CamPos; 14] {
     [
     // View volume from each quadrant
     (point![ distance,  distance,  distance], vector![-1.0, -1.0, -1.0]),
@@ -132,7 +132,7 @@ const fn camera_pos_all(distance: f32, neg_distance: f32) -> [CamPos; 14] {
     ]
 }
 
-const fn camera_pos_single(distance: f32) -> [CamPos; 1] {
+pub const fn camera_pos_single(distance: f32) -> [CamPos; 1] {
     [(
         point![distance, distance, distance],
         vector![-1.0, -1.0, -1.0],
