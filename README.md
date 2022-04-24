@@ -113,13 +113,13 @@ Testovaci framework Criterion vyzaduje program `perf`.
 
 ## Data
 
-| Objem | Soubor | Rozlišení | TF | Popis | 
+| Objem | Soubor | Rozlišení | velikost | TF | Popis | 
 | ----------- | ---------- | ---------- | ---------- | ---------- |
-| 1 | `volumes/800shapes_lin.vol` | 800 |  | Porovnani single thread reseni |
-| 2 | `volumes/800shapes_block16.vol` | 800 |  | Porovnani single thread reseni |
-| 4 | `volumes/2kshapes_lin.vol` | 2000 |  |  |
-| 4 | `volumes/2kshapes_block16.vol` | 2000 |  | Optimalizovane reseni |
-| 5 | `volumes/4kshapes_block16.vol` | 4000 |  | Optimalizovane reseni, pouze stream ze souboru |
+| 1 | `volumes/800shapes_lin.vol` | 800 | 512MB | Porovnani single thread reseni |
+| 2 | `volumes/800shapes_block16.vol` | 800 | 600MB |  | Porovnani single thread reseni |
+| 4 | `volumes/2kshapes_lin.vol` | 2000 | 8GB |  |  |
+| 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB |  | Optimalizovane reseni |
+| 5 | `volumes/4kshapes_block16.vol` | 4000 | GB |  | Optimalizovane reseni, pouze stream ze souboru |
 
 ### Generovani dat
 
@@ -145,5 +145,5 @@ cargo run --release --bin vol_gen -- --dims=2000,2000,2000 --seed 2 --layout z -
 
 Objem #5
 ```
-cargo run --release --bin vol_gen -- --dims=4000,4000,4000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 300 --sample 100 --output-file volumes/2kshapes_block16.vol
+cargo run --release --bin vol_gen -- --dims=4000,4000,4000 --seed 2 --layout z --block-size 16  --generator shapes --n-of-shapes 300 --sample 100 --output-file volumes/4kshapes_block16.vol --object-size 190
 ```

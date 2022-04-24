@@ -11,7 +11,10 @@ use criterion::BenchmarkId;
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use parking_lot::RwLock;
-use raycaster_lib::volumetric::MemoryType;
+use raycaster_lib::{
+    premade::{parse::generator_parser, transfer_functions::shapes_tf},
+    volumetric::MemoryType,
+};
 pub use raycaster_lib::{
     premade::{
         parse::{from_file, skull_parser},
@@ -208,7 +211,7 @@ where
         P: AsRef<Path>,
     {
         let parser_add_block_side = move |src: DataSource<u8>| {
-            let mut res = skull_parser(src);
+            let mut res = generator_parser(src);
             match &mut res {
                 Ok(ref mut m) => {
                     if m.block_side.is_none() {
@@ -229,7 +232,7 @@ where
         };
         let mut full_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")); // should be library root (!not workspace dir!)
         full_path.push(path);
-        from_file(full_path, parser_add_block_side, skull_tf).unwrap()
+        from_file(full_path, parser_add_block_side, shapes_tf).unwrap()
     }
 
     pub fn get_benchmark(self) -> impl FnOnce(&mut Criterion) {
@@ -410,14 +413,14 @@ where
                 early_ray_termination: true,
                 empty_space_skipping: true,
                 ..
-            } => "ERT + EI",
+            } => "ERT+EI",
         };
 
         let w = self.render_options.resolution.x;
         let h = self.render_options.resolution.y;
 
-        let path = &self.vol_path;
+        let path = &self.vol_path.file_name().unwrap();
 
-        format!("Render {st_mt} | {volume_type} | {w}x{h} | {optim} | {memory} | {path:?}")
+        format!("{st_mt}_{volume_type}_{w}x{h}_{optim}_{memory}_{path:?}")
     }
 }

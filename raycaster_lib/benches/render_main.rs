@@ -61,10 +61,10 @@ criterion_group! {
     name = sequential_block_stream_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_streamblock<{SMALL_SHAPES_LIN_ID}>,
-        render_streamblock_ert<{SMALL_SHAPES_LIN_ID}>,
-        render_streamblock_ei<{SMALL_SHAPES_LIN_ID}>,
-        render_streamblock_ert_ei<{SMALL_SHAPES_LIN_ID}>
+        render_streamblock<{SMALL_SHAPES_BLOCK_ID}>,
+        render_streamblock_ert<{SMALL_SHAPES_BLOCK_ID}>,
+        render_streamblock_ei<{SMALL_SHAPES_BLOCK_ID}>,
+        render_streamblock_ert_ei<{SMALL_SHAPES_BLOCK_ID}>
 }
 
 // Block Volume RAM and optimizations
@@ -72,10 +72,10 @@ criterion_group! {
     name = sequential_block_ram_small;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_ramblock<{SMALL_SHAPES_LIN_ID}>,
-        render_ramblock_ert<{SMALL_SHAPES_LIN_ID}>,
-        render_ramblock_ei<{SMALL_SHAPES_LIN_ID}>,
-        render_ramblock_ert_ei<{SMALL_SHAPES_LIN_ID}>
+        render_ramblock<{SMALL_SHAPES_BLOCK_ID}>,
+        render_ramblock_ert<{SMALL_SHAPES_BLOCK_ID}>,
+        render_ramblock_ei<{SMALL_SHAPES_BLOCK_ID}>,
+        render_ramblock_ert_ei<{SMALL_SHAPES_BLOCK_ID}>
 }
 
 // Camera angles
@@ -100,11 +100,11 @@ criterion_group! {
 }
 
 // Parallel, 2K volume, full optimisations
+// todo render_parallel_ram<{MAIN_BLOCK_ID}> crashes on full RAM
 criterion_group! {
     name = parallel_2k;
     config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
     targets =
-        render_parallel_ram<{MAIN_BLOCK_ID}>,
         render_parallel_stream<{MAIN_BLOCK_ID}>
 }
 
@@ -134,19 +134,29 @@ criterion_group! {
 //criterion_main!(parallel_params);
 
 // BP main
+// criterion_main!(
+//     // Ram vs Stream vs Float in single thread
+//     sequential_linear_float_small,
+//     sequential_linear_ram_small,
+//     sequential_linear_stream_small,
+//     sequential_block_float_small,
+//     sequential_block_stream_small,
+//     sequential_block_ram_small,
+//     // Main: 2K volume ST and MT
+//     sequential_linear_ram_2k,
+//     parallel_2k,
+//     // 4K streamed (parallel only)
+//     //parallel_4k,
+//     // Camera angles
+
+//     // Determining block side
+//     //block_side
+// );
+
 criterion_main!(
-    // Ram vs Stream vs Float in single thread
-    sequential_linear_float_small,
-    sequential_linear_ram_small,
-    sequential_linear_stream_small,
-    sequential_block_float_small,
-    sequential_block_stream_small,
-    sequential_block_ram_small,
-    // Main: 2K volume ST and MT
-    sequential_linear_ram_2k,
-    parallel_2k,
+    //parallel_2k,
     // 4K streamed (parallel only)
-    //parallel_4k,
+    parallel_4k,
     // Camera angles
 
     // Determining block side

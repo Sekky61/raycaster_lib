@@ -21,7 +21,7 @@ pub fn render_ramlinear<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
@@ -45,7 +45,7 @@ pub fn render_ramlinear_ert<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
@@ -69,7 +69,7 @@ pub fn render_ramlinear_ei<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
@@ -93,7 +93,7 @@ pub fn render_ramlinear_ert_ei<const VOL_ID: usize>(c: &mut Criterion) {
         &get_cam_pos(VOL_ID),
         path,
         PhantomData::<LinearVolume>,
-        Memory::Stream,
+        Memory::Ram,
         None,
     );
 
