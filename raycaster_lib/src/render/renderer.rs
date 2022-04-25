@@ -144,7 +144,9 @@ where
         // Source:
         // https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-39-volume-rendering-techniques
         // Equation 3
-        let opacity_correction = step_size;
+        //
+        // reference_step_length / new_step_length
+        let step_ratio = 1.0 / step_size;
 
         // Maximum number of step is known from intersection
         let max_n_of_steps = (t / step_size) as usize; // todo inverted into options
@@ -198,7 +200,7 @@ where
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
             //sum = (1 - sum.alpha) * volume.density * color + sum;
 
-            let opacity_corrected = color_b.w * opacity_correction;
+            let opacity_corrected = 1.0 - (1.0 - color_b.w).powf(step_ratio);
 
             // Accumulate color
             rgb += (1.0 - opacity) * opacity_corrected * sample_rgb;
