@@ -17,15 +17,24 @@ use super::{
     messages::{SubRenderResult, ToWorkerMsg},
 };
 
-// light direction (normalized)
+/// light direction (normalized).
+/// Single static light.
 const LIGHT_DIR: Vector3<f32> = vector![-0.74278, -0.55708, -0.37139];
 
+/// Worker state.
 enum Run {
     Stop,
     Continue,
     Render,
 }
 
+/// Renderer worker.
+/// In bachelors thesis, this is refered to as 'RV' (Renderovací Vlákno).
+///
+/// Overview of lifecycle:
+/// * Task is received.
+/// * Block is rendered into tile.
+/// * Compositor is notified of task being done.
 pub struct RenderWorker<'a, BV>
 where
     BV: Volume + Blocked,
@@ -42,6 +51,7 @@ impl<'a, BV> RenderWorker<'a, BV>
 where
     BV: Volume + Blocked,
 {
+    /// Construct new `RenderWorker`.
     #[must_use]
     pub fn new(
         renderer_id: usize,
@@ -60,6 +70,7 @@ where
         }
     }
 
+    /// Main loop.
     pub fn run(&mut self) {
         let mut command = None;
         loop {
@@ -83,6 +94,10 @@ where
         }
     }
 
+    /// Rendering routine.
+    /// Worker stays in this method for the duration of one frame.
+    ///
+    /// Returns command that could have been sent to worker during rendering (mainly `Finish` command).
     fn active_state(&self) -> ToWorkerMsg {
         let camera = self.camera.read();
 
@@ -122,6 +137,7 @@ where
         }
     }
 
+    /// Render block into `subcanvas`.
     fn render_block(
         &self,
         camera: &PerspectiveCamera,
@@ -130,7 +146,7 @@ where
     ) {
         // todo use renderoptions properly
         // Image size, todo move to property
-        let res_f = self.render_options.resolution.map(|v| v as f32);
+        let res_f = self.render_options.resolution.map(|v| v as f32); // todo cast everywhere
         let step_f = res_f.map(|v| 1.0 / v);
 
         // todo waiting for opacities can be done here, render and send back immediately
@@ -168,6 +184,7 @@ where
         }
     }
 
+    /// Accumulation of color along `ray`.
     fn sample_color(
         &self,
         block: &<BV as Blocked>::BlockType,

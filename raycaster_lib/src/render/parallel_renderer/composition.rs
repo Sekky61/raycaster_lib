@@ -20,14 +20,21 @@ use super::{
     messages::{RenderTask, ToMasterMsg, ToWorkerMsg},
 };
 
+/// Subcanvas, aka. Tile.
+///
+/// Subcanvas is the target of rendering.
+/// It has its own queue of subvolumes visible in it.
 pub struct SubCanvas {
-    queue: VecDeque<u32>, // indexes into blocks
+    /// Items of queue are indexes into current volume.
+    queue: VecDeque<u32>,
     pub pixels: PixelBox,
     pub colors: Vec<Vector3<f32>>,
     pub opacities: Vec<f32>,
 }
 
 impl SubCanvas {
+    /// Constructs new `SubCanvas` with placement and dimensions of `pixels`.
+    /// Buffers are zeroed out and queue is empty.
     pub fn new(pixels: PixelBox) -> Self {
         let size = pixels.items();
         let queue = VecDeque::new();
@@ -42,20 +49,32 @@ impl SubCanvas {
     }
 }
 
+/// `Canvas` is a collection of `SubCanvas`es.
+///
+/// # Safety
+///
+/// Subcanvases are wrapped in [`UnsafeCell`], making their safe use
+/// the responsibility of the user.
+/// Generally, only one mutable reference at a time is allowed.
 pub struct Canvas {
+    /// Resolution of canvas
     size: PixelBox,
+    /// Collection of `SubCanvas`es.
     sub_canvases: Vec<UnsafeCell<SubCanvas>>,
+    /// Atomic counter for detecting end of rendering.
     remaining_subs: AtomicU32,
+    /// Width of tile in pixels
     tile_side: u16,
-    tiles_x: u16, // number of tiles in one row
+    /// number of tiles in one row
+    tiles_x: u16,
 }
 
+/// Struct is allowed to be sent across threads.
 unsafe impl Sync for Canvas {}
 
 impl Canvas {
-    // Segment viewport into NxN subframes
-    // Calc pixel sizes and offsets
-    // todo return only PixelBox
+    /// Constructs new `Canvas`.
+    /// Segments viewport into WxH subframes.
     pub fn new(resolution: Vector2<u16>, tile_side: u16) -> Canvas {
         let tiles = Canvas::slice_into_tiles(resolution, tile_side);
         let size = PixelBox::new(0..resolution.x, 0..resolution.y);
@@ -91,12 +110,23 @@ impl Canvas {
         }
     }
 
+    /// Calculates number of tiles in each dimension, given `resolution` and `tile_side`.
     fn slice_into_tiles(resolution: Vector2<u16>, tile_side: u16) -> Vector2<u16> {
         (resolution + vector![tile_side - 1, tile_side - 1]) // Ceil
             .component_div(&vector![tile_side, tile_side])
     }
 
-    // Interior mutability, needs exclusive access
+    /// Builds queues of all `SubCanvas`es.
+    /// This is done in a few steps:
+    /// * Blocks of volume are filtered by visibility.
+    /// * Their distance from camera is measured.
+    /// * Blocks are sorted in ascending order by their distance from camera.
+    /// * For each block, tiles through which block can be seen are found.
+    /// * The block is added to the queues of 'affected' tiles.
+    ///
+    /// # Safety
+    ///
+    /// uses interior mutability, exclusive access to `Canvas` must be provided.
     pub fn build_queues<V>(
         &self,
         camera: &PerspectiveCamera,
@@ -153,6 +183,8 @@ impl Canvas {
         }
     }
 
+    /// Get overlap of area in which block is visible with tile grid.
+    /// Returns 2D range of tile indexes.
     fn get_affected_tiles(
         pixel_box: PixelBox,
         tile_side: u16,
@@ -167,21 +199,39 @@ impl Canvas {
     }
 }
 
+/// State of Compositor
 enum Run {
+    /// Exit loop.
     Stop,
+    /// Keep waiting.
     Continue,
+    /// Go to active state.
     Render,
 }
 
+/// Compositor worker.
+/// In bachelors thesis, this is refered to as 'KV' (Kompoziční Vlákno).
+///
+/// Overview of lifecycle:
+/// * Subvolumes are sorted.
+/// * Initial batch of rendering tasks are sent to queue.
+/// * Passive waiting for incoming completed tasks.
+/// * Dispatching new task or copying subcanvas to `main_buffer`.
 pub struct CompWorker {
+    /// ID of worker thread
     compositor_id: u8,
+    /// Number of compositors used in rendering.
     compositor_count: u8,
+    /// Shared reference to `Canvas`.
     canvas: Arc<Canvas>,
+    /// Final buffer (framebuffer). Subcanvases are copied here.
     main_buffer: Arc<Mutex<Vec<u8>>>,
+    /// Interthread communication.
     comms: CompWorkerComms,
 }
 
 impl CompWorker {
+    /// Construct new `CompWorker`.
     pub fn new(
         compositor_id: u8,
         compositor_count: u8,
@@ -198,6 +248,8 @@ impl CompWorker {
         }
     }
 
+    /// Main loop (blocking).
+    /// Worker is meant to live in a separate thread and wait for commands.
     pub fn run(&self) {
         let mut command = None;
         loop {
@@ -207,18 +259,22 @@ impl CompWorker {
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::GoLive { .. } => Run::Render, // Ignore quality setting
+                ToWorkerMsg::GoLive { .. } => Run::Render, // Ignore quality setting, irrelevant
                 ToWorkerMsg::Finish => Run::Stop,
             };
             command = match cont {
                 Run::Stop => break,
                 Run::Continue => None,
-                Run::Render => Some(self.main_loop()),
+                Run::Render => Some(self.active_state()),
             }
         }
     }
 
-    pub fn main_loop(&self) -> ToWorkerMsg {
+    /// Rendering routine.
+    /// Worker stays in this method for the duration of one frame.
+    ///
+    /// Returns command that could have been sent to worker during rendering (mainly `Finish` command).
+    pub fn active_state(&self) -> ToWorkerMsg {
         #[cfg(debug_assertions)]
         println!("Comp {}: start main loop", self.compositor_id);
 
@@ -252,6 +308,7 @@ impl CompWorker {
         #[cfg(debug_assertions)]
         println!("Comp {}: initial batch done", self.compositor_id);
 
+        // Passive part
         loop {
             // Wait for render task
             let result = select! {
@@ -286,7 +343,7 @@ impl CompWorker {
         }
     }
 
-    // Mark tile and copy it to main buffer
+    /// Mark tile as finished and copy its contents to main buffer.
     unsafe fn tile_finished(&self, subcanvas: &mut SubCanvas) {
         // copy color to main canvas
         {
@@ -321,6 +378,7 @@ impl CompWorker {
         }
     }
 
+    /// Create task to render block with id `block_id` into tile with id `tile_id`.
     fn send_task(&self, block_id: u32, tile_id: u32, subcanvas: *mut SubCanvas) {
         let task = RenderTask::new(block_id, tile_id, subcanvas);
         #[cfg(debug_assertions)]
@@ -332,7 +390,7 @@ impl CompWorker {
         self.comms.task_sen.send(task).unwrap();
     }
 
-    // Copy into main buffer
+    /// Copy subframe into main buffer.
     fn copy_subframe(&self, buffer: &mut [u8], tile: &mut SubCanvas) {
         let bytes = convert_to_bytes(&tile.colors[..]);
         let data = &bytes[..];
@@ -355,7 +413,9 @@ impl CompWorker {
     }
 }
 
+/// Subcanvas data (floats) gets converted to 1-byte integer values.
 fn convert_to_bytes(subcanvas_rgb: &[Vector3<f32>]) -> Vec<u8> {
+    // todo optimisation potential - extra allocation
     let mut v = Vec::with_capacity(3 * subcanvas_rgb.len());
     subcanvas_rgb.iter().for_each(|rgb| {
         rgb.iter().for_each(|&val| v.push(val as u8));

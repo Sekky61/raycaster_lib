@@ -29,16 +29,22 @@ pub struct MasterComms {
     pub command_sender: Vec<Sender<ToWorkerMsg>>,
 }
 
+/// Builder for communication channels of parallel renderer.
 #[derive(Clone)]
 pub struct CommsBuilder {
-    ren_to_comp: Channel<SubRenderResult>, // Render -> Comp
-    comp_to_ren: Channel<RenderTask>,      // Comp -> Render
-    // Command channels are in order by ID, Renderers first
-    command: Vec<Channel<ToWorkerMsg>>, // Master -> Worker
-    results: Channel<ToMasterMsg>,      // Comp -> Master
+    /// Channel from Renderer to Compositor.
+    ren_to_comp: Channel<SubRenderResult>,
+    /// Channel from Compositor to Renderer.
+    comp_to_ren: Channel<RenderTask>,
+    /// Channels from master to all worker threads.
+    /// Command channels are in order by ID, Renderers first.
+    command: Vec<Channel<ToWorkerMsg>>,
+    /// Channel from compositor to Master.
+    results: Channel<ToMasterMsg>,
 }
 
 impl CommsBuilder {
+    /// Construct communications for `n` worker threads.
     pub fn new(n_of_workers: usize) -> CommsBuilder {
         let command: Vec<_> = std::iter::repeat_with(|| crossbeam::channel::bounded(10000))
             .take(n_of_workers)
@@ -56,6 +62,7 @@ impl CommsBuilder {
         }
     }
 
+    /// Get senders and receivers for Render worker with `id`.
     pub fn renderer(&self, id: usize) -> RenderWorkerComms {
         let result_sen = self.ren_to_comp.0.clone();
         let task_rec = self.comp_to_ren.1.clone();
@@ -68,6 +75,7 @@ impl CommsBuilder {
         }
     }
 
+    /// Get senders and receivers for Compositor worker with `id`.
     pub fn compositor(&self, id: usize) -> CompWorkerComms {
         let task_sen = self.comp_to_ren.0.clone();
         let result_rec = self.ren_to_comp.1.clone();
@@ -82,6 +90,7 @@ impl CommsBuilder {
         }
     }
 
+    /// Get senders and receivers for Master thread.
     pub fn master(&self) -> MasterComms {
         let result_receiver = self.results.1.clone();
         let command_sender = self.command.iter().map(|ch| ch.0.clone()).collect();

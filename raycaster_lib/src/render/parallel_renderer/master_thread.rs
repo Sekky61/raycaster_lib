@@ -9,19 +9,21 @@ use crate::{
     PerspectiveCamera,
 };
 
-use super::{communication::CommsBuilder, messages::ToWorkerMsg};
 use super::{
+    communication::CommsBuilder,
     composition::Canvas,
+    messages::ToWorkerMsg,
     workers::{CompWorker, RenderWorker},
 };
 
-// Determined by experiments for 6c12t CPU
-const RENDERER_COUNT: u8 = 9; // todo dynamic
+/// Parameters determined with experiments for 6c12t CPU
+/// todo dynamic detection
+const RENDERER_COUNT: u8 = 9;
 const COMPOSITER_COUNT: u8 = 1;
 const WORKER_COUNT: u8 = RENDERER_COUNT + COMPOSITER_COUNT;
-
 const TILE_SIDE: u16 = 10;
 
+/// Parallel renderer's entity for being controled by [`RendererFront`].
 pub struct ParalelRenderer<BV>
 where
     BV: Volume + Blocked,
@@ -59,6 +61,7 @@ impl<BV> ParalelRenderer<BV>
 where
     BV: Volume + Blocked + 'static,
 {
+    /// Construct new `ParalelRenderer`.
     pub fn new(
         volume: BV,
         camera: Arc<RwLock<PerspectiveCamera>>,
@@ -83,6 +86,8 @@ where
         }
     }
 
+    /// Spawns 'master thread'.
+    /// This thread controls rendering cycle, communicates with user.
     pub fn start_rendering(self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             // Scope assures threads will be joined before exiting the scope

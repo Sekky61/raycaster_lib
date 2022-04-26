@@ -1,3 +1,5 @@
+//! Parallel renderer module
+
 mod communication;
 mod composition;
 mod master_thread;

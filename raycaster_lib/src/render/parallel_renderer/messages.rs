@@ -1,7 +1,6 @@
 use super::composition::SubCanvas;
 
-// Todo combine Vec and pixelbox to newtype
-
+/// Structure describing rendering task.
 pub struct RenderTask {
     pub block_id: u32,
     pub tile_id: u32,
@@ -21,13 +20,19 @@ impl RenderTask {
 /// Safety: subcanvas is read by at most one thread, 'ownership' is passed by channels
 unsafe impl Send for RenderTask {}
 
+/// Controling messages to worker threads: `RenderWorker` (RV) and `CompWorker` (KV).
 pub enum ToWorkerMsg {
     GoIdle,
-    GoLive { quality: bool }, // Go to active state, mainly seize camera and recalc distances
+    /// Go to active state, mainly seize camera and recalc distances.
+    /// `Quality` parameter instructs render workers.
+    GoLive {
+        quality: bool,
+    },
+    /// Wrap up, get ready to be joined.
     Finish,
 }
 
-// todo split color and transmit it at lower priority
+/// Message telling `CompWorker`, that task on tile `tile_id` is done.
 pub struct SubRenderResult {
     pub tile_id: u32,
 }
@@ -38,6 +43,7 @@ impl SubRenderResult {
     }
 }
 
+/// Messgae sent by `CompWorker` telling master render is done.
 pub enum ToMasterMsg {
     RenderDone,
 }
