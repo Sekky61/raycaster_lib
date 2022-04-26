@@ -114,14 +114,14 @@ Testovaci framework Criterion vyzaduje program `perf`.
 ## Data
 
 | Objem | Soubor | Rozlišení | velikost | TF | Popis | 
-| ----------- | ---------- | ---------- | ---------- | ---------- |
-| 1 | `volumes/800shapes_lin.vol` | 800 | 512MB | Porovnani single thread reseni |
-| 2 | `volumes/800shapes_block16.vol` | 800 | 600MB |  | Porovnani single thread reseni |
-| 4 | `volumes/2kshapes_lin.vol` | 2000 | 8GB |  |  |
-| 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB |  | Optimalizovane reseni |
-| 5 | `volumes/4kshapes_block16.vol` | 4000 | GB |  | Optimalizovane reseni, pouze stream ze souboru |
+| ----------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| 1 | `volumes/800shapes_lin.vol` | 800 | 512MB | `shapes` | Porovnani single thread reseni |
+| 2 | `volumes/800shapes_block16.vol` | 800 | 645MB | `shapes` | Porovnani single thread reseni |
+| 4 | `volumes/2kshapes_lin.vol` | 2000 | 8GB | `shapes` | d |
+| 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB | `shapes` | Optimalizovane reseni |
+| 5 | `volumes/4kshapes_block16.vol` | 4000 | GB | `shapes` | Optimalizovane reseni, pouze stream ze souboru |
 
-### Generovani dat
+### Generování dat
 
 Objem #1
 ```

@@ -350,7 +350,7 @@ impl BuildVolume<u8> for BlockVolume {
             MemoryType::Ram => data.to_vec(),
         };
 
-        let ptr = unsafe { data_desired_form.as_ptr() };
+        let ptr = data_desired_form.as_ptr();
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {

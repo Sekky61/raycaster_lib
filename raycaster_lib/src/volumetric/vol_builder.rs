@@ -96,7 +96,8 @@ impl TypedMmap {
     }
 
     pub fn as_ptr<T>(&self) -> *const T {
-        self.mmap.as_ptr() as *const T
+        let ptr = self.mmap.as_ptr() as *const T;
+        unsafe { ptr.add(self.offset) }
     }
 
     pub fn into_inner(self) -> (Mmap, usize) {

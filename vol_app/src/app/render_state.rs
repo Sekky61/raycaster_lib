@@ -145,6 +145,7 @@ impl RenderState {
                     CameraMovement::PositionInDir(d) => camera.change_pos_view_dir(d),
                 }
             }
+            println!("Cam: {:?} dir {:?}", camera.get_pos(), camera.get_dir());
             // Drop Write camera guard
         }
     }
