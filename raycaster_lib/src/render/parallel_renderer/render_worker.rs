@@ -222,7 +222,7 @@ where
         // Equation 3
         //
         // reference_step_length / new_step_length
-        let step_ratio = 1.0 / step_size;
+        let step_ratio = step_size;
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);
@@ -257,10 +257,10 @@ where
 
                 let reflect = LIGHT_DIR - 2.0 * (grad_norm.dot(&LIGHT_DIR)) * grad_norm;
                 let r_dot_view = reflect.dot(&view_dir_neg);
-                let light_intensity = 200.0;
+                let light_intensity = 120.0;
                 let specular = f32::max(0.0, r_dot_view).powf(128.0) * light_intensity;
 
-                sample_rgb = sample_rgb * (diffuse + 0.09) + vector![specular, specular, specular];
+                sample_rgb = sample_rgb * (diffuse + 0.16) + vector![specular, specular, specular];
             }
 
             // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6

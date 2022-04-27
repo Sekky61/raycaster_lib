@@ -69,14 +69,14 @@ impl BuildVolume<u8> for LinearVolume {
         let tf = metadata.tf.ok_or("No tf")?;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
-            .cast::<f32>()
-            .component_mul(&scale);
+            .cast::<f32>();
+        //.component_mul(&scale); // todo fix scale
 
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
 
         println!(
-            "Constructed LinearVolume ({}x{}x{}) memory {:?}",
-            size.x, size.y, size.z, memory_type
+            "Constructed LinearVolume ({}x{}x{}) scale ({}x{}x{}) memory {:?}",
+            size.x, size.y, size.z, scale.x, scale.y, scale.z, memory_type
         );
 
         let mut volume = LinearVolume {

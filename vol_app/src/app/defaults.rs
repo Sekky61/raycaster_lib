@@ -28,8 +28,8 @@ pub const EI: bool = true;
 /// Does not affect volumes saved in files by blocks.
 pub const BLOCK_SIDE: usize = 16;
 
-pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Ram;
-pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Shapes;
+pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Stream;
+pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
 
@@ -44,6 +44,12 @@ pub const CAM_POS_Z: f32 = 300.0;
 
 // Detail lebky
 // Cam: [167.10689, 125.40133, 19.744026] dir [[-0.77025497, 0.40161204, 0.4953939]]
+
+// 800 pohled
+// [849.85864, 812.4856, 883.1134] dir [[-0.57735026, -0.57735026, -0.57735026]]
+
+// large pohled
+// [138.35358, 122.0896, 185.15799] dir [[-0.48893616, -0.36998138, -0.7899716]]
 
 pub const CAM_POS: Point3<f32> = point![CAM_POS_X, CAM_POS_Y, CAM_POS_Z];
 pub const CAM_DIR: Vector3<f32> = vector![0.0 - CAM_POS_X, 0.0 - CAM_POS_Y, 0.0 - CAM_POS_Z];
