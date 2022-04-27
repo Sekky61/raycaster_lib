@@ -1,8 +1,7 @@
-use std::sync::Arc;
+use std::cell::UnsafeCell;
 
 use crossbeam::select;
 use nalgebra::{vector, Vector3};
-use parking_lot::RwLock;
 
 use crate::{
     common::Ray,
@@ -40,8 +39,8 @@ where
     BV: Volume + Blocked,
 {
     renderer_id: usize,
-    camera: Arc<RwLock<PerspectiveCamera>>,
-    render_quality: bool,
+    camera: &'a UnsafeCell<PerspectiveCamera>,
+    sample_step: f32,
     render_options: RenderOptions,
     comms: RenderWorkerComms,
     volume: &'a BV,
@@ -55,7 +54,7 @@ where
     #[must_use]
     pub fn new(
         renderer_id: usize,
-        camera: Arc<RwLock<PerspectiveCamera>>,
+        camera: &'a UnsafeCell<PerspectiveCamera>,
         render_options: RenderOptions,
         comms: RenderWorkerComms,
         volume: &'a BV,
@@ -63,7 +62,7 @@ where
         Self {
             renderer_id,
             camera,
-            render_quality: true,
+            sample_step: 0.2, // Default, gets overridden
             render_options,
             comms,
             volume,
@@ -80,8 +79,8 @@ where
             };
             let cont = match msg {
                 ToWorkerMsg::GoIdle => Run::Continue,
-                ToWorkerMsg::GoLive { quality } => {
-                    self.render_quality = quality;
+                ToWorkerMsg::GoLive { sample_step } => {
+                    self.sample_step = sample_step;
                     Run::Render
                 }
                 ToWorkerMsg::Finish => Run::Stop,
@@ -99,12 +98,12 @@ where
     ///
     /// Returns command that could have been sent to worker during rendering (mainly `Finish` command).
     fn active_state(&self) -> ToWorkerMsg {
-        let camera = self.camera.read();
-
         #[cfg(debug_assertions)]
         println!("Render {}: entering main loop", self.renderer_id);
 
         let blocks = self.volume.get_blocks();
+
+        let cam_ref = unsafe { self.camera.get().as_ref().unwrap() };
 
         loop {
             // Wait for task from master thread or finish call
@@ -124,7 +123,7 @@ where
             let block = &blocks[block_id as usize];
 
             // Render task
-            self.render_block(&camera, subcanvas, block);
+            self.render_block(cam_ref, subcanvas, block);
             // Opacities have been mutated
 
             #[cfg(debug_assertions)]
@@ -203,15 +202,9 @@ where
             None => return accum,
         };
 
-        let step_size = if self.render_quality {
-            // todo more render_options
-            self.render_options.ray_step_quality
-        } else {
-            self.render_options.ray_step_fast
-        };
-        let max_n_of_steps = (t / step_size) as usize;
+        let max_n_of_steps = (t / self.sample_step) as usize;
 
-        let step = obj_ray.direction * step_size; // normalized
+        let step = obj_ray.direction * self.sample_step; // normalized
 
         let mut pos = obj_ray.origin;
 
@@ -222,7 +215,7 @@ where
         // Equation 3
         //
         // reference_step_length / new_step_length
-        let step_ratio = step_size;
+        let step_ratio = self.sample_step;
 
         for _ in 0..max_n_of_steps {
             //let sample = self.volume.sample_at(pos);

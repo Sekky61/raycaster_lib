@@ -24,9 +24,9 @@ unsafe impl Send for RenderTask {}
 pub enum ToWorkerMsg {
     GoIdle,
     /// Go to active state, mainly seize camera and recalc distances.
-    /// `Quality` parameter instructs render workers.
     GoLive {
-        quality: bool,
+        /// Step length along ray during color integration.
+        sample_step: f32,
     },
     /// Wrap up, get ready to be joined.
     Finish,

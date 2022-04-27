@@ -14,31 +14,6 @@ use super::{
     defaults,
 };
 
-/// Queue of not yet applied camera movements
-pub struct CameraBuffer {
-    // todo instead of buffering, keep copy of camera, manipulate it and switch them
-    buffer: VecDeque<CameraMovement>,
-}
-
-impl CameraBuffer {
-    /// New empty queue
-    pub fn new() -> Self {
-        let buffer = VecDeque::new();
-        Self { buffer }
-    }
-
-    /// Add new movement to queue
-    /// Camera will be moved inbetween frames
-    pub fn add_movement(&mut self, movement: CameraMovement) {
-        self.buffer.push_back(movement);
-    }
-
-    /// Returns `true` if buffer is empty
-    fn is_empty(&self) -> bool {
-        self.buffer.is_empty()
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum PickedMemoryType {
     Stream,
@@ -89,9 +64,10 @@ impl RenderQualitySettings {
 ///
 /// Applies changes to camera, spawns and controls rendering
 pub struct RenderState {
+    pub camera: PerspectiveCamera,
+    pub camera_changed: bool,
     pub renderer_front: RendererFront,
     pub render_options: RenderOptions,
-    pub camera_buffer: CameraBuffer,
     pub render_quality_preference: RenderQualitySettings,
     pub current_tf: PrewrittenTF,
     pub render_time: Instant,
@@ -113,10 +89,13 @@ impl RenderState {
             .ray_step_quality(defaults::RAY_STEP_QUALITY)
             .build_unchecked();
 
+        let camera = PerspectiveCamera::new(defaults::CAM_POS, defaults::CAM_DIR);
+
         Self {
+            camera,
+            camera_changed: false,
             renderer_front: RendererFront::new(),
             is_rendering: false,
-            camera_buffer: CameraBuffer::new(),
             render_options,
             render_quality_preference: defaults::RENDER_QUALITY,
             multi_thread: defaults::MULTI_THREAD,
@@ -126,37 +105,19 @@ impl RenderState {
         }
     }
 
-    /// Apply all buffered camera movements
-    pub fn apply_cam_change(&mut self) {
-        /* todo chybí mousewheel
-        // y        ... vertical scroll
-                        // +1 unit  ... 1 step of wheel down (negative -> scroll up)
-
-                        cam.change_pos_view_dir((*y as f32) * 5.0);
-        */
-        let camera = self.renderer_front.get_camera_handle().unwrap();
-        {
-            let mut camera = camera.write();
-            while let Some(movement) = self.camera_buffer.buffer.pop_front() {
-                match movement {
-                    CameraMovement::PositionOrtho(d) => camera.change_pos(d),
-                    CameraMovement::PositionPlane(d) => camera.change_pos_plane(d),
-                    CameraMovement::Direction(d) => camera.look_around(d * 0.3),
-                    CameraMovement::PositionInDir(d) => camera.change_pos_view_dir(d),
-                }
-            }
-            println!("Cam: {:?} dir {:?}", camera.get_pos(), camera.get_dir());
-            // Drop Write camera guard
-        }
-    }
-
     /// If conditions are met, start rendering new frame
     pub fn check_render_conditions(&mut self) {
         if self.is_rendering {
             return;
         }
 
-        let quality = if self.camera_buffer.is_empty() {
+        let quality = if self.camera_changed {
+            match self.render_quality_preference {
+                RenderQualitySettings::AlwaysQuality => RenderQuality::Quality,
+                RenderQualitySettings::AlwaysFast => RenderQuality::Fast,
+                RenderQualitySettings::FastOnMovement => RenderQuality::Fast,
+            }
+        } else {
             match self.render_quality_preference {
                 RenderQualitySettings::FastOnMovement => match self.current_frame_quality {
                     RenderQuality::Quality => return,
@@ -164,15 +125,8 @@ impl RenderState {
                 },
                 _ => return,
             }
-        } else {
-            match self.render_quality_preference {
-                RenderQualitySettings::AlwaysQuality => RenderQuality::Quality,
-                RenderQualitySettings::AlwaysFast => RenderQuality::Fast,
-                RenderQualitySettings::FastOnMovement => RenderQuality::Fast,
-            }
         };
 
-        self.apply_cam_change();
         self.current_frame_quality = quality;
         self.start_render_frame(quality);
     }
@@ -183,10 +137,16 @@ impl RenderState {
     /// * `quality` - quality of render
     fn start_render_frame(&mut self, quality: RenderQuality) {
         self.is_rendering = true;
-        let msg = match quality {
-            RenderQuality::Quality => RendererMessage::StartRendering,
-            RenderQuality::Fast => RendererMessage::StartRenderingFast,
+        let sample_step = match quality {
+            RenderQuality::Quality => defaults::RAY_STEP_QUALITY,
+            RenderQuality::Fast => defaults::RAY_STEP_FAST,
         };
+
+        let msg = RendererMessage::StartRendering {
+            sample_step,
+            camera: Some(self.camera.clone()),
+        };
+        self.camera_changed = false;
 
         println!("Starting render - quality {quality:?}");
         self.renderer_front.send_message(msg);
@@ -280,13 +240,30 @@ impl RenderState {
             }
         }
 
-        self.renderer_front
-            .send_message(RendererMessage::StartRendering);
+        self.start_render_frame(RenderQuality::Quality);
     }
 
-    /// Put `movement` to buffer
+    /// Move camera
     pub fn register_movement(&mut self, movement: CameraMovement) {
-        self.camera_buffer.add_movement(movement);
+        /* todo chybí mousewheel
+        // y        ... vertical scroll
+                        // +1 unit  ... 1 step of wheel down (negative -> scroll up)
+
+                        cam.change_pos_view_dir((*y as f32) * 5.0);
+        */
+        match movement {
+            CameraMovement::PositionOrtho(d) => self.camera.change_pos(d),
+            CameraMovement::PositionPlane(d) => self.camera.change_pos_plane(d),
+            CameraMovement::Direction(d) => self.camera.look_around(d * 0.3),
+            CameraMovement::PositionInDir(d) => self.camera.change_pos_view_dir(d),
+        }
+        println!(
+            "Cam: {:?} dir {:?}",
+            self.camera.get_pos(),
+            self.camera.get_dir()
+        );
+        self.camera_changed = true;
+
         self.check_render_conditions();
     }
 }
@@ -365,7 +342,7 @@ where
 fn construct_common(
     parser: PrewrittenParser,
     tf: PrewrittenTF,
-) -> (Arc<RwLock<PerspectiveCamera>>, ParserFn, TF) {
+) -> (PerspectiveCamera, ParserFn, TF) {
     let position = defaults::CAM_POS;
     let direction = defaults::CAM_DIR;
 
@@ -374,7 +351,6 @@ fn construct_common(
     let tf_fn = tf.get_tf();
 
     let camera = PerspectiveCamera::new(position, direction);
-    let camera = Arc::new(RwLock::new(camera));
 
     (camera, parser_fn, tf_fn)
 }

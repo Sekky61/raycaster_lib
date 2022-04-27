@@ -1,4 +1,4 @@
-use nalgebra::{vector, Vector3, Vector4};
+use nalgebra::{vector, Vector3};
 
 use crate::{color::RGBA, common::Ray, volumetric::Volume, PerspectiveCamera};
 
@@ -36,7 +36,8 @@ where
     /// * `buffer` - reference to target buffer.
     pub fn render(&mut self, camera: &PerspectiveCamera, buffer: &mut [u8]) {
         // Hide quality setting
-        self.render_to_buffer(camera, buffer, true)
+        const QUALITY_RENDER_STEP: f32 = 0.2;
+        self.render_to_buffer(camera, buffer, QUALITY_RENDER_STEP)
     }
 
     /// Public render function.
@@ -49,7 +50,7 @@ where
         &mut self,
         camera: &PerspectiveCamera,
         buffer: &mut [u8],
-        quality: bool,
+        ray_step: f32,
     ) {
         // buffer y=0 is up
         // expects black background
@@ -85,7 +86,7 @@ where
                 let ray = camera.get_ray(pixel_coord);
 
                 // Color pixel
-                let ray_color = self.collect_light(&ray, camera, quality);
+                let ray_color = self.collect_light(&ray, camera, ray_step);
 
                 // Draw boundbox
                 // todo delete
@@ -114,7 +115,7 @@ where
 
     /// Accumulate color along one ray.
     /// Opacity is corrected for sample step
-    fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera, quality: bool) -> RGBA {
+    fn collect_light(&self, ray: &Ray, camera: &PerspectiveCamera, step_size: f32) -> RGBA {
         // Get intersection with volume
         let (obj_ray, t) = match self.volume.transform_ray(ray) {
             Some(e) => e,
@@ -129,12 +130,6 @@ where
         // Setup iterating along ray
         let begin = obj_ray.origin;
         let direction = ray.direction;
-
-        let step_size = if quality {
-            self.render_options.ray_step_quality
-        } else {
-            self.render_options.ray_step_fast
-        };
 
         let step = direction * step_size; // normalized
         let mut pos = begin;

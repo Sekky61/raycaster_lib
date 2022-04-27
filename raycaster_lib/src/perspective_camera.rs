@@ -3,6 +3,7 @@ use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 use crate::common::{BoundBox, Ray, ViewportBox};
 
 /// Ray-casting camera
+#[derive(Clone)]
 pub struct PerspectiveCamera {
     /// Position of the camera in world coordinates
     position: Point3<f32>,

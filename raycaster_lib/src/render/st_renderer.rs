@@ -1,7 +1,7 @@
 use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 
 use crate::{volumetric::Volume, PerspectiveCamera};
 
@@ -13,7 +13,8 @@ where
 {
     volume: V,
     shared_buffer: Arc<Mutex<Vec<u8>>>,
-    camera: Arc<RwLock<PerspectiveCamera>>,
+    camera: PerspectiveCamera,
+    ray_step: f32,
     render_options: RenderOptions,
     communication: (Sender<()>, Receiver<RendererMessage>),
 }
@@ -24,10 +25,6 @@ where
 {
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>> {
         self.shared_buffer.clone()
-    }
-
-    fn get_camera(&self) -> Arc<RwLock<PerspectiveCamera>> {
-        self.camera.clone()
     }
 
     fn start(self) -> JoinHandle<()> {
@@ -44,11 +41,7 @@ impl<V> SerialRenderer<V>
 where
     V: Volume,
 {
-    pub fn new(
-        volume: V,
-        camera: Arc<RwLock<PerspectiveCamera>>,
-        render_options: RenderOptions,
-    ) -> Self {
+    pub fn new(volume: V, camera: PerspectiveCamera, render_options: RenderOptions) -> Self {
         let elements =
             (render_options.resolution.x as usize) * (render_options.resolution.y as usize);
         let buffer = Arc::new(Mutex::new(vec![0; elements * 3]));
@@ -65,19 +58,27 @@ where
             shared_buffer: buffer,
             camera,
             render_options,
+            ray_step: 1.0, // default, get overwritten
         }
     }
 
-    pub fn start_rendering(self) -> JoinHandle<()> {
+    pub fn start_rendering(mut self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             let mut renderer = Renderer::new(self.volume, self.render_options);
             // Master loop
             loop {
                 // Gather input
                 let msg = self.communication.1.recv().unwrap();
-                let quality = match msg {
-                    RendererMessage::StartRendering => true,
-                    RendererMessage::StartRenderingFast => false,
+                match msg {
+                    RendererMessage::StartRendering {
+                        sample_step,
+                        camera,
+                    } => {
+                        self.ray_step = sample_step;
+                        if let Some(cam) = camera {
+                            self.camera = cam;
+                        }
+                    }
                     RendererMessage::ShutDown => break,
                 };
 
@@ -85,11 +86,8 @@ where
                     // Lock buffer
                     let mut buffer = self.shared_buffer.lock();
 
-                    // Lock camera
-                    let camera = self.camera.read();
-
                     // Render
-                    renderer.render_to_buffer(&camera, &mut buffer[..], quality);
+                    renderer.render_to_buffer(&self.camera, &mut buffer[..], self.ray_step);
                 }
 
                 // Send result

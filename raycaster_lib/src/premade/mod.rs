@@ -45,7 +45,7 @@ pub fn render_frame(resolution: Vector2<u16>) -> Vec<u8> {
     let mut buffer = vec![0; 3 * (resolution.x as usize) * (resolution.y as usize)]; // 3 bytes per pixel
 
     // Run rendering (blocking)
-    renderer.render_to_buffer(&camera, buffer.as_mut_slice(), true);
+    renderer.render(&camera, buffer.as_mut_slice());
 
     buffer
 }

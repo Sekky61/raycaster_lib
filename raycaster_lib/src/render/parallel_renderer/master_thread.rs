@@ -1,7 +1,7 @@
-use std::{sync::Arc, thread::JoinHandle};
+use std::{cell::UnsafeCell, ops::DerefMut, sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 
 use crate::{
     render::{render_front::RenderThread, RenderOptions, RendererMessage},
@@ -29,11 +29,29 @@ where
     BV: Volume + Blocked,
 {
     volume: BV,
-    camera: Arc<RwLock<PerspectiveCamera>>, // In read mode during the render, write inbetween renders
+    camera: SendableCamera, // In read mode during the render, write inbetween renders
     render_options: RenderOptions,
     buffer: Arc<Mutex<Vec<u8>>>,
     communication: (Sender<()>, Receiver<RendererMessage>),
 }
+
+pub struct SendableCamera(UnsafeCell<PerspectiveCamera>);
+
+impl std::ops::Deref for SendableCamera {
+    type Target = UnsafeCell<PerspectiveCamera>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for SendableCamera {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+unsafe impl Sync for SendableCamera {}
 
 impl<BV> RenderThread for ParalelRenderer<BV>
 where
@@ -41,10 +59,6 @@ where
 {
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>> {
         self.buffer.clone()
-    }
-
-    fn get_camera(&self) -> Arc<RwLock<PerspectiveCamera>> {
-        self.camera.clone()
     }
 
     fn start(self) -> JoinHandle<()> {
@@ -62,11 +76,7 @@ where
     BV: Volume + Blocked + 'static,
 {
     /// Construct new `ParalelRenderer`.
-    pub fn new(
-        volume: BV,
-        camera: Arc<RwLock<PerspectiveCamera>>,
-        render_options: RenderOptions,
-    ) -> Self {
+    pub fn new(volume: BV, camera: PerspectiveCamera, render_options: RenderOptions) -> Self {
         let elements: usize =
             (render_options.resolution.x as usize) * (render_options.resolution.y as usize);
         let buffer = Arc::new(Mutex::new(vec![0; elements * 3]));
@@ -79,7 +89,7 @@ where
 
         Self {
             volume,
-            camera,
+            camera: SendableCamera(UnsafeCell::new(camera)),
             render_options,
             buffer,
             communication,
@@ -88,7 +98,7 @@ where
 
     /// Spawns 'master thread'.
     /// This thread controls rendering cycle, communicates with user.
-    pub fn start_rendering(self) -> JoinHandle<()> {
+    pub fn start_rendering(mut self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             // Scope assures threads will be joined before exiting the scope
             crossbeam::scope(|s| {
@@ -107,10 +117,11 @@ where
                     let mut renderers = Vec::with_capacity(RENDERER_COUNT as usize);
                     let mut compositors = Vec::with_capacity(COMPOSITER_COUNT as usize);
 
+                    let cam_ref = &self.camera;
+
                     for id in 0..RENDERER_COUNT {
                         // Create render thread
                         let ren_comms = comms.renderer(id as usize);
-                        let camera_ref = self.camera.clone();
                         let handle = s
                             .builder()
                             .name(format!("Ren{id}"))
@@ -120,7 +131,7 @@ where
 
                                 let mut renderer = RenderWorker::new(
                                     id as usize,
-                                    camera_ref,
+                                    cam_ref,
                                     self.render_options,
                                     ren_comms,
                                     volume,
@@ -175,9 +186,17 @@ where
                     println!("Master : waiting for input");
                     let msg = self.communication.1.recv().unwrap();
 
-                    let quality = match msg {
-                        RendererMessage::StartRendering => true,
-                        RendererMessage::StartRenderingFast => false,
+                    let sample_step = match msg {
+                        RendererMessage::StartRendering {
+                            sample_step,
+                            camera,
+                        } => {
+                            if let Some(cam) = camera {
+                                let cam_ref = unsafe { self.camera.0.get().as_mut().unwrap() };
+                                *cam_ref = cam;
+                            }
+                            sample_step
+                        }
                         RendererMessage::ShutDown => break,
                     };
 
@@ -188,10 +207,10 @@ where
                     {
                         let blocks = volume.get_blocks();
                         let empty_blocks_index = volume.get_empty_blocks();
-                        let camera = self.camera.read();
+                        let cam_ref = unsafe { self.camera.get().as_ref().unwrap() };
 
                         canvas.build_queues(
-                            &camera,
+                            cam_ref,
                             blocks,
                             empty_blocks_index,
                             self.render_options,
@@ -203,7 +222,7 @@ where
 
                     // Send go live messages
                     for worker in master_comms.command_sender.iter() {
-                        worker.send(ToWorkerMsg::GoLive { quality }).unwrap();
+                        worker.send(ToWorkerMsg::GoLive { sample_step }).unwrap();
                     }
 
                     #[cfg(debug_assertions)]

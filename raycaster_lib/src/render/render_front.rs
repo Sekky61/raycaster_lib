@@ -1,7 +1,7 @@
 use std::{sync::Arc, thread::JoinHandle};
 
 use crossbeam::channel::{Receiver, Sender};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 
 use crate::PerspectiveCamera;
 
@@ -9,11 +9,15 @@ use crate::PerspectiveCamera;
 ///
 /// Messages queue up and one is read after frame is done
 pub enum RendererMessage {
-    /// Start rendering
-    StartRendering,
-    /// Start rendering a lower quality image
-    StartRenderingFast,
-    /// Shut down, thread will get ready to be joined
+    /// Start rendering.
+    StartRendering {
+        /// Length of step in accumulation.
+        sample_step: f32,
+        /// Camera to sample with.
+        /// If no camera is sent, use camera renderer already has.
+        camera: Option<PerspectiveCamera>,
+    },
+    /// Shut down, thread will get ready to be joined.
     ShutDown,
 }
 
@@ -24,11 +28,6 @@ pub enum RendererMessage {
 pub trait RenderThread {
     /// Get reference to shared framebuffer
     fn get_shared_buffer(&self) -> Arc<Mutex<Vec<u8>>>;
-
-    /// Get reference to camera
-    ///
-    /// If you obtain write lock, you can change camera position
-    fn get_camera(&self) -> Arc<RwLock<PerspectiveCamera>>;
 
     /// Spawn thread(s) with renderer
     ///
@@ -46,7 +45,6 @@ pub trait RenderThread {
 pub struct RendererFront {
     handle: Option<JoinHandle<()>>,
     buffer: Option<Arc<Mutex<Vec<u8>>>>,
-    camera: Option<Arc<RwLock<PerspectiveCamera>>>,
     communication_in: (Sender<RendererMessage>, Receiver<RendererMessage>),
     communication_out: (Sender<()>, Receiver<()>), // todo passive wait to read buffer instead?
 }
@@ -59,7 +57,6 @@ impl RendererFront {
         Self {
             handle: None,
             buffer: None,
-            camera: None,
             communication_in,
             communication_out,
         }
@@ -123,19 +120,6 @@ impl RendererFront {
         self.buffer.as_ref()
     }
 
-    /// Getter for camera handle
-    /// /// If front is inactive, return `None`
-    pub fn get_camera_handle(&self) -> Option<Arc<RwLock<PerspectiveCamera>>> {
-        self.camera.as_ref().cloned()
-    }
-
-    /// Borrow camera handle
-    /// Avoids incrementing atomic reference counter
-    /// Otherwise equivalent to `get_camera_handle`
-    pub fn get_camera_handle_borrow(&self) -> Option<&Arc<RwLock<PerspectiveCamera>>> {
-        self.camera.as_ref()
-    }
-
     /// Start `renderer`
     ///
     /// Front goes into active state.
@@ -160,11 +144,9 @@ impl RendererFront {
         );
         renderer.set_communication(communication);
         let buffer = renderer.get_shared_buffer();
-        let camera = renderer.get_camera();
         let handle = renderer.start(); // start thread but wait for startrendering message
         self.buffer = Some(buffer);
         self.handle = Some(handle);
-        self.camera = Some(camera);
     }
 
     /// Sync thread with parent
@@ -178,7 +160,6 @@ impl RendererFront {
             handle.join().unwrap();
             self.buffer = None;
             self.handle = None;
-            self.camera = None;
         }
     }
 }
