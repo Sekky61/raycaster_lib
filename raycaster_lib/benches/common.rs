@@ -28,6 +28,8 @@ pub use raycaster_lib::{
 pub const WIDTH: u16 = 700;
 pub const HEIGHT: u16 = 700;
 
+pub const RAY_STEP: f32 = 0.2;
+
 pub const RESOLUTION: Vector2<u16> = vector![WIDTH, HEIGHT];
 
 pub const POSITION: Point3<f32> = point![QUADRANT_DISTANCE, QUADRANT_DISTANCE, QUADRANT_DISTANCE];
@@ -238,14 +240,12 @@ where
     pub fn get_benchmark(self) -> impl FnOnce(&mut Criterion) {
         move |c: &mut Criterion| {
             let camera = PerspectiveCamera::new(POSITION, DIRECTION);
-            let shared_camera = Arc::new(RwLock::new(camera));
 
             let bench_name = self.generate_bench_name();
 
             let mut front = RendererFront::new();
 
             // handles
-            let cam = shared_camera.clone();
             let sender = front.get_sender();
             let finish_sender = sender.clone();
             let receiver = front.get_receiver();
@@ -260,7 +260,7 @@ where
                         }
 
                         let par_ren =
-                            ParalelRenderer::new(volume, shared_camera, self.render_options);
+                            ParalelRenderer::new(volume, camera.clone(), self.render_options);
                         front.start_rendering(par_ren);
                     } else {
                         let mut volume: FloatBlockVolume = self.get_volume(&self.vol_path);
@@ -270,7 +270,7 @@ where
                         }
 
                         let par_ren =
-                            ParalelRenderer::new(volume, shared_camera, self.render_options);
+                            ParalelRenderer::new(volume, camera.clone(), self.render_options);
                         front.start_rendering(par_ren);
                     };
                 }
@@ -281,7 +281,7 @@ where
                         volume.build_empty_index();
                     }
 
-                    let serial_r = SerialRenderer::new(volume, shared_camera, self.render_options);
+                    let serial_r = SerialRenderer::new(volume, camera.clone(), self.render_options);
                     front.start_rendering(serial_r);
                 }
             }
@@ -290,24 +290,26 @@ where
             let mut positions = self.camera_positions;
 
             c.bench_function(&bench_name, move |b| {
+                let mut camera = camera.clone();
                 let sender_in = sender.clone();
                 let receiver = receiver.clone();
-                let cam = cam.clone();
+                let cam = camera.clone();
                 let positions = &mut positions;
 
                 b.iter(move || {
                     let mut pos_iter = positions.iter();
                     // Setup
                     for (pos, dir) in pos_iter.by_ref() {
-                        {
-                            // set another cam pos
-                            let mut cam_guard = cam.write();
-                            cam_guard.set_pos(*pos);
-                            cam_guard.set_direction(*dir);
-                        }
+                        camera.set_pos(*pos);
+                        camera.set_direction(*dir);
 
                         // Render
-                        sender_in.send(RendererMessage::StartRendering).unwrap();
+                        sender_in
+                            .send(RendererMessage::StartRendering {
+                                sample_step: RAY_STEP,
+                                camera: Some(camera.clone()),
+                            })
+                            .unwrap();
                         receiver.recv().unwrap();
                     }
                 });
@@ -321,14 +323,13 @@ where
     pub fn block_size_bench(mut self) -> impl FnOnce(&mut Criterion) {
         move |c: &mut Criterion| {
             let camera = PerspectiveCamera::new(POSITION, DIRECTION);
-            let shared_camera = Arc::new(RwLock::new(camera));
 
             let mut front = RendererFront::new();
 
             let mut group = c.benchmark_group("block_side_par");
+            let cam = camera.clone();
             for size in (2_usize..=128).step_by(2) {
                 // handles
-                let cam = shared_camera.clone();
                 let sender = front.get_sender();
 
                 // set block side
@@ -353,7 +354,7 @@ where
                 }
 
                 group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-                    let cami = cam.clone();
+                    let mut camera = camera.clone();
                     // Camera positions
                     let positions = self.camera_positions.clone();
                     let sender_in = sender.clone();
@@ -362,15 +363,16 @@ where
                         let mut pos_iter = positions.iter();
                         // Setup
                         for (pos, dir) in pos_iter.by_ref() {
-                            {
-                                // set another cam pos
-                                let mut cam_guard = cami.write();
-                                cam_guard.set_pos(*pos);
-                                cam_guard.set_direction(*dir);
-                            }
+                            camera.set_pos(*pos);
+                            camera.set_direction(*dir);
 
                             // Render
-                            sender_in.send(RendererMessage::StartRendering).unwrap();
+                            sender_in
+                                .send(RendererMessage::StartRendering {
+                                    sample_step: RAY_STEP,
+                                    camera: Some(camera.clone()),
+                                })
+                                .unwrap();
                             receiver.recv().unwrap();
                         }
                     });

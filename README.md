@@ -4,6 +4,7 @@
 1. [Základní informace](#základní-informace)
 2. [Překlad a spouštění](#překlad-a-spouštění)
 3. [Dokumentace](#dokumentace)
+4. [Testování](#Testovani)
 
 # Základní informace
 
@@ -70,14 +71,12 @@ Pripadne jeste spoustet s promennou `RUSTFLAGS="-C target-cpu=native"`
 
 ## Spouštění
 
-Projekt se skládá ze dvou aplikací, `vol_app` a `vol_gen`.
+Projekt se skládá ze dvou spustitelných aplikací, `vol_app` a `vol_gen`.
 
 Kompilace a spuštění demo aplikace
 ```
 cargo run --release --bin vol_app
-```
-nebo (vyšší optimalizace)
-```
+// nebo s vyšší optimalizací:
 cargo run --profile release-full --bin vol_app
 ```
 Přeložená aplikace se nachází v `target/release/vol_app`.
@@ -110,6 +109,8 @@ Argumentem `--open` se dokumentace automaticky otevře v prohlížeči, argument
 # Testovani
 
 Testovaci framework Criterion vyzaduje program `perf`.
+Unit testy, docs testy a integrační testy se spouští příkazem `cargo test`.
+Benchmarky se spouštějí příkazem `cargo bench`.
 
 ## Data
 
@@ -121,7 +122,7 @@ Testovaci framework Criterion vyzaduje program `perf`.
 | 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB | `shapes` | Optimalizovane reseni |
 | 5 | `volumes/4kshapes_block16.vol` | 4000 | GB | `shapes` | Optimalizovane reseni, pouze stream ze souboru |
 
-### Generování dat
+## Generování dat
 
 Objem #1
 ```
