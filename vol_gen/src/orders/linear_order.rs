@@ -16,6 +16,11 @@ impl OrderGenerator for LinearCoordIterator {
     fn construct(config: &Config) -> Self {
         LinearCoordIterator::from_dims(config.dims)
     }
+
+    fn get_progress(&self) -> (u64, u64) {
+        // Task is done, when all slices are done
+        (self.state.x as u64, self.dims.x as u64)
+    }
 }
 
 impl LinearCoordIterator {

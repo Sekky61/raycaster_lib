@@ -24,4 +24,8 @@ pub enum SampleOrder {
 
 pub trait OrderGenerator: Iterator<Item = Vector3<u32>> {
     fn construct(config: &Config) -> Self;
+
+    /// Report progress.
+    /// Returns two values, first being current progress and second being total steps.
+    fn get_progress(&self) -> (u64, u64);
 }

@@ -4,6 +4,7 @@
 
 use std::{error::Error, io::Write};
 
+use indicatif::ProgressBar;
 use nalgebra::Vector3;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
@@ -19,14 +20,6 @@ mod shapes;
 mod solid;
 
 // todo sparse files with writes using lseek
-
-// Any generator
-pub trait Generator {
-    fn generate(self);
-}
-
-// Generates continuous chunks of samples in any order
-pub trait ChunkGenerator {}
 
 /// Generates one sample at a time, at any location
 pub trait SampleGenerator: Sync {
@@ -48,6 +41,10 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
 ) -> Result<(), Box<dyn Error>> {
     let sample_generator = SG::construct(config);
     let mut ord_iter = OG::construct(config);
+
+    // ProgressBar
+    let (_, total) = ord_iter.get_progress();
+    let bar = ProgressBar::new(total);
 
     // Open file
     let file_name = &config.file_name;
@@ -87,6 +84,9 @@ pub fn generate_order<SG: SampleGenerator, OG: OrderGenerator>(
         if written != output_samples.len() {
             return Err("Writing error".into());
         }
+
+        let (current, _) = ord_iter.get_progress();
+        bar.set_position(current);
     }
 
     Ok(())

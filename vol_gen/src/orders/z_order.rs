@@ -34,6 +34,11 @@ impl OrderGenerator for ZCoordIterator {
         };
         ZCoordIterator::new(config.dims, block_side)
     }
+
+    fn get_progress(&self) -> (u64, u64) {
+        // Generating is done, when all blocks are done
+        self.block.get_progress()
+    }
 }
 
 impl ZCoordIterator {

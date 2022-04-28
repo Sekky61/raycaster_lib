@@ -192,11 +192,11 @@ where
                 sample_rgb = sample_rgb * (diffuse + 0.16) + vector![specular, specular, specular];
             }
 
-            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
-            //sum = (1 - sum.alpha) * volume.density * color + sum;
-
+            // Correct opacity for size of step
             let opacity_corrected = 1.0 - (1.0 - color_b.w).powf(step_ratio);
 
+            // pseudocode from https://scholarworks.rit.edu/cgi/viewcontent.cgi?article=6466&context=theses page 55, figure 5.6
+            //sum = (1 - sum.alpha) * volume.density * color + sum;
             // Accumulate color
             rgb += (1.0 - opacity) * opacity_corrected * sample_rgb;
             opacity += (1.0 - opacity) * opacity_corrected;
