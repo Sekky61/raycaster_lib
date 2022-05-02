@@ -152,6 +152,8 @@ impl RenderState {
 
     /// Initialize renderer
     ///
+    /// Returns success, or error message.
+    ///
     /// # Params
     /// * `path` - path of file to parse
     /// * `parser` - parser to use
@@ -160,7 +162,7 @@ impl RenderState {
         path: &Path,
         parser: PrewrittenParser,
         mem_type: PickedMemoryType,
-    ) {
+    ) -> Result<(), &'static str> {
         // todo no params are needed
         print!(
             "GUI: starting renderer: MT {} | ERT {} | EI {} | ",
@@ -177,7 +179,7 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Stream,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::Stream, false) => {
@@ -188,7 +190,7 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Stream,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::Ram, true) => {
@@ -199,7 +201,7 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Ram,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::Ram, false) => {
@@ -210,7 +212,7 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Ram,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::RamFloat, true) => {
@@ -221,7 +223,7 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Ram,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
             (PickedMemoryType::RamFloat, false) => {
@@ -232,12 +234,13 @@ impl RenderState {
                     self.render_options,
                     self.current_tf,
                     MemoryType::Ram,
-                );
+                )?;
                 self.renderer_front.start_rendering(renderer);
             }
         }
 
         self.start_render_frame(RenderQuality::Quality);
+        Ok(())
     }
 
     /// Move camera
@@ -267,7 +270,7 @@ fn volume_setup_paralel<V>(
     render_options: RenderOptions,
     tf: PrewrittenTF,
     memory: MemoryType,
-) -> ParalelRenderer<V>
+) -> Result<ParalelRenderer<V>, &'static str>
 where
     V: Volume + Blocked + BuildVolume<u8> + 'static,
 {
@@ -289,13 +292,13 @@ where
         res
     };
 
-    let mut volume: V = from_file(path, parser_add_block_side_volume_type, tf_fn).unwrap();
+    let mut volume: V = from_file(path, parser_add_block_side_volume_type, tf_fn)?;
 
     if render_options.empty_space_skipping {
         volume.build_empty_index();
     }
 
-    ParalelRenderer::new(volume, camera, render_options)
+    Ok(ParalelRenderer::new(volume, camera, render_options))
 }
 
 /// Setup linear renderer
@@ -305,7 +308,7 @@ fn volume_setup_linear<V>(
     render_options: RenderOptions,
     tf: PrewrittenTF,
     memory: MemoryType,
-) -> SerialRenderer<V>
+) -> Result<SerialRenderer<V>, &'static str>
 where
     V: Volume + BuildVolume<u8>,
 {
@@ -322,13 +325,13 @@ where
         meta_res
     };
 
-    let mut volume: V = from_file(path, parser_fn_with_volume_type, tf_fn).unwrap();
+    let mut volume: V = from_file(path, parser_fn_with_volume_type, tf_fn)?;
 
     if render_options.empty_space_skipping {
         volume.build_empty_index();
     }
 
-    SerialRenderer::new(volume, camera, render_options)
+    Ok(SerialRenderer::new(volume, camera, render_options))
 }
 
 fn construct_common(

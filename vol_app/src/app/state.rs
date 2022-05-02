@@ -187,11 +187,15 @@ impl State {
 
     /// Start renderer with default values
     pub fn initial_render_call(&mut self) {
-        self.rendering.start_renderer(
+        let res = self.rendering.start_renderer(
             &self.current_vol_path,
             self.current_parser,
             self.current_memory_type,
         );
+        match res {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error loading volume: {}", e),
+        }
     }
 
     /// Setter
@@ -243,11 +247,15 @@ impl State {
         self.current_parser = parser;
         self.current_memory_type = memory_type;
 
-        self.rendering.start_renderer(
+        let res = self.rendering.start_renderer(
             &self.current_vol_path,
             self.current_parser,
             self.current_memory_type,
         );
+        match res {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error loading volume: {}", e),
+        }
     }
 
     /// Restart renderer with new transfer function
@@ -262,11 +270,15 @@ impl State {
         };
         self.current_tf = tf;
         self.rendering.current_tf = tf;
-        self.rendering.start_renderer(
+        let res = self.rendering.start_renderer(
             &self.current_vol_path,
             self.current_parser,
             self.current_memory_type,
         );
+        match res {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error loading volume: {}", e),
+        }
     }
 
     /// New quality setting picked by user
