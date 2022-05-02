@@ -8,9 +8,38 @@
 
 # Základní informace
 
-Autor: Michal Majer
+Název práce:    Zobrazení rozsáhlých volumetrických dat na CPU
 
-Datum: 19.4.2022
+Autor:          Michal Majer
+
+Vedoucí práce:  Ing. Španěl Michal, Ph.D.
+
+Datum:          19.4.2022
+
+## Obsah média
+```
+.
+├── BP_xmajer21.pdf
+├── plakat.pdf
+├── zdroj/
+│   ├── raycaster\_lib/
+│   │   ├── benches
+│   │   ├── src
+│   │   └── tests
+│   ├── vol\_app
+│   ├── vol\_gen
+│   ├── volumes/
+│   │   └── Skull.vol       // Data pro běh demo aplikace
+│   ├── Cargo.toml
+│   └── Cargo.lock
+├── bin/
+│   ├── vol\_app
+│   └── vol\_gen
+├── docs                    // Vygenerovaná dokumentace
+├── bp\_tex /               // Zdrojové texty BP
+│   └── Makefile
+└── README.md
+```
 
 # Překlad a spouštění
 
