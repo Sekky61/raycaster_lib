@@ -4,13 +4,11 @@
 use std::{
     marker::PhantomData,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use criterion::BenchmarkId;
 pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
-use parking_lot::RwLock;
 use raycaster_lib::{
     premade::{parse::generator_parser, transfer_functions::shapes_tf},
     volumetric::MemoryType,
@@ -293,7 +291,6 @@ where
                 let mut camera = camera.clone();
                 let sender_in = sender.clone();
                 let receiver = receiver.clone();
-                let cam = camera.clone();
                 let positions = &mut positions;
 
                 b.iter(move || {
@@ -353,7 +350,7 @@ where
                     Algorithm::Linear => panic!("bad 45"),
                 }
 
-                group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
+                group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, _| {
                     let mut camera = camera.clone();
                     // Camera positions
                     let positions = self.camera_positions.clone();

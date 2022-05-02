@@ -3,7 +3,7 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 use crossbeam_channel::Receiver;
 use nalgebra::{vector, Vector2, Vector3};
 use parking_lot::Mutex;
-use raycaster_lib::{render::RendererMessage, volumetric::MemoryType};
+use raycaster_lib::render::RendererMessage;
 use slint::{
     re_exports::{PointerEvent, PointerEventButton, PointerEventKind},
     Weak,

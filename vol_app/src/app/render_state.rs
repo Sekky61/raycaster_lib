@@ -1,13 +1,10 @@
-use std::{collections::VecDeque, path::Path, sync::Arc, time::Instant};
-
-use parking_lot::RwLock;
-
 use raycaster_lib::{
     premade::parse::from_file,
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
     volumetric::{volumes::*, Blocked, BuildVolume, DataSource, MemoryType, Volume},
     ParserFn, PerspectiveCamera, TF,
 };
+use std::{path::Path, time::Instant};
 
 use super::{
     common::{CameraMovement, PrewrittenParser, PrewrittenTF},
@@ -257,11 +254,6 @@ impl RenderState {
             CameraMovement::Direction(d) => self.camera.look_around(d * 0.3),
             CameraMovement::PositionInDir(d) => self.camera.change_pos_view_dir(d),
         }
-        println!(
-            "Cam: {:?} dir {:?}",
-            self.camera.get_pos(),
-            self.camera.get_dir()
-        );
         self.camera_changed = true;
 
         self.check_render_conditions();

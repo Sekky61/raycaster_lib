@@ -1,4 +1,3 @@
-use memmap::Mmap;
 use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
 
 use crate::{
@@ -31,7 +30,7 @@ impl Block {
         bound_box: BoundBox,
         scale: Vector3<f32>,
         data: *const u8,
-        tf: TF,
+        _: TF,
     ) -> Self {
         let elements = block_side.pow(3);
         let slice = std::slice::from_raw_parts(data, elements);
@@ -44,17 +43,14 @@ impl Block {
             .append_translation(&lower_vec)
             .append_nonuniform_scaling(&scale_inv);
 
-        let mut block = Self {
+        Self {
             block_side,
             value_range,
             bound_box,
             transform,
             data,
             empty_index: EmptyIndex::dummy(),
-        };
-
-        //block.empty_index = EmptyIndex::<4>::from_volume_without_tf(&block, tf);
-        block
+        }
     }
 
     fn get_block_data_half(&self, start_index: usize) -> Vector4<f32> {
@@ -107,7 +103,7 @@ impl Volume for Block {
         unimplemented!()
     }
 
-    fn set_tf(&mut self, tf: TF) {
+    fn set_tf(&mut self, _: TF) {
         unimplemented!()
     }
 
@@ -315,7 +311,7 @@ impl Volume for BlockVolume {
         "BlockVolume"
     }
 
-    fn is_empty(&self, pos: Point3<f32>) -> bool {
+    fn is_empty(&self, _: Point3<f32>) -> bool {
         false // todo delegate to block
     }
 

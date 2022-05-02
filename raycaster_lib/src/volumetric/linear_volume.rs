@@ -79,7 +79,7 @@ impl BuildVolume<u8> for LinearVolume {
             size.x, size.y, size.z, scale.x, scale.y, scale.z, memory_type
         );
 
-        let mut volume = LinearVolume {
+        let volume = LinearVolume {
             bound_box,
             size,
             tf,

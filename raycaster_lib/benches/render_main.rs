@@ -133,32 +133,22 @@ criterion_group! {
 
 //criterion_main!(parallel_params);
 
-// BP main
-// criterion_main!(
-//     // Ram vs Stream vs Float in single thread
-//     sequential_linear_float_small,
-//     sequential_linear_ram_small,
-//     sequential_linear_stream_small,
-//     sequential_block_float_small,
-//     sequential_block_stream_small,
-//     sequential_block_ram_small,
-//     // Main: 2K volume ST and MT
-//     sequential_linear_ram_2k,
-//     parallel_2k,
-//     // 4K streamed (parallel only)
-//     //parallel_4k,
-//     // Camera angles
-
-//     // Determining block side
-//     //block_side
-// );
-
+// test main
 criterion_main!(
-    //parallel_2k,
+    // Ram vs Stream vs Float in single thread
+    sequential_linear_float_small,
+    sequential_linear_ram_small,
+    sequential_linear_stream_small,
+    sequential_block_float_small,
+    sequential_block_stream_small,
+    sequential_block_ram_small,
+    // Main: 2K volume ST and MT
+    sequential_linear_ram_2k,
+    parallel_2k,
     // 4K streamed (parallel only)
-    parallel_4k,
+    //parallel_4k,
     // Camera angles
 
     // Determining block side
-    block_side
+    //block_side
 );

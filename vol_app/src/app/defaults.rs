@@ -7,7 +7,6 @@ use super::{
     render_state::{PickedMemoryType, RenderQualitySettings},
 };
 use nalgebra::{point, vector, Point3, Vector2, Vector3};
-use raycaster_lib::volumetric::MemoryType;
 
 // Render resolution
 pub const RENDER_WIDTH: u16 = 700; // todo use constants properly -- as defaults

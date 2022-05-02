@@ -98,7 +98,7 @@ where
 
     /// Spawns 'master thread'.
     /// This thread controls rendering cycle, communicates with user.
-    pub fn start_rendering(mut self) -> JoinHandle<()> {
+    pub fn start_rendering(self) -> JoinHandle<()> {
         std::thread::spawn(move || {
             // Scope assures threads will be joined before exiting the scope
             crossbeam::scope(|s| {
