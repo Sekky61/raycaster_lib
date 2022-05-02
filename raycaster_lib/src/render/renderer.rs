@@ -88,21 +88,6 @@ where
                 // Color pixel
                 let ray_color = self.collect_light(&ray, camera, ray_step);
 
-                // Draw boundbox
-                // todo delete
-
-                // if x == pixels.x.start
-                //     || x == pixels.x.end - 1
-                //     || y == pixels.y.end - 1
-                //     || y == pixels.y.start
-                // {
-                //     buffer[index] = 255;
-                //     buffer[index + 1] = 255;
-                //     buffer[index + 2] = 255;
-                //     index += 3;
-                //     continue;
-                // }
-
                 let color_bytes = ray_color * ray_color.w;
                 buffer[index] = color_bytes.x as u8;
                 buffer[index + 1] = color_bytes.y as u8;
@@ -174,12 +159,10 @@ where
             ];
 
             let grad_magnitude = grad.magnitude();
-            const GRAD_MAG_THRESH: f32 = 10.0; // todo tweak
+            const GRAD_MAG_THRESH: f32 = 2.0; // todo tweak
 
             // Apply shading to samples on the edge of the object only
             if grad_magnitude > GRAD_MAG_THRESH {
-                // todo const albedo: f32 = 0.18 / PI;
-
                 // Phong
                 let grad_norm = grad / grad_magnitude;
                 let diffuse = f32::max(grad_norm.dot(&-LIGHT_DIR), 0.00); // ambient light 0.09

@@ -143,7 +143,6 @@ where
         subcanvas: &mut SubCanvas,
         block: &<BV as Blocked>::BlockType,
     ) {
-        // todo use renderoptions properly
         // Image size, todo move to property
         let res_f = self.render_options.resolution.map(|v| v as f32); // todo cast everywhere
         let step_f = res_f.map(|v| 1.0 / v);

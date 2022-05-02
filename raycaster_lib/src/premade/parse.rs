@@ -152,7 +152,6 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         Err(_) => return Err("Parse error"),
     };
 
-    // todo handle Z sample shape
     let mut block_side = None;
 
     let ExtractedMetaGen {
@@ -172,7 +171,7 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
 
     let cut_data = data_source.clone_with_offset(offset);
 
-    // todo doesnt hold for z shape (padidng to blocks)
+    // This doesn't hold for z shape (padidng to blocks)
     //assert_eq!(slice.len() - offset, size.x * size.y * size.z);
 
     Ok(VolumeMetadata {

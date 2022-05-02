@@ -137,8 +137,7 @@ impl State {
                     .register_movement(CameraMovement::Direction(delta));
             }
             (true, true) => {
-                // rotate around origin
-                // TODO
+                // todo rotate around origin
                 // let axisangle = Vector3::y() * (std::f32::consts::FRAC_PI_8 * drag_diff.0);
                 // let rot = nalgebra::Rotation3::new(axisangle);
 
@@ -221,7 +220,7 @@ impl State {
         // Take both
         let path = match self.file_picked.take() {
             Some(path) => path,
-            None => return, // todo error
+            None => panic!("Nothing picked"),
         };
         self.parser_picked = None;
         self.app.unwrap().set_path_text("Nothing picked".into());

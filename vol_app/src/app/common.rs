@@ -33,7 +33,6 @@ impl PrewrittenParser {
     /// Mapping from enum variant to the actual parser
     /// Returns function pointer
     pub fn get_parser_fn(&self) -> fn(DataSource<u8>) -> Result<VolumeMetadata<u8>, &'static str> {
-        // todo typedef return type
         match self {
             PrewrittenParser::MyVolParser => generator_parser,
             PrewrittenParser::SkullParser => skull_parser,
@@ -42,7 +41,6 @@ impl PrewrittenParser {
 
     /// Get index in GUI
     pub fn get_gui_index(&self) -> i32 {
-        // todo typedef return type
         match self {
             PrewrittenParser::MyVolParser => 0,
             PrewrittenParser::SkullParser => 1,

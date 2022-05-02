@@ -109,7 +109,7 @@ pub fn get_command<'a>() -> Command<'a> {
                 .validator(is_positive_number),
         )
         .arg(
-            Arg::new("sample") // maybe join this with layout arg | todo add overlap default 1
+            Arg::new("sample") // maybe join this with layout arg
                 .help("Values of generated object")
                 .long("sample")
                 .value_name("BYTE")
@@ -117,7 +117,7 @@ pub fn get_command<'a>() -> Command<'a> {
                 .validator(|s| is_positive_number(s).and(can_fit_u8(s))),
         )
         .arg(
-            Arg::new("object-size") // maybe join this with layout arg | todo add overlap default 1
+            Arg::new("object-size") // maybe join this with layout arg
                 .help("Size of individual generated objects")
                 .long("object-size")
                 .value_name("SIDE")
@@ -125,7 +125,7 @@ pub fn get_command<'a>() -> Command<'a> {
                 .validator(is_positive_number),
         )
         .arg(
-            Arg::new("block-size") // maybe join this with layout arg | todo add overlap default 1
+            Arg::new("block-size") // maybe join this with layout arg
                 .help("Size of blocks in Z shape layout")
                 .long("block-size")
                 .short('b')

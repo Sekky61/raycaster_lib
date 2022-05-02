@@ -81,7 +81,7 @@ impl Canvas {
 
         let items = (tiles.x as usize) * (tiles.y as usize);
 
-        let mut sub_canvases = Vec::with_capacity(items); //todo
+        let mut sub_canvases = Vec::with_capacity(items);
         println!(
             "Canvas split into {}x{} = {} tiles",
             tiles.x, tiles.y, items
