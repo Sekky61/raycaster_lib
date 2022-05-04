@@ -20,6 +20,7 @@ pub enum MemoryType {
     Ram,
 }
 
+#[derive(Debug)]
 pub enum StorageShape {
     Linear,
     Z(u8),
@@ -35,8 +36,8 @@ pub struct VolumeMetadata<T> {
     pub data: Option<DataSource<T>>,
     pub memory_type: Option<MemoryType>,
     pub data_shape: Option<StorageShape>,
-    pub tf: Option<TF>,            // Transfer function
-    pub block_side: Option<usize>, // todo u16
+    pub desired_data_shape: Option<StorageShape>,
+    pub tf: Option<TF>, // Transfer function
 }
 
 impl<T> VolumeMetadata<T> {
@@ -73,13 +74,20 @@ impl<T> VolumeMetadata<T> {
         self
     }
 
-    pub fn set_block_side(&mut self, block_side: usize) -> &mut Self {
-        self.block_side = Some(block_side);
+    pub fn set_memory_type(&mut self, memory_type: MemoryType) -> &mut Self {
+        self.memory_type = Some(memory_type);
         self
     }
 
-    pub fn set_memory_type(&mut self, memory_type: MemoryType) -> &mut Self {
-        self.memory_type = Some(memory_type);
+    /// What data actually looks like in file.
+    pub fn set_data_shape(&mut self, data_shape: StorageShape) -> &mut Self {
+        self.data_shape = Some(data_shape);
+        self
+    }
+
+    /// This represents what the shape should be, not what the shape of data is.
+    pub fn set_desired_data_shape(&mut self, desired_data_shape: StorageShape) -> &mut Self {
+        self.desired_data_shape = Some(desired_data_shape);
         self
     }
 }

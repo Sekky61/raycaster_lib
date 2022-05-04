@@ -11,7 +11,7 @@ pub use criterion::{criterion_group, criterion_main, Criterion};
 pub use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use raycaster_lib::{
     premade::{parse::generator_parser, transfer_functions::shapes_tf},
-    volumetric::MemoryType,
+    volumetric::{MemoryType, StorageShape},
 };
 pub use raycaster_lib::{
     premade::{
@@ -95,7 +95,7 @@ pub mod volume_files {
     }
 }
 
-pub const BLOCK_SIDE: usize = 10;
+pub const BLOCK_SIDE: u8 = 16;
 
 pub const QUADRANT_DISTANCE: f32 = 300.0;
 
@@ -172,7 +172,7 @@ pub struct BenchOptions<V> {
     pub vol_path: PathBuf,
     /// For naming test and parallel renders
     pub memory: Memory,
-    pub block_side: Option<usize>,
+    pub block_side: Option<u8>,
 }
 
 impl<V> BenchOptions<V>
@@ -186,7 +186,7 @@ where
         vol_path: &str,
         volume: PhantomData<V>,
         memory: Memory,
-        block_side: Option<usize>,
+        block_side: Option<u8>,
     ) -> Self {
         let camera_positions = Vec::from(camera_positions);
         Self {
@@ -214,16 +214,16 @@ where
             let mut res = generator_parser(src);
             match &mut res {
                 Ok(ref mut m) => {
-                    if m.block_side.is_none() {
-                        m.block_side = self.block_side;
+                    if let Some(block_side) = self.block_side {
+                        m.desired_data_shape = Some(StorageShape::Z(block_side));
                     }
                     match self.memory {
                         Memory::Stream => m.set_memory_type(MemoryType::Stream),
                         Memory::Ram => m.set_memory_type(MemoryType::Ram),
                     };
                     println!(
-                        "Blockside of {:?}, memory {:?}",
-                        m.block_side, m.memory_type
+                        "Shape of {:?}, memory {:?}",
+                        m.desired_data_shape, m.memory_type
                     );
                 }
                 Err(_) => (),
@@ -325,7 +325,7 @@ where
 
             let mut group = c.benchmark_group("block_side_par");
             let cam = camera.clone();
-            for size in (2_usize..=128).step_by(2) {
+            for size in (2_u8..=128).step_by(2) {
                 // handles
                 let sender = front.get_sender();
 

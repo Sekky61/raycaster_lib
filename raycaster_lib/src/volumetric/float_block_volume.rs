@@ -157,7 +157,7 @@ impl BuildVolume<u8> for FloatBlockVolume {
         let scale = metadata.scale.ok_or("No scale")?;
         let data = metadata.data.ok_or("No data")?;
         let tf = metadata.tf.ok_or("No transfer function")?;
-        let block_side = metadata.block_side.ok_or("No block side")?;
+        let block_side = 16; // todo
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();

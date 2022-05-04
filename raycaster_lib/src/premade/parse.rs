@@ -70,8 +70,8 @@ pub fn beetle_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u16>,
         data: Some(new_data_src),
         data_shape: Some(StorageShape::Linear),
         tf: Some(beetle_tf),
-        block_side: None,
         memory_type: None,
+        desired_data_shape: None,
     };
 
     Ok(meta)
@@ -106,8 +106,8 @@ pub fn skull_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8>, &
         data: Some(cut_data),
         data_shape: Some(StorageShape::Linear),
         tf: Some(skull_tf),
-        block_side: None,
         memory_type: None,
+        desired_data_shape: None,
     })
 }
 
@@ -152,8 +152,6 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         Err(_) => return Err("Parse error"),
     };
 
-    let mut block_side = None;
-
     let ExtractedMetaGen {
         offset,
         size,
@@ -162,10 +160,7 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
 
     let data_shape = match slice[24] {
         1 => StorageShape::Linear,
-        2 => {
-            block_side = Some(slice[25] as usize);
-            StorageShape::Z(slice[25])
-        }
+        2 => StorageShape::Z(slice[25]),
         _ => return Err("Unknown data shape"),
     };
 
@@ -181,8 +176,8 @@ pub fn generator_parser(data_source: DataSource<u8>) -> Result<VolumeMetadata<u8
         data: Some(cut_data),
         data_shape: Some(data_shape),
         tf: Some(skull_tf),
-        block_side,
         memory_type: None,
+        desired_data_shape: None,
     })
 }
 

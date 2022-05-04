@@ -2,7 +2,7 @@ use nalgebra::{point, vector, Matrix4, Point3, Vector3, Vector4};
 
 use crate::{
     common::{blockify, tf_visible_range, BoundBox, Ray, ValueRange},
-    volumetric::{DataSource, MemoryType},
+    volumetric::{DataSource, MemoryType, StorageShape},
     TF,
 };
 
@@ -182,6 +182,7 @@ pub struct BlockVolume {
     pub empty_blocks: Vec<bool>,
     block_size: Vector3<usize>, // Number of blocks in structure (.data)
     _data_owner: DataSource<u8>,
+    _blocked_data_owner: Vec<Vec<u8>>,
     pub data: Vec<Block>,
     tf: TF,
 }
@@ -326,15 +327,34 @@ impl BuildVolume<u8> for BlockVolume {
         let size = metadata.size.ok_or("No size")?;
         let scale = metadata.scale.ok_or("No scale")?;
         let tf = metadata.tf.ok_or("No transfer function")?;
-        let block_side = metadata.block_side.ok_or("No block side")?;
         let data = metadata.data.ok_or("No data")?;
         let memory_type = metadata.memory_type.unwrap_or(MemoryType::Stream);
+
+        let data_shape = metadata.data_shape.ok_or("No data shape")?;
+        let desired_data_shape = metadata.desired_data_shape;
 
         let vol_dims = (size - vector![1, 1, 1]) // side length is n-1 times the point
             .cast::<f32>();
         let vol_dims = (vol_dims).component_mul(&scale); // todo workaround
 
         let bound_box = BoundBox::from_position_dims(position, vol_dims);
+
+        let block_side = match data_shape {
+            StorageShape::Linear => match desired_data_shape {
+                Some(StorageShape::Z(s)) => s,
+                _ => panic!("Bad shape"),
+            },
+            StorageShape::Z(b) => match desired_data_shape {
+                Some(StorageShape::Z(s)) => s,
+                None => b,
+                _ => panic!("Bad shape"),
+            },
+        } as usize;
+
+        let is_blocked = match data_shape {
+            StorageShape::Linear => false,
+            StorageShape::Z(s) => s as usize == block_side,
+        };
 
         let step_size = block_side - 1;
         let block_size = blockify(size, block_side, 1);
@@ -346,7 +366,12 @@ impl BuildVolume<u8> for BlockVolume {
             MemoryType::Ram => data.to_vec(),
         };
 
-        let ptr = data_desired_form.as_ptr();
+        let mut blocked_data_owner = vec![];
+
+        let base_ptr = data_desired_form.as_ptr();
+        let data_slice = data_desired_form.get_slice();
+
+        let elements_in_block = block_side * block_side * block_side;
 
         for x in 0..block_size.x {
             for y in 0..block_size.y {
@@ -355,8 +380,16 @@ impl BuildVolume<u8> for BlockVolume {
                     let block_start = step_size * block_off;
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
 
-                    let block_data_offset = get_3d_index(block_size, block_off) * block_side.pow(3);
-                    let block_data_ptr = unsafe { ptr.add(block_data_offset) };
+                    let block_data_ptr = if is_blocked {
+                        let block_data_offset =
+                            get_3d_index(block_size, block_off) * elements_in_block;
+                        unsafe { base_ptr.add(block_data_offset) }
+                    } else {
+                        let v = get_block_data(data_slice, size, block_start, block_side);
+                        let ptr = v.as_ptr();
+                        blocked_data_owner.push(v);
+                        ptr
+                    };
                     let block = unsafe {
                         Block::new(block_side, block_bound_box, scale, block_data_ptr, tf)
                     };
@@ -388,9 +421,36 @@ impl BuildVolume<u8> for BlockVolume {
             tf,
             block_side,
             empty_blocks,
+            _blocked_data_owner: blocked_data_owner,
         };
         Ok(volume)
     }
+}
+
+// todo redo
+pub fn get_block_data(
+    slice: &[u8],
+    size: Vector3<usize>,
+    block_start: Point3<usize>,
+    side: usize,
+) -> Vec<u8> {
+    let elements = side * side * side;
+    let mut data = Vec::with_capacity(elements); // todo background value
+    for off_x in 0..side {
+        for off_y in 0..side {
+            for off_z in 0..side {
+                let pos = block_start + vector![off_x, off_y, off_z];
+                if pos.x < size.x && pos.y < size.y && pos.z < size.z {
+                    let index = get_3d_index(size, pos);
+                    let value = slice[index];
+                    data.push(value);
+                } else {
+                    data.push(0);
+                }
+            }
+        }
+    }
+    data
 }
 
 fn get_bound_box(

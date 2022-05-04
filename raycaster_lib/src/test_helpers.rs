@@ -23,8 +23,8 @@ pub fn white_vol_meta() -> VolumeMetadata<u8> {
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
-        block_side: Some(16),
         memory_type: None,
+        desired_data_shape: None,
     }
 }
 
@@ -38,8 +38,8 @@ pub fn empty_vol_meta(size: Vector3<usize>) -> VolumeMetadata<u8> {
         data: Some(data_source),
         tf: Some(white_tf),
         data_shape: Some(StorageShape::Linear),
-        block_side: Some(16),
         memory_type: None,
+        desired_data_shape: None,
     }
 }
 
@@ -61,7 +61,7 @@ where
 
 /// Parses and returns volume from file `volumes/Skull.vol` (relative to workspaces)
 /// Optional parameter `block_side` allows creation of block volumes
-pub fn skull_volume<V>(block_side: Option<usize>) -> V
+pub fn skull_volume<V>(block_side: Option<u8>) -> V
 where
     V: Volume + BuildVolume<u8>,
 {
@@ -71,7 +71,7 @@ where
     let ds = DataSource::from_file(path).unwrap();
     let mut meta = skull_parser(ds).expect("skull error");
     match block_side {
-        Some(side) => meta.block_side = Some(side),
+        Some(side) => meta.desired_data_shape = Some(StorageShape::Z(side)),
         None => (),
     }
     BuildVolume::build(meta).unwrap()

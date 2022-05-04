@@ -19,20 +19,20 @@ pub const VOLUME_PATH: &str = "volumes/Skull.vol";
 // "volumes/Skull.vol" "volumes/a.vol" "volumes/800shapes_block16.vol" "volumes/solid_blocks_32.vol" "volumes/100_solid.vol"
 pub const VOLUME_PARSER: PrewrittenParser = PrewrittenParser::SkullParser;
 
-pub const MULTI_THREAD: bool = false;
+pub const MULTI_THREAD: bool = true;
 pub const ERT: bool = true;
 pub const EI: bool = true;
 
 /// Block side used when constructing blocks in memory.
 /// Does not affect volumes saved in files by blocks.
-pub const BLOCK_SIDE: usize = 16;
+pub const BLOCK_SIDE: u8 = 16;
 
 pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Stream;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;
 
-pub const RAY_STEP_FAST: f32 = 1.0;
+pub const RAY_STEP_FAST: f32 = 0.9;
 pub const RAY_STEP_QUALITY: f32 = 0.2;
 
 // Camera

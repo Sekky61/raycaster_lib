@@ -1,7 +1,7 @@
 use raycaster_lib::{
     premade::parse::from_file,
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},
-    volumetric::{volumes::*, Blocked, BuildVolume, DataSource, MemoryType, Volume},
+    volumetric::{volumes::*, Blocked, BuildVolume, DataSource, MemoryType, StorageShape, Volume},
     ParserFn, PerspectiveCamera, TF,
 };
 use std::{path::Path, time::Instant};
@@ -282,9 +282,7 @@ where
         let mut res = parser_fn(src);
         match &mut res {
             Ok(ref mut m) => {
-                if m.block_side.is_none() {
-                    m.block_side = Some(defaults::BLOCK_SIDE);
-                }
+                m.desired_data_shape = Some(StorageShape::Z(defaults::BLOCK_SIDE));
                 m.set_memory_type(memory);
             }
             Err(_) => (),
