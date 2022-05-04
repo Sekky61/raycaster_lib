@@ -27,7 +27,7 @@ pub const EI: bool = true;
 /// Does not affect volumes saved in files by blocks.
 pub const BLOCK_SIDE: u8 = 16;
 
-pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Stream;
+pub const MEMORY_TYPE: PickedMemoryType = PickedMemoryType::Ram;
 pub const TRANSFER_FUNCTION: PrewrittenTF = PrewrittenTF::Skull;
 
 pub const RENDER_QUALITY: RenderQualitySettings = RenderQualitySettings::FastOnMovement;

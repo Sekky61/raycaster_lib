@@ -61,7 +61,7 @@ impl Block {
             let ptr = ptr.add(1);
             let d1 = ptr.read();
 
-            let ptr = ptr.add(self.block_side);
+            let ptr = ptr.add(self.block_side - 1);
             let d2 = ptr.read();
 
             let ptr = ptr.add(1);
@@ -342,18 +342,27 @@ impl BuildVolume<u8> for BlockVolume {
         let block_side = match data_shape {
             StorageShape::Linear => match desired_data_shape {
                 Some(StorageShape::Z(s)) => s,
-                _ => panic!("Bad shape"),
+                _ => return Err("Bad shape"),
             },
             StorageShape::Z(b) => match desired_data_shape {
-                Some(StorageShape::Z(s)) => s,
-                None => b,
-                _ => panic!("Bad shape"),
+                Some(StorageShape::Z(s)) => {
+                    if s != b {
+                        return Err("Not compatible block sides #2");
+                    }
+                    s
+                }
+                _ => return Err("Bad shape"),
             },
         } as usize;
 
         let is_blocked = match data_shape {
             StorageShape::Linear => false,
-            StorageShape::Z(s) => s as usize == block_side,
+            StorageShape::Z(s) => {
+                if s as usize != block_side {
+                    return Err("Not compatible block sides");
+                }
+                true
+            }
         };
 
         let step_size = block_side - 1;
@@ -361,15 +370,12 @@ impl BuildVolume<u8> for BlockVolume {
 
         let mut blocks = Vec::with_capacity(block_size.product());
 
-        let data_desired_form = match memory_type {
-            MemoryType::Stream => data,
-            MemoryType::Ram => data.to_vec(),
-        };
-
         let mut blocked_data_owner = vec![];
 
-        let base_ptr = data_desired_form.as_ptr();
-        let data_slice = data_desired_form.get_slice();
+        // Base of mapped data
+        // Will be pointed to by streamblocks or copied by ram blocks
+        let base_ptr = data.as_ptr();
+        let data_slice = data.get_slice();
 
         let elements_in_block = block_side * block_side * block_side;
 
@@ -380,16 +386,37 @@ impl BuildVolume<u8> for BlockVolume {
                     let block_start = step_size * block_off;
                     let block_bound_box = get_bound_box(position, scale, block_start, block_side);
 
-                    let block_data_ptr = if is_blocked {
-                        let block_data_offset =
-                            get_3d_index(block_size, block_off) * elements_in_block;
-                        unsafe { base_ptr.add(block_data_offset) }
-                    } else {
-                        let v = get_block_data(data_slice, size, block_start, block_side);
-                        let ptr = v.as_ptr();
-                        blocked_data_owner.push(v);
-                        ptr
+                    let block_data_ptr = match (memory_type, is_blocked) {
+                        (MemoryType::Stream, true) => {
+                            let block_data_offset =
+                                get_3d_index(block_size, block_off) * elements_in_block;
+                            unsafe { base_ptr.add(block_data_offset) }
+                        }
+                        (MemoryType::Stream, false) => {
+                            return Err("Incompatible combination: Stream and unblocked volume")
+                        }
+                        (MemoryType::Ram, true) => {
+                            let block_data_offset =
+                                get_3d_index(block_size, block_off) * elements_in_block;
+
+                            let mut v = Vec::with_capacity(elements_in_block);
+                            v.extend_from_slice(
+                                &data_slice
+                                    [block_data_offset..block_data_offset + elements_in_block],
+                            );
+                            let ptr = v.as_ptr();
+                            blocked_data_owner.push(v);
+                            ptr
+                        }
+                        (MemoryType::Ram, false) => {
+                            let v = get_block_data(data_slice, size, block_start, block_side);
+                            assert_eq!(v.len(), elements_in_block);
+                            let ptr = v.as_ptr();
+                            blocked_data_owner.push(v);
+                            ptr
+                        }
                     };
+
                     let block = unsafe {
                         Block::new(block_side, block_bound_box, scale, block_data_ptr, tf)
                     };
@@ -401,7 +428,7 @@ impl BuildVolume<u8> for BlockVolume {
         let empty_blocks = BlockVolume::build_empty(&blocks, tf);
 
         println!(
-            "Built {} blocks of dims {} blocks ({},{},{}) blocks ({},{},{}) memory",
+            "Built {} blocks of dims {} blocks ({},{},{}) blocks ({},{},{}) memory {:?}",
             blocks.len(),
             block_side,
             size.x,
@@ -410,6 +437,7 @@ impl BuildVolume<u8> for BlockVolume {
             block_size.x,
             block_size.y,
             block_size.z,
+            memory_type
         );
 
         let volume = BlockVolume {
@@ -417,7 +445,7 @@ impl BuildVolume<u8> for BlockVolume {
             data_size: size,
             block_size,
             data: blocks,
-            _data_owner: data_desired_form,
+            _data_owner: data,
             tf,
             block_side,
             empty_blocks,

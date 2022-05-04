@@ -51,12 +51,16 @@ mod test {
 
     /// Float comparison for optional values
     fn compare_samples(s1: Option<f32>, s2: Option<f32>) -> bool {
-        match (s1, s2) {
+        let x = match (s1, s2) {
             (None, None) => true,
             (None, Some(_)) => false,
             (Some(_), None) => false,
             (Some(v1), Some(v2)) => (v1 - v2).abs() < f32::EPSILON,
+        };
+        if !x {
+            eprintln!("Comp. failed {s1:?} {s2:?}");
         }
+        x
     }
 
     /// Expected: `Linearvolume` and `Blockvolume` match when sampled everywhere
@@ -83,10 +87,9 @@ mod test {
 
     /// Same test as above, with bigger volume
     #[test]
-    #[ignore]
     fn linear_block_matches_skull() {
-        let linear: FloatVolume = skull_volume(None);
-        let block: FloatBlockVolume = skull_volume(Some(5));
+        let linear: LinearVolume = skull_volume(None);
+        let block: BlockVolume = skull_volume(Some(5));
 
         let vol_size_l = linear.get_size();
         let vol_size_b = block.get_size();

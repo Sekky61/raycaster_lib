@@ -6,7 +6,7 @@ use nalgebra::{point, vector, Vector3};
 use crate::{
     color::RGBA,
     premade::parse::skull_parser,
-    volumetric::{BuildVolume, DataSource, StorageShape, Volume, VolumeMetadata},
+    volumetric::{BuildVolume, DataSource, MemoryType, StorageShape, Volume, VolumeMetadata},
 };
 
 pub fn white_tf(sample: f32) -> RGBA {
@@ -70,6 +70,7 @@ where
     println!("{:?}", path);
     let ds = DataSource::from_file(path).unwrap();
     let mut meta = skull_parser(ds).expect("skull error");
+    meta.memory_type = Some(MemoryType::Ram);
     match block_side {
         Some(side) => meta.desired_data_shape = Some(StorageShape::Z(side)),
         None => (),
