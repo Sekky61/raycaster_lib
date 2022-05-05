@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 //! Some prebuilt parsers and transfer functions.
 //!
 //! Serves as an example to make your own, for example to add support

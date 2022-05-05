@@ -1,3 +1,9 @@
+/*
+    vol_app
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use std::{cell::RefCell, rc::Rc};
 
 use nalgebra::vector;

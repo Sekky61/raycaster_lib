@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{point, Point3, Vector3};
 
 use super::Ray;

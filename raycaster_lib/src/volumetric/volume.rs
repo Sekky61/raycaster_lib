@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use crate::common::{BoundBox, Ray};
 
 use crate::TF;

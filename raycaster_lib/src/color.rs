@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{vector, Vector4};
 
 pub type RGBA = Vector4<f32>;

@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use crate::color::{self, RGBA};
 
 // R G B A -- A <0;1>

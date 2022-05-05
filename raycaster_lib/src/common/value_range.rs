@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use std::ops::{Deref, Range};
 
 /// Represents a range of floating-point values.

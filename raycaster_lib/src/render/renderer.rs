@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{vector, Vector3};
 
 use crate::{color::RGBA, common::Ray, volumetric::Volume, PerspectiveCamera};

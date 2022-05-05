@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use common::volume_files::*;
 use criterion::{criterion_group, criterion_main, Criterion};
 use render_benchmarks::{

@@ -1,3 +1,9 @@
+/*
+    vol_app
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{Vector2, Vector3};
 use raycaster_lib::{
     premade::{

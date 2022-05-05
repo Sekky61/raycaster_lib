@@ -1,3 +1,9 @@
+/*
+    vol_app
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use raycaster_lib::{
     premade::parse::from_file,
     render::{ParalelRenderer, RenderOptions, RendererFront, RendererMessage, SerialRenderer},

@@ -1,3 +1,9 @@
+/*
+    vol_app
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 
 use crossbeam_channel::Receiver;

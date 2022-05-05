@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 //! Benchmark categories by volume type
 
 pub mod block_ram;

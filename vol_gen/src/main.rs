@@ -1,3 +1,9 @@
+/*
+    vol_gen
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 //! Volume generation tool
 //!
 //! # Command line arguments

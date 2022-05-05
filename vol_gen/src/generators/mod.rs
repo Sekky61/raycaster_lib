@@ -1,3 +1,9 @@
+/*
+    vol_gen
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 //! Generators module
 //!
 //! Types implmenting `SampleGenerator` can be used to generate volumes

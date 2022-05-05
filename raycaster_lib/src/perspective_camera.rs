@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{vector, Point3, Rotation3, Vector2, Vector3};
 
 use crate::common::{BoundBox, Ray, ViewportBox};

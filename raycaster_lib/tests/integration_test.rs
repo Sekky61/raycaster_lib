@@ -1,3 +1,9 @@
+/*
+    raycaster_lib
+    Author: Michal Majer
+    Date: 2022-05-05
+*/
+
 use nalgebra::{point, vector, Point3, Vector2, Vector3};
 use raycaster_lib::{
     render::RenderOptions, test_helpers, volumetric::volumes::FloatVolume, PerspectiveCamera,
