@@ -87,6 +87,7 @@ mod test {
 
     /// Same test as above, with bigger volume
     #[test]
+    #[ignore]
     fn linear_block_matches_skull() {
         let linear: LinearVolume = skull_volume(None);
         let block: BlockVolume = skull_volume(Some(5));

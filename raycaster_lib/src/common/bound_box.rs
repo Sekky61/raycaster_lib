@@ -84,8 +84,8 @@ impl BoundBox {
         // [ (min,max) , (min,max) , (min,max) ]
         let t_minmax = t0.zip_map(&t1, |t0, t1| if t0 < t1 { (t0, t1) } else { (t1, t0) });
 
-        let tmin = f32::max(f32::max(t_minmax.x.0, t_minmax.y.0), t_minmax.z.0) + 0.0001;
-        let tmax = f32::min(f32::min(t_minmax.x.1, t_minmax.y.1), t_minmax.z.1) - 0.0001;
+        let tmin = f32::max(f32::max(t_minmax.x.0, t_minmax.y.0), t_minmax.z.0);
+        let tmax = f32::min(f32::min(t_minmax.x.1, t_minmax.y.1), t_minmax.z.1);
 
         // the whole box is behind us
         if tmax.is_sign_negative() {
