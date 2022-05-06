@@ -159,5 +159,4 @@ pub fn get_command<'a>() -> Command<'a> {
                 .value_hint(ValueHint::FilePath)
                 .default_value_os(OsStr::new("a.vol")),
         )
-        .arg(Arg::new("sparse").help("Use sparse files").long("sparse"))
 }

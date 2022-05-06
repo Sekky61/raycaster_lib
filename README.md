@@ -96,7 +96,7 @@ Překlad a spouštění s tímto profilem:
 cargo build --profile release-full
 ```
 
-Pripadne jeste spoustet s promennou `RUSTFLAGS="-C target-cpu=native"`
+Připadně lze překládat s proměnnou `RUSTFLAGS="-C target-cpu=native"`
 
 ## Spouštění
 
@@ -117,6 +117,23 @@ cargo run --release --bin vol_gen
 Přeložená aplikace se nachází v `target/release/vol_gen`.
 `vol_gen` přijímá argumenty přes příkazovou řádku.
 Jejich formát lze zjistit příkazem `cargo run --release --bin vol_gen -- --help`.
+
+Výstup `--help` pro `vol_gen`:
+```
+USAGE:
+    vol_gen [OPTIONS] --dims=<X>,<Y>,<Z> --generator <NAME>
+
+OPTIONS:
+    -d, --dims=<X>,<Y>,<Z>      Dimensions of volume
+    -g, --generator <NAME>      Type of generator [possible values: shapes, noise, solid]
+    -h, --help                  Print help information
+    -l, --layout <SHAPE>        Layout of samples in memory [default: linear] [possible values:
+                                linear, z]
+    -o, --output-file <FILE>    File name to output [default: a.vol]
+    -s, --shape=<X>,<Y>,<Z>     Shape of cell [default: 1 1 1]
+        --seed <SEED>           Seed for RNG, leave out for random seed
+    -V, --version               Print version information
+``` 
 
 Příklady spuštění `vol_gen`:
 ```
@@ -143,13 +160,13 @@ Benchmarky se spouštějí příkazem `cargo bench`.
 
 ## Data
 
-| Objem | Soubor | Rozlišení | velikost | TF | Popis | 
-| ----------- | ---------- | ---------- | ---------- | ---------- | ---------- |
-| 1 | `volumes/800shapes_lin.vol` | 800 | 512MB | `shapes` | Porovnani single thread reseni |
-| 2 | `volumes/800shapes_block16.vol` | 800 | 645MB | `shapes` | Porovnani single thread reseni |
+| Objem | Soubor | Rozlišení | velikost | TF |
+| ----------- | ---------- | ---------- | ---------- | ---------- |
+| 1 | `volumes/800shapes_lin.vol` | 800 | 512MB | `shapes` |
+| 2 | `volumes/800shapes_block16.vol` | 800 | 645MB | `shapes` |
 | 4 | `volumes/2kshapes_lin.vol` | 2000 | 8GB | `shapes` | d |
-| 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB | `shapes` | Optimalizovane reseni |
-| 5 | `volumes/4kshapes_block16.vol` | 4000 | GB | `shapes` | Optimalizovane reseni, pouze stream ze souboru |
+| 4 | `volumes/2kshapes_block16.vol` | 2000 | 9.8GB | `shapes` |
+| 5 | `volumes/4kshapes_block16.vol` | 4000 | ~75GB | `shapes` |
 
 ## Generování dat
 
