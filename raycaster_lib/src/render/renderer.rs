@@ -165,7 +165,7 @@ where
             ];
 
             let grad_magnitude = grad.magnitude();
-            const GRAD_MAG_THRESH: f32 = 2.0; // todo tweak
+            const GRAD_MAG_THRESH: f32 = 0.01; // todo tweak
 
             // Apply shading to samples on the edge of the object only
             if grad_magnitude > GRAD_MAG_THRESH {

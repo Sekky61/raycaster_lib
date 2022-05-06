@@ -245,7 +245,7 @@ where
             ];
 
             let grad_magnitude = grad.magnitude();
-            const GRAD_MAG_THRESH: f32 = 10.0; // todo tweak
+            const GRAD_MAG_THRESH: f32 = 0.01; // todo tweak
 
             let mut sample_rgb = color_b.xyz();
 

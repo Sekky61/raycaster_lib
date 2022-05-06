@@ -83,7 +83,7 @@ pub trait Volume: Send {
     fn sample_at_gradient(&self, pos: Point3<f32>) -> (f32, Vector3<f32>) {
         // Default implementation, can be replaced with a more effective one for concrete volume types
         let sample = self.sample_at(pos);
-        let grad_dir = 0.4;
+        let grad_dir = 0.01;
 
         // Samples are taken on higher coordinates, cap safe sample coord range
         let safe_size = self.get_size().map(|v| v as f32 - 1.01);
