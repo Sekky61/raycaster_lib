@@ -129,6 +129,12 @@ criterion_group! {
     targets = block_side_test
 }
 
+criterion_group! {
+    name = parallel_other;
+    config = Criterion::default().significance_level(0.1).sample_size(SAMPLE_SIZE);
+    targets = render_parallel_float<{MAIN_BLOCK_ID}>, render_parallel_ram<{MAIN_BLOCK_ID}>
+}
+
 // Testing mains
 
 //criterion_main!(parallel);
