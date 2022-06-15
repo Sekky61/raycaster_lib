@@ -6,6 +6,9 @@ Scroll down for [Czech version](#Zobrazení-rozsáhlých-volumetrických-dat-na-
 
 Direct volumetric raycasting library written in Rust
 
+<img src="photos/app_screenshot.PNG" alt="drawing" height="300"/>
+<img src="photos/green_particle.PNG?" alt="drawing" height="300"/>
+
 # Zobrazení rozsáhlých volumetrických dat na CPU
 
 ## Obsah
