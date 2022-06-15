@@ -1,3 +1,11 @@
+# CPU Rendering of Large Volumetric Data
+
+Scroll down for [Czech version](#Zobrazení-rozsáhlých-volumetrických-dat-na-CPU)
+
+2021/2022 Bachelor's thesis
+
+Direct volumetric raycasting library written in Rust
+
 # Zobrazení rozsáhlých volumetrických dat na CPU
 
 ## Obsah
