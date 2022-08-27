@@ -2,7 +2,7 @@
 
 Scroll down for [Czech version](#Zobrazení-rozsáhlých-volumetrických-dat-na-CPU)
 
-2021/2022 Bachelor's thesis
+[2021/2022 Bachelor's thesis](https://www.fit.vut.cz/study/thesis/24489/?stud=majer)
 
 Direct volumetric raycasting library written in Rust
 
@@ -94,7 +94,7 @@ libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev \
 autoconf libxcb-xrm0 libxcb-xrm-dev automake libxcb-shape0-dev libxcb-xfixes0-dev
 ```
 
-## překlad
+## Překlad
 
 Překlad probíhá přes nástroj `cargo` (případně `rustc`).
 
